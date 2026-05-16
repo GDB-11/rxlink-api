@@ -53,8 +53,6 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
             errorFactory: CredentialError (ex) => new GetByRefreshTokenAsyncError(ex.Message, ex)
         );
 
-    // ── Mutations ─────────────────────────────────────────────────────────────
-
     /// <inheritdoc/>
     /// <remarks>
     /// Executes token rotation atomically via a CTE:
