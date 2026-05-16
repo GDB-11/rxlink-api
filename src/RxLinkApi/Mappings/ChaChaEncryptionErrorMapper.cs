@@ -13,50 +13,43 @@ public sealed class ChaChaEncryptionErrorMapper : IErrorHttpMapper<ChaChaEncrypt
         {
             GetBytesError bytesError => new BadRequestObjectResult(new
             {
-                Type = "EncodingFailed",
-                Message = bytesError.Message,
-                Detail = bytesError.Details
+                message = bytesError.Message,
+                details = bytesError.Details
             }),
             
             GetBytesFromBase64StringError base64Error => new BadRequestObjectResult(new
             {
-                Type = "Base64DecodingFailed",
-                Message = base64Error.Message,
-                Detail = base64Error.Details
+                message = base64Error.Message,
+                details = base64Error.Details
             }),
             
             ChaChaEncryptError encryptError => new BadRequestObjectResult(new
             {
-                Type = "EncryptionFailed",
-                Message = encryptError.Message,
-                Detail = encryptError.Details
+                message = encryptError.Message,
+                details = encryptError.Details
             }),
             
             ChaChaDecryptError decryptError => new BadRequestObjectResult(new
             {
-                Type = "DecryptionFailed",
-                Message = decryptError.Message,
-                Detail = decryptError.Details
+                message = decryptError.Message,
+                details = decryptError.Details
             }),
             
             PerformDecryption decryptionError => new UnprocessableEntityObjectResult(new
             {
-                Type = "DecryptionFailed",
-                Message = decryptionError.Message,
-                Detail = decryptionError.Details
+                message = decryptionError.Message,
+                details = decryptionError.Details
             }),
             
             ExtractEncryptedPartsError extractError => new BadRequestObjectResult(new
             {
-                Type = "InvalidEncryptedDataFormat",
-                Message = extractError.Message,
-                Detail = extractError.Details
+                message = extractError.Message,
+                details = extractError.Details
             }),
             
             _ => new ObjectResult(new
             {
-                Type = "InternalServerError",
-                Message = "An unexpected encryption error occurred"
+                message = "An unexpected encryption error occurred"
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

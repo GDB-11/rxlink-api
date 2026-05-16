@@ -10,31 +10,26 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
         {
             UserNotFoundError => new UnauthorizedObjectResult(new
             {
-                error = "Unauthorized",
                 message = error.Message
             }),
 
             RefreshTokenNotFoundError => new UnauthorizedObjectResult(new
             {
-                error = "Unauthorized",
                 message = error.Message
             }),
 
             InvalidUserTokenError => new UnauthorizedObjectResult(new
             {
-                error = "Unauthorized",
                 message = error.Message
             }),
 
             UserInactiveError => new UnauthorizedObjectResult(new
             {
-                error = "Unauthorized",
                 message = error.Message
             }),
 
             JwtGenerationError jwt => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = jwt.Message,
                 details = jwt.Details
             })
@@ -44,7 +39,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             JwtStorageError storage => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = storage.Message,
                 details = storage.Details
             })
@@ -54,7 +48,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             StoreRefreshTokenError store => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = store.Message,
                 details = store.Details
             })
@@ -64,7 +57,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             GetByUsernameAsyncDomainError email => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = email.Message,
                 details = email.Details
             })
@@ -74,7 +66,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             GetByRefreshTokenAsyncDomainError refresh => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = refresh.Message,
                 details = refresh.Details
             })
@@ -84,7 +75,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             ChaChaDecryptError decrypt => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = decrypt.Message,
                 details = decrypt.Details
             })
@@ -94,7 +84,6 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             _ => new ObjectResult(new
             {
-                error = "InternalServerError",
                 message = "An unexpected error occurred"
             })
             {
