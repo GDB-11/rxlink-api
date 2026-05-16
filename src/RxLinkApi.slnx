@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/1. Presentation/">
+    <Project Path="RxLinkApi/RxLinkApi.csproj" />
+  </Folder>
+  <Folder Name="/2. Application/">
+    <Project Path="Application.Core.DTOs/Application.Core.DTOs.csproj" />
+    <Project Path="Application.Core.Interfaces/Application.Core.Interfaces.csproj" />
+    <Project Path="Application.Core.Services/Application.Core.Services.csproj" />
+  </Folder>
+  <Folder Name="/3. Infrastructure/">
+    <Project Path="Infrastructure.Core.Interfaces/Infrastructure.Core.Interfaces.csproj" />
+    <Project Path="Infrastructure.Core.Models/Infrastructure.Core.Models.csproj" />
+    <Project Path="Infrastructure.Core.Services/Infrastructure.Core.Services.csproj" />
+  </Folder>
+  <Folder Name="/4. Common/">
+    <Project Path="Common.Helpers/Common.Helpers.csproj" />
+  </Folder>
+</Solution>

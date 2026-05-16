@@ -1,0 +1,6 @@
+@RxLinkApi_HostAddress = http://localhost:5207
+
+GET {{RxLinkApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
