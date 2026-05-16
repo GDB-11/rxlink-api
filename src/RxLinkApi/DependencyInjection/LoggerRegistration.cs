@@ -1,6 +1,14 @@
+using RxLinkApi.Logging;
+
 namespace RxLinkApi.DependencyInjection;
 
-public sealed class LoggerRegistration
+internal static class LoggerRegistration
 {
-    
+    extension(WebApplicationBuilder builder)
+    {
+        internal void RegisterLogger()
+        {
+            builder.Services.AddSingleton<IResultLogger, ConsoleResultLogger>();
+        }
+    }
 }

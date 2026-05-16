@@ -1,8 +1,19 @@
+using RxLinkApi.DependencyInjection;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.RegisterKeys();
+
+builder.RegisterDatabase();
+
+builder.RegisterLogger();
+
+builder.RegisterRepositories();
+
+builder.RegisterErrorMappers();
+
+builder.RegisterApplicationServices();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -15,7 +26,14 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("API de RxLink - Sistema para clínicas")
+            .WithTheme(ScalarTheme.Purple)
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+            .AddPreferredSecuritySchemes();
+    });
 }
 
 app.UseHttpsRedirection();

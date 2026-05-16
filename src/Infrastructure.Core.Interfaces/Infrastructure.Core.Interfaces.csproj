@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Common.Helpers\Common.Helpers.csproj" />
+      <ProjectReference Include="..\Infrastructure.Core.DTOs\Infrastructure.Core.DTOs.csproj" />
       <ProjectReference Include="..\Infrastructure.Core.Models\Infrastructure.Core.Models.csproj" />
     </ItemGroup>
 
