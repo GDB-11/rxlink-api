@@ -31,4 +31,25 @@ public abstract class BaseDatabaseService
 
     protected static async Task<IEnumerable<TOut>> ExecuteQueryAsync<TIn, TOut>(IDbConnection connection, string sql, TIn entity) => 
         await connection.QueryAsync<TOut>(sql, entity);
+    
+    protected static async Task<TOut> ExecuteWithTransactionAsync<TOut>(
+        IDbConnection connection,
+        Func<IDbTransaction, Task<TOut>> operation)
+    {
+        if (connection.State != ConnectionState.Open)
+            connection.Open();
+
+        using IDbTransaction transaction = connection.BeginTransaction();
+        try
+        {
+            TOut result = await operation(transaction);
+            transaction.Commit();
+            return result;
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
 }

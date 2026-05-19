@@ -12,6 +12,11 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
             {
                 message = error.Message
             }),
+            
+            IncorrectPasswordError => new UnauthorizedObjectResult(new
+            {
+                message = error.Message
+            }),
 
             RefreshTokenNotFoundError => new UnauthorizedObjectResult(new
             {
@@ -84,7 +89,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             _ => new ObjectResult(new
             {
-                message = "An unexpected error occurred"
+                message = "Ocurrió un error inesperado."
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

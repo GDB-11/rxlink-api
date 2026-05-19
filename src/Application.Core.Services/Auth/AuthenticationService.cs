@@ -14,27 +14,27 @@ namespace Application.Core.Services.Auth;
 
 public sealed class AuthenticationService : IAuthentication
 {
-    private readonly ICredentialRepository   _credentialRepository;
-    private readonly IPassword               _passwordService;
-    private readonly IJwt                    _jwtService;
+    private readonly ICredentialRepository _credentialRepository;
+    private readonly IPassword _passwordService;
+    private readonly IJwt _jwtService;
     private readonly IDeterministicEncryption _deterministicEncryption;
-    private readonly ITimeProvider           _timeProvider;
-    private readonly JwtConfig               _jwtConfig;
+    private readonly ITimeProvider _timeProvider;
+    private readonly JwtConfig _jwtConfig;
 
     public AuthenticationService(
-        ICredentialRepository    credentialRepository,
-        IPassword                passwordService,
-        IJwt                     jwtService,
+        ICredentialRepository credentialRepository,
+        IPassword passwordService,
+        IJwt jwtService,
         IDeterministicEncryption deterministicEncryption,
-        ITimeProvider            timeProvider,
-        JwtConfig                jwtConfig)
+        ITimeProvider timeProvider,
+        JwtConfig jwtConfig)
     {
-        _credentialRepository    = credentialRepository;
-        _passwordService         = passwordService;
-        _jwtService              = jwtService;
+        _credentialRepository = credentialRepository;
+        _passwordService = passwordService;
+        _jwtService = jwtService;
         _deterministicEncryption = deterministicEncryption;
-        _timeProvider            = timeProvider;
-        _jwtConfig               = jwtConfig;
+        _timeProvider = timeProvider;
+        _jwtConfig = jwtConfig;
     }
 
     public Task<Result<LoginResponse, AuthenticationError>> LoginAsync(LoginRequest request) =>
@@ -63,7 +63,7 @@ public sealed class AuthenticationService : IAuthentication
     private Task<Result<LoginResponse, AuthenticationError>> ValidatePasswordAndGenerateTokens(User user, string password) =>
         _passwordService.VerifyPassword(password, user.PasswordHash)
             .MapError(AuthenticationError (error) => new ChaChaDecryptError(error.Message, error.Details, error.Exception))
-            .Ensure(isValid => isValid, new InvalidUserTokenError())
+            .Ensure(isValid => isValid, new IncorrectPasswordError())
             .BindAsync(_ => GenerateAndStoreNewTokens(user));
 
     private Task<Result<LoginResponse, AuthenticationError>> GenerateAndStoreNewTokens(User user)
@@ -97,15 +97,15 @@ public sealed class AuthenticationService : IAuthentication
                 .MapError(AuthenticationError (error) => new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)));
 
     private static LoginResponse GenerateLoginResponse(
-        User     user,
-        string   accessToken,
-        string   rawRefreshToken,
+        User user,
+        string accessToken,
+        string rawRefreshToken,
         DateTime expiresAt) =>
         new()
         {
-            AccessToken  = accessToken,
+            AccessToken = accessToken,
             RefreshToken = rawRefreshToken,
-            ExpiresAt    = expiresAt,
+            ExpiresAt = expiresAt,
             User = new UserInfo
             {
                 UserCode = user.UserCode,

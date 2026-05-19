@@ -14,12 +14,12 @@ namespace Application.Core.Services.Auth;
 
 public sealed class JwtService : IJwt
 {
-    private readonly JwtConfig     _jwtConfig;
+    private readonly JwtConfig _jwtConfig;
     private readonly ITimeProvider _timeProvider;
 
     public JwtService(JwtConfig jwtConfig, ITimeProvider timeProvider)
     {
-        _jwtConfig    = jwtConfig;
+        _jwtConfig = jwtConfig;
         _timeProvider = timeProvider;
     }
 
@@ -31,7 +31,7 @@ public sealed class JwtService : IJwt
 
     private (string AccessToken, DateTime ExpiresAt) CreateAccessToken(User user)
     {
-        DateTime issuedAt  = _timeProvider.UtcNow;
+        DateTime issuedAt = _timeProvider.UtcNow;
         DateTime expiresAt = issuedAt.AddMinutes(_jwtConfig.AccessTokenExpiryMinutes);
 
         Claim[] claims =
@@ -46,17 +46,17 @@ public sealed class JwtService : IJwt
                 : []
         ];
 
-        var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject            = new ClaimsIdentity(claims),
-            Expires            = expiresAt,
-            IssuedAt           = issuedAt,
-            Issuer             = _jwtConfig.Issuer,
-            Audience           = _jwtConfig.Audience,
-            SigningCredentials  = credentials
+            Subject = new ClaimsIdentity(claims),
+            Expires = expiresAt,
+            IssuedAt = issuedAt,
+            Issuer = _jwtConfig.Issuer,
+            Audience = _jwtConfig.Audience,
+            SigningCredentials = credentials
         };
 
         string accessToken = new JsonWebTokenHandler().CreateToken(tokenDescriptor);
