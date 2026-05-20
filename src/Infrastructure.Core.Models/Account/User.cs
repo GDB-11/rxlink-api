@@ -6,10 +6,9 @@ namespace Infrastructure.Core.Models.Account;
 /// </summary>
 public sealed class User
 {
-    public required int UserId { get; init; }
     public required Guid UserCode { get; init; }
-    public required int PersonId { get; init; }
-    public required int RoleId { get; init; }
+    public required Guid PersonCode { get; init; }
+    public required string RoleName { get; init; }
     public int? SpecialtyId { get; init; }
     public required string Username { get; init; }
     public required string Email { get; init; }

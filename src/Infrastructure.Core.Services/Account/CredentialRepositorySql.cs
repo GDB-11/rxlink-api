@@ -10,10 +10,10 @@ internal static class CredentialRepositorySql
     // ── Shared column projection ──────────────────────────────────────────────
     // Reused by every SELECT that returns a User DTO.
     private const string UserProjection = """
-        u."UserId",
         u."UserCode",
         u."PersonId",
         u."RoleId",
+        r."Name" AS "RoleName",
         u."SpecialtyId",
         u."Username",
         u."Email",
@@ -29,9 +29,9 @@ internal static class CredentialRepositorySql
     private const string UserFromJoin = """
         FROM public."User"   u
         INNER JOIN public."Person" p ON p."PersonId" = u."PersonId"
+        INNER JOIN public."Role" r ON u."RoleId" = r."RoleId"
         """;
 
-    // Only active, non-deleted users are valid credentials.
     private const string ActiveUserFilter = """
         u."IsActive"  = TRUE
         AND u."DeletedAt" IS NULL

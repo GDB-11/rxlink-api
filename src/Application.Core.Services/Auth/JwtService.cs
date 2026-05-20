@@ -40,7 +40,7 @@ public sealed class JwtService : IJwt
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.Name,  $"{user.Names} {user.Surnames}"),
             new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
-            new(ClaimTypes.Role, user.RoleId.ToString()),
+            new(ClaimTypes.Role, user.RoleName),
             .. user.LicenseNumber is not null
                 ? (Claim[])[new Claim("license_number", user.LicenseNumber)]
                 : []
