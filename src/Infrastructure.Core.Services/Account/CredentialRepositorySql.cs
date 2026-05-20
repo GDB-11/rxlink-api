@@ -27,8 +27,8 @@ internal static class CredentialRepositorySql
         """;
 
     private const string UserFromJoin = """
-        FROM "User"   u
-        JOIN "Person" p ON p."PersonId" = u."PersonId"
+        FROM public."User"   u
+        INNER JOIN public."Person" p ON p."PersonId" = u."PersonId"
         """;
 
     // Only active, non-deleted users are valid credentials.
@@ -62,7 +62,7 @@ internal static class CredentialRepositorySql
     internal const string GetByRefreshToken = $"""
         SELECT {UserProjection}
         {UserFromJoin}
-        JOIN "RefreshToken" rt ON rt."UserId" = u."UserId"
+        INNER JOIN "RefreshToken" rt ON rt."UserId" = u."UserId"
         WHERE rt."TokenHash" = @TokenHash
           AND rt."RevokedAt" IS NULL
           AND rt."ExpiresAt" > @CurrentDate

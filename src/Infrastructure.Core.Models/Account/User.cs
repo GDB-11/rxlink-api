@@ -4,7 +4,7 @@ namespace Infrastructure.Core.Models.Account;
 /// Represents a system user in the context of authentication and credential management.
 /// Combines columns from the <c>User</c> and <c>Person</c> tables.
 /// </summary>
-public sealed record User
+public sealed class User
 {
     public required int UserId { get; init; }
     public required Guid UserCode { get; init; }

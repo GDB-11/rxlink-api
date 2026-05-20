@@ -18,13 +18,13 @@ public abstract class BaseDatabaseService
         await connection.ExecuteAsync(sql, entity);
 
     protected static async Task<TOut?> ExecuteFirstOrDefaultAsync<TIn, TOut>(IDbConnection connection, string sql, TIn entity) => 
-        await connection.QueryFirstOrDefaultAsync<TOut>(sql, entity);
+        await connection.QueryFirstOrDefaultAsync<TOut?>(sql, entity);
 
     protected static async Task<TOut?> ExecuteSingleOrDefaultAsync<TIn, TOut>(IDbConnection connection, string sql, TIn entity) => 
-        await connection.QuerySingleOrDefaultAsync<TOut>(sql, entity);
+        await connection.QuerySingleOrDefaultAsync<TOut?>(sql, entity);
     
     protected static async Task<TOut?> ExecuteScalarAsync<TIn, TOut>(IDbConnection connection, string sql, TIn entity) => 
-        await connection.ExecuteScalarAsync<TOut>(sql, entity);
+        await connection.ExecuteScalarAsync<TOut?>(sql, entity);
 
     protected static async Task<IEnumerable<TOut>> ExecuteQueryAsync<TOut>(IDbConnection connection, string sql) => 
         await connection.QueryAsync<TOut>(sql);
