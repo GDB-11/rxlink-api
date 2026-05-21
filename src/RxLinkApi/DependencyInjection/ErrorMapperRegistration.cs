@@ -1,5 +1,6 @@
 using Application.Core.DTOs.Auth.Errors;
 using Application.Core.DTOs.Encryption.Errors;
+using Application.Core.DTOs.Navigation.Errors;
 using RxLinkApi.Mappings;
 
 namespace RxLinkApi.DependencyInjection;
@@ -12,6 +13,7 @@ internal static class ErrorMapperRegistration
         {
             builder.Services.AddScoped<IErrorHttpMapper<ChaChaEncryptionError>, ChaChaEncryptionErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<AuthenticationError>, AuthErrorMapper>();
+            builder.Services.AddScoped<IErrorHttpMapper<NavigationError>, NavigationErrorMapper>();
         }
     }
 }

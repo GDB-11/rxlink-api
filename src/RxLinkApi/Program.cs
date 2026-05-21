@@ -75,6 +75,7 @@ app.UseHttpsRedirection();
 
 app.UseCors(app.Environment.IsDevelopment() ? "DevelopmentCors" : "ProductionCors");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -1,5 +1,7 @@
 using Infrastructure.Core.Interfaces.Account;
+using Infrastructure.Core.Interfaces.Navigation;
 using Infrastructure.Core.Services.Account;
+using Infrastructure.Core.Services.Navigation;
 
 namespace RxLinkApi.DependencyInjection;
 
@@ -10,6 +12,7 @@ internal static class RepositoryRegistration
         internal void RegisterRepositories()
         {
             builder.Services.AddScoped<ICredentialRepository, CredentialRepository>();
+            builder.Services.AddScoped<INavigationRepository, NavigationRepository>();
         }
     }
 }

@@ -8,8 +8,8 @@ using RxLinkApi.Mappings;
 namespace RxLinkApi.Controllers;
 
 /// <summary>
-/// Base controller with functional programming patterns
-/// Handles Result -> HTTP conversion and logging as side effects
+/// Base controller with functional programming patterns.
+/// Handles Result → HTTP conversion and logging as side effects.
 /// </summary>
 [ApiController]
 public abstract class FunctionalController : ControllerBase
@@ -22,8 +22,8 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an operation and converts the Result to an HTTP response
-    /// Logging happens as a side effect at the edge
+    /// Executes an operation and converts the Result to an HTTP response.
+    /// Logging happens as a side effect at the edge.
     /// </summary>
     protected IActionResult Execute<T, TError>(
         Func<Result<T, TError>> operation,
@@ -37,7 +37,7 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an async operation and converts the Result to an HTTP response
+    /// Executes an async operation and converts the Result to an HTTP response.
     /// </summary>
     protected async Task<IActionResult> ExecuteAsync<T, TError>(
         Func<Task<Result<T, TError>>> operation,
@@ -53,8 +53,8 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an async operation with authenticated user context
-    /// Automatically extracts and validates the user ID from JWT claims
+    /// Executes an async operation with authenticated user context.
+    /// Automatically extracts and validates the user ID (<c>sub</c> claim) from the JWT.
     /// </summary>
     protected async Task<IActionResult> ExecuteAuthenticatedAsync<T, TError>(
         Func<Guid, Task<Result<T, TError>>> operation,
@@ -78,7 +78,34 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an operation that returns NoContent on success
+    /// Executes an async operation with the authenticated user's role.
+    /// Extracts and validates the <see cref="ClaimTypes.Role"/> claim from the JWT,
+    /// then passes the role name to <paramref name="operation"/>.
+    /// Returns <c>401 Unauthorized</c> when the claim is absent or empty.
+    /// </summary>
+    protected async Task<IActionResult> ExecuteWithRoleAsync<T, TError>(
+        Func<string, Task<Result<T, TError>>> operation,
+        IErrorHttpMapper<TError> errorMapper,
+        string operationName,
+        Func<T, IActionResult>? successMapper = null)
+    {
+        string? roleClaim = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(roleClaim))
+        {
+            await _logger.LogErrorAsync(operationName, "Invalid or missing role claim in JWT token");
+            return Unauthorized();
+        }
+
+        Result<T, TError> result = await operation(roleClaim);
+
+        return result
+            .LogResult(_logger, operationName)
+            .ToHttpResult(errorMapper, successMapper);
+    }
+
+    /// <summary>
+    /// Executes an operation that returns NoContent on success.
     /// </summary>
     protected IActionResult ExecuteNoContent<T, TError>(
         Func<Result<T, TError>> operation,
@@ -91,7 +118,7 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an operation that returns Created (201) on success
+    /// Executes an operation that returns Created (201) on success.
     /// </summary>
     protected IActionResult ExecuteCreated<T, TError>(
         Func<Result<T, TError>> operation,
@@ -105,7 +132,7 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
-    /// Executes an operation with a custom success status code
+    /// Executes an operation with a custom success status code.
     /// </summary>
     protected IActionResult ExecuteWithStatus<T, TError>(
         Func<Result<T, TError>> operation,

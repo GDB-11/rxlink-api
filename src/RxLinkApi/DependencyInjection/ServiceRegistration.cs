@@ -1,6 +1,8 @@
 using Application.Core.Interfaces.Auth;
+using Application.Core.Interfaces.Navigation;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Services.Auth;
+using Application.Core.Services.Navigation;
 using Application.Core.Services.Shared;
 
 namespace RxLinkApi.DependencyInjection;
@@ -18,6 +20,7 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<IEncryption, EncryptionService>();
             builder.Services.AddScoped<ITimeProvider, SystemTimeProviderService>();
             builder.Services.AddScoped<IAuthentication, AuthenticationService>();
+            builder.Services.AddScoped<INavigation, NavigationService>();
         }
     }
 }
