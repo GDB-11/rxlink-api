@@ -21,4 +21,7 @@ public interface IMedicationRepository
 
     /// <summary>Soft-deletes an active medication. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, MedicationRepositoryError>> DeactivateAsync(Guid code, Guid performedByUserCode);
+    
+    /// <summary>Reactivates a previously deactivated medication. Returns the number of affected rows (0 = not found or already inactive).</summary>
+    Task<Result<int, MedicationRepositoryError>> ActivateAsync(Guid code);
 }

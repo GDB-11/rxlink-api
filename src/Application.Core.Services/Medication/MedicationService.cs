@@ -60,18 +60,25 @@ public sealed class MedicationService : IMedication
             .EnsureAsync(affected => affected > 0, new MedicationNotFoundError())
             .MapAsync(_ => Unit.Value);
 
+    /// <inheritdoc/>
+    public Task<Result<Unit, MedicationError>> ActivateAsync(Guid code, Guid performedByUserCode) =>
+        _repository.ActivateAsync(code)
+            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureAsync(affected => affected > 0, new MedicationNotFoundError())
+            .MapAsync(_ => Unit.Value);
+
     private static MedicationPageResponse BuildPageResponse(IEnumerable<MedicationRow> rows, int page, int pageSize)
     {
-        List<MedicationRow> list       = rows.ToList();
-        int                 totalCount = list.Count > 0 ? (int)list[0].TotalCount : 0;
-        int                 totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+        List<MedicationRow> list = rows.ToList();
+        int totalCount = list.Count > 0 ? (int)list[0].TotalCount : 0;
+        int totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
 
         return new MedicationPageResponse
         {
-            Items      = list.Select(MapToResponse).ToList(),
+            Items = list.Select(MapToResponse).ToList(),
             TotalCount = totalCount,
-            Page       = page,
-            PageSize   = pageSize,
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages
         };
     }
@@ -79,14 +86,14 @@ public sealed class MedicationService : IMedication
     private static MedicationResponse MapToResponse(MedicationRow row) =>
         new()
         {
-            MedicationCode          = row.MedicationCode,
-            PharmaceuticalFormId    = row.PharmaceuticalFormId,
-            PharmaceuticalFormName  = row.PharmaceuticalFormName,
-            AdministrationRouteId   = row.AdministrationRouteId,
+            MedicationCode = row.MedicationCode,
+            PharmaceuticalFormId = row.PharmaceuticalFormId,
+            PharmaceuticalFormName = row.PharmaceuticalFormName,
+            AdministrationRouteId = row.AdministrationRouteId,
             AdministrationRouteName = row.AdministrationRouteName,
-            GenericName             = row.GenericName,
-            CommercialName          = row.CommercialName,
-            Concentration           = row.Concentration,
-            IsActive                = row.IsActive
+            GenericName = row.GenericName,
+            CommercialName = row.CommercialName,
+            Concentration = row.Concentration,
+            IsActive = row.IsActive
         };
 }

@@ -112,4 +112,18 @@ internal static class MedicationRepositorySql
         WHERE "MedicationCode" = @Code
           AND "IsActive" = TRUE
         """;
+    
+    /// <summary>
+    /// Reactivates a previously deactivated medication.
+    /// Affects 0 rows when the code does not match an active record.
+    /// </summary>
+    internal const string Activate = """
+        UPDATE "Medication"
+        SET
+            "IsActive"  = TRUE,
+            "DeletedAt" = NULL,
+            "DeletedBy" = NULL
+        WHERE "MedicationCode" = @Code
+          AND "IsActive" = FALSE
+        """;
 }

@@ -90,4 +90,21 @@ public sealed class MedicationsController : FunctionalController
             operationName: nameof(Deactivate),
             successMapper: _ => NoContent()
         );
+    
+    /// <summary>
+    /// Deactivates a medication (soft-delete). The record is preserved to maintain FK integrity.
+    /// </summary>
+    [HttpPatch("{code:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> Activate(Guid code) =>
+        ExecuteAuthenticatedAsync(
+            operation:     userCode => _medicationService.ActivateAsync(code, userCode),
+            errorMapper:   _errorMapper,
+            operationName: nameof(Deactivate),
+            successMapper: _ => NoContent()
+        );
 }

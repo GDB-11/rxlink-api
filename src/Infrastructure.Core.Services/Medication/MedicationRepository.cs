@@ -78,4 +78,14 @@ public sealed class MedicationRepository : BaseDatabaseService, IMedicationRepos
                 new { Code = code, UserCode = performedByUserCode }),
             errorFactory: MedicationRepositoryError (ex) => new DeactivateMedicationError(ex.Message, ex)
         );
+    
+    /// <inheritdoc/>
+    public async Task<Result<int, MedicationRepositoryError>> ActivateAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                MedicationRepositorySql.Activate,
+                new { Code = code }),
+            errorFactory: MedicationRepositoryError (ex) => new DeactivateMedicationError(ex.Message, ex)
+        );
 }
