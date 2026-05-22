@@ -1,7 +1,9 @@
 using Application.Core.Interfaces.Auth;
+using Application.Core.Interfaces.Medication;
 using Application.Core.Interfaces.Navigation;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Services.Auth;
+using Application.Core.Services.Medication;
 using Application.Core.Services.Navigation;
 using Application.Core.Services.Shared;
 
@@ -21,6 +23,7 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<ITimeProvider, SystemTimeProviderService>();
             builder.Services.AddScoped<IAuthentication, AuthenticationService>();
             builder.Services.AddScoped<INavigation, NavigationService>();
+            builder.Services.AddScoped<IMedication, MedicationService>();
         }
     }
 }

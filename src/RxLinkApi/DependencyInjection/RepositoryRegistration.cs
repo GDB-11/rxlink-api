@@ -1,6 +1,8 @@
 using Infrastructure.Core.Interfaces.Account;
+using Infrastructure.Core.Interfaces.Medication;
 using Infrastructure.Core.Interfaces.Navigation;
 using Infrastructure.Core.Services.Account;
+using Infrastructure.Core.Services.Medication;
 using Infrastructure.Core.Services.Navigation;
 
 namespace RxLinkApi.DependencyInjection;
@@ -13,6 +15,7 @@ internal static class RepositoryRegistration
         {
             builder.Services.AddScoped<ICredentialRepository, CredentialRepository>();
             builder.Services.AddScoped<INavigationRepository, NavigationRepository>();
+            builder.Services.AddScoped<IMedicationRepository, MedicationRepository>();
         }
     }
 }
