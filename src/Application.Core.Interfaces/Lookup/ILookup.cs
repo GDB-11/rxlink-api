@@ -7,4 +7,5 @@ namespace Application.Core.Interfaces.Lookup;
 public interface ILookup
 {
     Task<Result<MedicationLookupsResponse, LookupError>> GetMedicationLookupsAsync();
+    Task<Result<UserLookupsResponse, LookupError>> GetUserLookupsAsync();
 }

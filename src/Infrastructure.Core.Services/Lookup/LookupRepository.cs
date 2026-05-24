@@ -28,4 +28,32 @@ public sealed class LookupRepository : BaseDatabaseService, ILookupRepository
             operation:    async () => await ExecuteQueryAsync<LookupRow>(_connection, LookupRepositorySql.GetAdministrationRoutes),
             errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
         );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetSexesAsync() =>
+        await Result.TryAsync(
+            operation:    async () => await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetSexes),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveDocumentTypesAsync() =>
+        await Result.TryAsync(
+            operation:    async () => await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetActiveDocumentTypes),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveRolesAsync() =>
+        await Result.TryAsync(
+            operation:    async () => await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetActiveRoles),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveSpecialtiesAsync() =>
+        await Result.TryAsync(
+            operation:    async () => await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetActiveSpecialties),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
 }

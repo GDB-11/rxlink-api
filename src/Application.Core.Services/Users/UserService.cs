@@ -5,6 +5,7 @@ using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Users;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Models.Users;
 
@@ -38,7 +39,7 @@ public sealed class UserService : IUser
             .BindAsync(passwordHash => _repository.InsertAsync(
                     names: request.Names,
                     surnames: request.Surnames,
-                    birthDate: request.BirthDate,
+                    birthDate: request.BirthDate.ToDateTime(),
                     sexCode: request.SexCode,
                     phone: request.Phone,
                     alternativePhone: request.AlternativePhone,
@@ -48,8 +49,8 @@ public sealed class UserService : IUser
                     emergencyContactPhone: request.EmergencyContactPhone,
                     documentTypeCode: request.DocumentTypeCode,
                     documentNumber: request.DocumentNumber,
-                    documentIssueDate: request.DocumentIssueDate,
-                    documentExpirationDate: request.DocumentExpirationDate,
+                    documentIssueDate: request.DocumentIssueDate.ToDateTime(),
+                    documentExpirationDate: request.DocumentExpirationDate.ToDateTime(),
                     roleName: request.RoleName,
                     specialtyCode: request.SpecialtyCode,
                     username: request.Username,
@@ -66,7 +67,7 @@ public sealed class UserService : IUser
                 code: code,
                 names: request.Names,
                 surnames: request.Surnames,
-                birthDate: request.BirthDate,
+                birthDate: request.BirthDate.ToDateTime(),
                 sexCode: request.SexCode,
                 phone: request.Phone,
                 alternativePhone: request.AlternativePhone,
@@ -76,8 +77,8 @@ public sealed class UserService : IUser
                 emergencyContactPhone: request.EmergencyContactPhone,
                 documentTypeCode: request.DocumentTypeCode,
                 documentNumber: request.DocumentNumber,
-                documentIssueDate: request.DocumentIssueDate,
-                documentExpirationDate: request.DocumentExpirationDate,
+                documentIssueDate: request.DocumentIssueDate.ToDateTime(),
+                documentExpirationDate: request.DocumentExpirationDate.ToDateTime(),
                 roleName: request.RoleName,
                 specialtyCode: request.SpecialtyCode,
                 username: request.Username,

@@ -40,4 +40,19 @@ public sealed class LookupsController : FunctionalController
             errorMapper:   _errorMapper,
             operationName: nameof(GetMedicationLookups)
         );
+
+    /// <summary>
+    /// Returns sexes, document types, roles and active specialties used by the user form.
+    /// </summary>
+    [HttpGet("users")]
+    [ProducesResponseType(typeof(UserLookupsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetUserLookups() =>
+        ExecuteAsync(
+            operation:     () => _lookupService.GetUserLookupsAsync(),
+            errorMapper:   _errorMapper,
+            operationName: nameof(GetUserLookups)
+        );
 }

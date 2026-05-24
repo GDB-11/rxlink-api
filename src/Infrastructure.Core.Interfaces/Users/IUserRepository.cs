@@ -16,11 +16,11 @@ public interface IUserRepository
     /// Throws on unique constraint violations (duplicate username/email).
     /// </summary>
     Task<Result<UserRow?, UserRepositoryError>> InsertAsync(
-        string names, string surnames, DateOnly birthDate, Guid sexCode,
+        string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string personEmail,
         string? address, string? emergencyContactName, string? emergencyContactPhone,
         Guid documentTypeCode, string documentNumber,
-        DateOnly? documentIssueDate, DateOnly? documentExpirationDate,
+        DateTime? documentIssueDate, DateTime? documentExpirationDate,
         string roleName, Guid? specialtyCode,
         string username, string email, string passwordHash, string? licenseNumber);
 
@@ -31,11 +31,11 @@ public interface IUserRepository
     /// </summary>
     Task<Result<UserRow?, UserRepositoryError>> UpdateAsync(
         Guid code,
-        string names, string surnames, DateOnly birthDate, Guid sexCode,
+        string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string personEmail,
         string? address, string? emergencyContactName, string? emergencyContactPhone,
         Guid documentTypeCode, string documentNumber,
-        DateOnly? documentIssueDate, DateOnly? documentExpirationDate,
+        DateTime? documentIssueDate, DateTime? documentExpirationDate,
         string roleName, Guid? specialtyCode,
         string username, string email, string? licenseNumber);
 

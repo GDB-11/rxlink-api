@@ -55,8 +55,7 @@ internal static class UserRepositorySql
         INNER JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
         INNER JOIN "Role" r ON r."RoleId" = u."RoleId"
         LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
-        WHERE u."DeletedAt" IS NULL
-          AND (@Search IS NULL OR
+        WHERE (@Search IS NULL OR
                p."Names"    ILIKE '%' || @Search || '%' OR
                p."Surnames" ILIKE '%' || @Search || '%' OR
                u."Username" ILIKE '%' || @Search || '%' OR
@@ -303,7 +302,7 @@ internal static class UserRepositorySql
             "DeletedAt" = NULL,
             "DeletedBy" = NULL
         WHERE "UserCode"  = @Code
-          AND "IsActive"  = TRUE
-          AND "DeletedAt" IS NULL
+          AND "IsActive"  = FALSE
+          AND "DeletedAt" IS NOT NULL
         """;
 }

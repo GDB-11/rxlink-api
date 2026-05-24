@@ -13,4 +13,31 @@ internal static class LookupRepositorySql
         FROM   "AdministrationRoute"
         ORDER  BY "AdministrationRouteId"
         """;
+
+    internal const string GetSexes = """
+        SELECT "SexCode" AS "Code", "Name"
+        FROM   "Sex"
+        ORDER  BY "Name"
+        """;
+
+    internal const string GetActiveDocumentTypes = """
+        SELECT "DocumentTypeCode" AS "Code", "Name"
+        FROM   "DocumentType"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "Name"
+        """;
+
+    internal const string GetActiveRoles = """
+        SELECT "RoleCode" AS "Code", "Name"
+        FROM   "Role"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "Name"
+        """;
+
+    internal const string GetActiveSpecialties = """
+        SELECT "SpecialtyCode" AS "Code", "Name"
+        FROM   "Specialty"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "Name"
+        """;
 }
