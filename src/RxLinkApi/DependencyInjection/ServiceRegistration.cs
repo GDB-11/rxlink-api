@@ -3,11 +3,13 @@ using Application.Core.Interfaces.Lookup;
 using Application.Core.Interfaces.Medication;
 using Application.Core.Interfaces.Navigation;
 using Application.Core.Interfaces.Shared;
+using Application.Core.Interfaces.Users;
 using Application.Core.Services.Auth;
 using Application.Core.Services.Lookup;
 using Application.Core.Services.Medication;
 using Application.Core.Services.Navigation;
 using Application.Core.Services.Shared;
+using Application.Core.Services.Users;
 
 namespace RxLinkApi.DependencyInjection;
 
@@ -27,6 +29,7 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<INavigation, NavigationService>();
             builder.Services.AddScoped<IMedication, MedicationService>();
             builder.Services.AddScoped<ILookup, LookupService>();
+            builder.Services.AddScoped<IUser, UserService>();
         }
     }
 }
