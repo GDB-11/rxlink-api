@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc;
 using RxLinkApi.DependencyInjection;
 using Scalar.AspNetCore;
 
@@ -16,7 +17,25 @@ builder.RegisterErrorMappers();
 
 builder.RegisterApplicationServices();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            Dictionary<string, string[]> errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .ToDictionary(
+                    kvp => char.ToLowerInvariant(kvp.Key[0]) + kvp.Key[1..],
+                    kvp => kvp.Value!.Errors.Select(e => e.ErrorMessage).ToArray()
+                );
+
+            return new BadRequestObjectResult(new
+            {
+                title  = "One or more validation errors occurred.",
+                errors
+            });
+        };
+    });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
