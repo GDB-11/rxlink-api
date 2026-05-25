@@ -1,9 +1,11 @@
 using Infrastructure.Core.Interfaces.Account;
+using Infrastructure.Core.Interfaces.Allergy;
 using Infrastructure.Core.Interfaces.Lookup;
 using Infrastructure.Core.Interfaces.Medication;
 using Infrastructure.Core.Interfaces.Navigation;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Services.Account;
+using Infrastructure.Core.Services.Allergy;
 using Infrastructure.Core.Services.Lookup;
 using Infrastructure.Core.Services.Medication;
 using Infrastructure.Core.Services.Navigation;
@@ -18,6 +20,7 @@ internal static class RepositoryRegistration
         internal void RegisterRepositories()
         {
             builder.Services.AddScoped<ICredentialRepository, CredentialRepository>();
+            builder.Services.AddScoped<IAllergyRepository, AllergyRepository>();
             builder.Services.AddScoped<INavigationRepository, NavigationRepository>();
             builder.Services.AddScoped<IMedicationRepository, MedicationRepository>();
             builder.Services.AddScoped<ILookupRepository, LookupRepository>();

@@ -1,9 +1,11 @@
+using Application.Core.Interfaces.Allergy;
 using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Lookup;
 using Application.Core.Interfaces.Medication;
 using Application.Core.Interfaces.Navigation;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Interfaces.Users;
+using Application.Core.Services.Allergy;
 using Application.Core.Services.Auth;
 using Application.Core.Services.Lookup;
 using Application.Core.Services.Medication;
@@ -19,6 +21,7 @@ internal static class ServiceRegistration
     {
         internal void RegisterApplicationServices()
         {
+            builder.Services.AddScoped<IAllergy, AllergyService>();
             builder.Services.AddScoped<IJwt, JwtService>();
             builder.Services.AddScoped<IPassword, PasswordService>();
             builder.Services.AddScoped<IChaChaEncryption, ChaChaEncryptionService>();
