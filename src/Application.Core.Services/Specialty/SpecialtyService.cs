@@ -19,6 +19,7 @@ public sealed class SpecialtyService : ISpecialty
     }
     
     
+    /// <inheritdoc/>
     public Task<Result<SpecialtyPageResponse, SpecialtyError>> GetPageAsync(SpecialtyPageRequest request)
     {
         int offset = (request.Page - 1) * request.PageSize;
@@ -28,24 +29,28 @@ public sealed class SpecialtyService : ISpecialty
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
     }
 
+    /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> CreateAsync(CreateSpecialtyRequest request) =>
             _repository.InsertAsync(request.Name)
                 .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
                 .EnsureNotNullAsync(new SpecialtyDataAccessError("No se pudo registrar la especialidad."))
                 .MapAsync(MapToResponse);
 
+    /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> UpdateAsync(Guid code, UpdateSpecialtyRequest request) =>
         _repository.UpdateAsync(code, request.Name)
             .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyNotFoundError())
             .MapAsync(MapToResponse);
 
+    /// <inheritdoc/>
     public Task<Result<Unit, SpecialtyError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.DeactivateAsync(code, performedByUserCode)
             .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new SpecialtyNotFoundError())
             .MapAsync(_ => Unit.Value);
 
+    /// <inheritdoc/>
     public Task<Result<Unit, SpecialtyError>> ActivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.ActivateAsync(code)
             .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))

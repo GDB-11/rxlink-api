@@ -4,6 +4,7 @@ using Application.Core.DTOs.Encryption.Errors;
 using Application.Core.DTOs.Lookup.Errors;
 using Application.Core.DTOs.Medication.Errors;
 using Application.Core.DTOs.Navigation.Errors;
+using Application.Core.DTOs.Specialty.Errors;
 using Application.Core.DTOs.User.Errors;
 using RxLinkApi.Mappings;
 
@@ -22,6 +23,7 @@ internal static class ErrorMapperRegistration
             builder.Services.AddScoped<IErrorHttpMapper<MedicationError>, MedicationErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<LookupError>, LookupErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<UserError>, UserErrorMapper>();
+            builder.Services.AddScoped<IErrorHttpMapper<SpecialtyError>, SpecialtyErrorMapper>();
         }
     }
 }

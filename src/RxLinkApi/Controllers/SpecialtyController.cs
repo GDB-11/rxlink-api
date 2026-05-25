@@ -44,7 +44,7 @@ public sealed class SpecialtyController : FunctionalController
     /// Registers a new specialty in the catalog.
     /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(SpecialtyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SpecialtyResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -90,7 +90,7 @@ public sealed class SpecialtyController : FunctionalController
         );
     
     /// <summary>
-    /// Deactivates a specialty (soft-delete). The record is preserved to maintain FK integrity.
+    /// Activates a specialty.
     /// </summary>
     [HttpPatch("{code:guid}/activate")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -102,7 +102,7 @@ public sealed class SpecialtyController : FunctionalController
         ExecuteAuthenticatedAsync(
             operation:     userCode => _specialtyService.ActivateAsync(code, userCode),
             errorMapper:   _errorMapper,
-            operationName: nameof(Deactivate),
+            operationName: nameof(Activate),
             successMapper: _ => NoContent()
         );
 }

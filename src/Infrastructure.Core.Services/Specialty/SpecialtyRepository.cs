@@ -1,11 +1,8 @@
 ﻿using System.Data;
 using BindSharp;
-using Infrastructure.Core.DTOs.Medication;
 using Infrastructure.Core.DTOs.Specialty;
 using Infrastructure.Core.Interfaces.Specialty;
-using Infrastructure.Core.Models.Medication;
 using Infrastructure.Core.Models.Specialty;
-using Infrastructure.Core.Services.Medication;
 
 namespace Infrastructure.Core.Services.Specialty;
 
