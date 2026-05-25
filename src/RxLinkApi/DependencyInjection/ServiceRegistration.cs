@@ -3,6 +3,7 @@ using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Lookup;
 using Application.Core.Interfaces.Medication;
 using Application.Core.Interfaces.Navigation;
+using Application.Core.Interfaces.Patient;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Interfaces.Specialty;
 using Application.Core.Interfaces.Users;
@@ -11,6 +12,7 @@ using Application.Core.Services.Auth;
 using Application.Core.Services.Lookup;
 using Application.Core.Services.Medication;
 using Application.Core.Services.Navigation;
+using Application.Core.Services.Patient;
 using Application.Core.Services.Shared;
 using Application.Core.Services.Specialty;
 using Application.Core.Services.Users;
@@ -24,6 +26,7 @@ internal static class ServiceRegistration
         internal void RegisterApplicationServices()
         {
             builder.Services.AddScoped<IAllergy, AllergyService>();
+            builder.Services.AddScoped<IPatient, PatientService>();
             builder.Services.AddScoped<IJwt, JwtService>();
             builder.Services.AddScoped<IPassword, PasswordService>();
             builder.Services.AddScoped<IChaChaEncryption, ChaChaEncryptionService>();
