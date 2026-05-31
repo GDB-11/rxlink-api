@@ -37,4 +37,11 @@ public sealed record CreatePersonRequest
 
     [MaxLength(30, ErrorMessage = "EmergencyContactPhone must not exceed 30 characters.")]
     public string? EmergencyContactPhone { get; init; }
+
+    [Required(ErrorMessage = "DocumentTypeCode is required.")]
+    public required Guid DocumentTypeCode { get; init; }
+
+    [Required(ErrorMessage = "DocumentNumber is required.")]
+    [MaxLength(50, ErrorMessage = "DocumentNumber must not exceed 50 characters.")]
+    public required string DocumentNumber { get; init; }
 }

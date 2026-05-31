@@ -4,6 +4,7 @@ using Application.Core.DTOs.Person.Response;
 using Application.Core.Interfaces.Person;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.Interfaces.Person;
 using Infrastructure.Core.Models.Person;
 
@@ -31,9 +32,10 @@ public sealed class PersonService : IPerson
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>
         _repository.InsertAsync(
-            request.Names, request.Surnames, request.BirthDate, request.SexCode,
+            request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
             request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone)
+            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
+            request.DocumentTypeCode, request.DocumentNumber)
             .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PersonDataAccessError("No se pudo registrar la persona."))
             .MapAsync(MapToResponse);
@@ -41,9 +43,10 @@ public sealed class PersonService : IPerson
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> UpdateAsync(Guid code, UpdatePersonRequest request) =>
         _repository.UpdateAsync(
-            code, request.Names, request.Surnames, request.BirthDate, request.SexCode,
+            code, request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
             request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone)
+            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
+            request.DocumentTypeCode, request.DocumentNumber)
             .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PersonNotFoundError())
             .MapAsync(MapToResponse);
@@ -78,6 +81,9 @@ public sealed class PersonService : IPerson
             Email = row.Email,
             Address = row.Address,
             EmergencyContactName = row.EmergencyContactName,
-            EmergencyContactPhone = row.EmergencyContactPhone
+            EmergencyContactPhone = row.EmergencyContactPhone,
+            DocumentTypeCode = row.DocumentTypeCode,
+            DocumentTypeName = row.DocumentTypeName,
+            DocumentNumber = row.DocumentNumber
         };
 }

@@ -14,5 +14,8 @@ public sealed class PersonRow
     public string? Address { get; init; }
     public string? EmergencyContactName { get; init; }
     public string? EmergencyContactPhone { get; init; }
+    public Guid? DocumentTypeCode { get; init; }
+    public string? DocumentTypeName { get; init; }
+    public string? DocumentNumber { get; init; }
     public required long TotalCount { get; init; }
 }

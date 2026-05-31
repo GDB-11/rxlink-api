@@ -28,9 +28,10 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
 
     /// <inheritdoc/>
     public async Task<Result<PersonRow?, PersonRepositoryError>> InsertAsync(
-        string names, string surnames, DateOnly birthDate, Guid sexCode,
+        string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
-        string? address, string? emergencyContactName, string? emergencyContactPhone) =>
+        string? address, string? emergencyContactName, string? emergencyContactPhone,
+        Guid documentTypeCode, string documentNumber) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
                 _connection,
@@ -46,16 +47,19 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
                     Email = email,
                     Address = address,
                     EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone
+                    EmergencyContactPhone = emergencyContactPhone,
+                    DocumentTypeCode = documentTypeCode,
+                    DocumentNumber = documentNumber
                 }),
             errorFactory: PersonRepositoryError (ex) => new InsertPersonError(ex.Message, ex)
         );
 
     /// <inheritdoc/>
     public async Task<Result<PersonRow?, PersonRepositoryError>> UpdateAsync(
-        Guid code, string names, string surnames, DateOnly birthDate, Guid sexCode,
+        Guid code, string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
-        string? address, string? emergencyContactName, string? emergencyContactPhone) =>
+        string? address, string? emergencyContactName, string? emergencyContactPhone,
+        Guid documentTypeCode, string documentNumber) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
                 _connection,
@@ -72,7 +76,9 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
                     Email = email,
                     Address = address,
                     EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone
+                    EmergencyContactPhone = emergencyContactPhone,
+                    DocumentTypeCode = documentTypeCode,
+                    DocumentNumber = documentNumber
                 }),
             errorFactory: PersonRepositoryError (ex) => new UpdatePersonError(ex.Message, ex)
         );

@@ -9,15 +9,17 @@ public interface IPersonRepository
     /// <summary>Returns one page of persons, with a total count via window function.</summary>
     Task<Result<IEnumerable<PersonRow>, PersonRepositoryError>> GetPageAsync(int offset, int limit, string? search);
 
-    /// <summary>Inserts a new person and returns the created row, or <c>null</c> on unexpected failure.</summary>
+    /// <summary>Inserts a new person with its primary document and returns the created row, or <c>null</c> on unexpected failure.</summary>
     Task<Result<PersonRow?, PersonRepositoryError>> InsertAsync(
-        string names, string surnames, DateOnly birthDate, Guid sexCode,
+        string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
-        string? address, string? emergencyContactName, string? emergencyContactPhone);
+        string? address, string? emergencyContactName, string? emergencyContactPhone,
+        Guid documentTypeCode, string documentNumber);
 
-    /// <summary>Updates a person by code. Returns <c>null</c> when no matching row exists.</summary>
+    /// <summary>Updates a person by code, replacing its documents. Returns <c>null</c> when no matching row exists.</summary>
     Task<Result<PersonRow?, PersonRepositoryError>> UpdateAsync(
-        Guid code, string names, string surnames, DateOnly birthDate, Guid sexCode,
+        Guid code, string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
-        string? address, string? emergencyContactName, string? emergencyContactPhone);
+        string? address, string? emergencyContactName, string? emergencyContactPhone,
+        Guid documentTypeCode, string documentNumber);
 }
