@@ -14,10 +14,13 @@ internal static class PatientRepositorySql
                 'PatientAllergyCode', pa."PatientAllergyCode",
                 'AllergyCode',        a."AllergyCode",
                 'AllergyName',        a."Name",
+                'SeverityCode',       sv."SeverityCode",
+                'SeverityName',       sv."Name",
                 'Notes',              pa."Notes"
             ) ORDER BY a."Name")
             FROM "PatientAllergy" pa
             JOIN "Allergy" a ON a."AllergyId" = pa."AllergyId"
+            LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = pa."SeverityId"
             WHERE pa."PatientId" = pat."PatientId"
               AND pa."DeletedAt" IS NULL
             ),
@@ -81,12 +84,14 @@ internal static class PatientRepositorySql
             RETURNING *
         ),
         ins_allergies AS (
-            INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "Notes")
-            SELECT ip."PatientId", a."AllergyId", elem->>'Notes'
+            INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "SeverityId", "Notes")
+            SELECT ip."PatientId", a."AllergyId", sv."SeverityId", elem->>'Notes'
             FROM ins_patient ip
             CROSS JOIN json_array_elements(COALESCE(@AllergiesJson::json, '[]'::json)) AS elem
             JOIN "Allergy" a ON a."AllergyCode" = (elem->>'AllergyCode')::uuid
                              AND a."IsActive" = TRUE
+            LEFT JOIN "AllergySeverity" sv ON sv."SeverityCode" = (elem->>'SeverityCode')::uuid
+                                          AND sv."IsActive" = TRUE
             RETURNING *
         )
         SELECT
@@ -108,10 +113,13 @@ internal static class PatientRepositorySql
                     'PatientAllergyCode', ia."PatientAllergyCode",
                     'AllergyCode',        a."AllergyCode",
                     'AllergyName',        a."Name",
+                    'SeverityCode',       sv."SeverityCode",
+                    'SeverityName',       sv."Name",
                     'Notes',              ia."Notes"
                 ) ORDER BY a."Name")
                 FROM ins_allergies ia
                 JOIN "Allergy" a ON a."AllergyId" = ia."AllergyId"
+                LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = ia."SeverityId"
                 WHERE ia."PatientId" = ip."PatientId"
                 ),
                 '[]'::json
@@ -152,10 +160,13 @@ internal static class PatientRepositorySql
                     'PatientAllergyCode', pa."PatientAllergyCode",
                     'AllergyCode',        a."AllergyCode",
                     'AllergyName',        a."Name",
+                    'SeverityCode',       sv."SeverityCode",
+                    'SeverityName',       sv."Name",
                     'Notes',              pa."Notes"
                 ) ORDER BY a."Name")
                 FROM "PatientAllergy" pa
                 JOIN "Allergy" a ON a."AllergyId" = pa."AllergyId"
+                LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = pa."SeverityId"
                 WHERE pa."PatientId" = upd_patient."PatientId"
                   AND pa."DeletedAt" IS NULL
                 ),

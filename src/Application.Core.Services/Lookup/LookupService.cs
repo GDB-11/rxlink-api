@@ -71,6 +71,20 @@ public sealed class LookupService : ILookup
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<PatientLookupsResponse, LookupError>> GetPatientLookupsAsync()
+    {
+        var severitiesResult = await _repository.GetAllergySeveritiesAsync();
+        if (severitiesResult.IsFailure)
+            return Result<PatientLookupsResponse, LookupError>.Failure(
+                new LookupDataAccessError(severitiesResult.Error!.Message, severitiesResult.Error.Details, severitiesResult.Error.Exception));
+
+        return Result<PatientLookupsResponse, LookupError>.Success(new PatientLookupsResponse
+        {
+            AllergySeverities = [.. severitiesResult.Value!.Select(ToGuidItem)]
+        });
+    }
+
     private static LookupItemResponse ToItem(LookupRow row) =>
         new() { Id = row.Id, Name = row.Name };
 

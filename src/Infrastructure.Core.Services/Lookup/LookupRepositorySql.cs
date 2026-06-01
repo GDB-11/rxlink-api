@@ -40,4 +40,11 @@ internal static class LookupRepositorySql
         WHERE  "IsActive" = TRUE
         ORDER  BY "Name"
         """;
+
+    internal const string GetAllergySeverities = """
+        SELECT "SeverityCode" AS "Code", "Name"
+        FROM   "AllergySeverity"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "SortOrder"
+        """;
 }

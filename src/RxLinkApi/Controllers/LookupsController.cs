@@ -8,7 +8,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Administrador")]
+[Authorize(Roles = "Administrador,Doctor")]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class LookupsController : FunctionalController
@@ -54,5 +54,20 @@ public sealed class LookupsController : FunctionalController
             operation:     () => _lookupService.GetUserLookupsAsync(),
             errorMapper:   _errorMapper,
             operationName: nameof(GetUserLookups)
+        );
+
+    /// <summary>
+    /// Returns allergy severities used by the patient form.
+    /// </summary>
+    [HttpGet("patients")]
+    [ProducesResponseType(typeof(PatientLookupsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetPatientLookups() =>
+        ExecuteAsync(
+            operation:     () => _lookupService.GetPatientLookupsAsync(),
+            errorMapper:   _errorMapper,
+            operationName: nameof(GetPatientLookups)
         );
 }

@@ -8,4 +8,5 @@ public interface ILookup
 {
     Task<Result<MedicationLookupsResponse, LookupError>> GetMedicationLookupsAsync();
     Task<Result<UserLookupsResponse, LookupError>> GetUserLookupsAsync();
+    Task<Result<PatientLookupsResponse, LookupError>> GetPatientLookupsAsync();
 }

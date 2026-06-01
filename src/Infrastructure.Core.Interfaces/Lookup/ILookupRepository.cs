@@ -12,4 +12,5 @@ public interface ILookupRepository
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveDocumentTypesAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveRolesAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveSpecialtiesAsync();
+    Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetAllergySeveritiesAsync();
 }

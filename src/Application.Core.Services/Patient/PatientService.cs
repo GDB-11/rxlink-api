@@ -36,7 +36,7 @@ public sealed class PatientService : IPatient
     public Task<Result<PatientResponse, PatientError>> CreateAsync(CreatePatientRequest request)
     {
         string allergiesJson = JsonSerializer.Serialize(
-            request.Allergies.Select(a => new { AllergyCode = a.AllergyCode, Notes = a.Notes }));
+            request.Allergies.Select(a => new { AllergyCode = a.AllergyCode, SeverityCode = a.SeverityCode, Notes = a.Notes }));
 
         return _repository.InsertAsync(request.PersonCode, allergiesJson)
             .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
