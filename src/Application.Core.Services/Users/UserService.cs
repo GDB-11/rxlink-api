@@ -61,6 +61,13 @@ public sealed class UserService : IUser
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
+    public Task<Result<UserResponse, UserError>> UpdateRoleAsync(Guid code, UpdateUserRoleRequest request) =>
+        _repository.UpdateRoleAsync(code, request.RoleName)
+            .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new UserNotFoundError())
+            .MapAsync(MapToResponse);
+
+    /// <inheritdoc/>
     public Task<Result<Unit, UserError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.DeactivateAsync(code, performedByUserCode)
             .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))

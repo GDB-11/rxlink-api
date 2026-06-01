@@ -73,6 +73,16 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
         );
 
     /// <inheritdoc/>
+    public async Task<Result<UserRow?, UserRepositoryError>> UpdateRoleAsync(Guid code, string roleName) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, UserRow>(
+                _connection,
+                UserRepositorySql.UpdateRole,
+                new { Code = code, RoleName = roleName }),
+            errorFactory: UserRepositoryError (ex) => new UpdateUserError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<int, UserRepositoryError>> DeactivateAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(

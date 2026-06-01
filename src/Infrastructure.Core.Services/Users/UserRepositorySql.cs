@@ -231,6 +231,76 @@ internal static class UserRepositorySql
         """;
 
     /// <summary>
+    /// Updates only the RoleId of an active user. Specialty, username, email and
+    /// license are preserved. Resolves the role via <c>refs</c> CTE, then updates
+    /// only <c>RoleId</c>. Returns no rows when the user is not found/deleted or
+    /// the role name is invalid/inactive.
+    /// </summary>
+    internal const string UpdateRole = """
+        WITH refs AS (
+            SELECT
+                r."RoleId",
+                r."RoleCode",
+                r."Name"   AS "RoleName"
+            FROM "Role" r
+            WHERE r."Name"     = @RoleName
+              AND r."IsActive" = TRUE
+        ),
+        upd_user AS (
+            UPDATE "User" u
+            SET "RoleId" = refs."RoleId"
+            FROM refs
+            WHERE u."UserCode"  = @Code
+              AND u."IsActive"  = TRUE
+              AND u."DeletedAt" IS NULL
+            RETURNING u."PersonId", u."UserCode", u."Username", u."Email",
+                      u."LicenseNumber", u."SpecialtyId", u."IsActive", u."CreatedAt"
+        )
+        SELECT
+            uu."UserCode",
+            p."PersonCode",
+            p."Names",
+            p."Surnames",
+            p."BirthDate",
+            s."SexCode",
+            s."Name"                AS "SexName",
+            p."Phone",
+            p."AlternativePhone",
+            p."Email"               AS "PersonEmail",
+            p."Address",
+            p."EmergencyContactName",
+            p."EmergencyContactPhone",
+            dt."DocumentTypeCode",
+            dt."Name"               AS "DocumentTypeName",
+            pd."Number"             AS "DocumentNumber",
+            pd."IssueDate"          AS "DocumentIssueDate",
+            pd."ExpirationDate"     AS "DocumentExpirationDate",
+            refs."RoleCode",
+            refs."RoleName",
+            sp."SpecialtyCode",
+            sp."Name"               AS "SpecialtyName",
+            uu."Username",
+            uu."Email",
+            uu."LicenseNumber",
+            uu."IsActive",
+            uu."CreatedAt",
+            0                       AS "TotalCount"
+        FROM upd_user uu
+        INNER JOIN refs ON TRUE
+        INNER JOIN "Person" p ON p."PersonId" = uu."PersonId"
+        INNER JOIN "Sex" s ON s."SexId" = p."SexId"
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM "PersonDocument"
+            WHERE "PersonId" = p."PersonId"
+            ORDER BY "PersonDocumentId" DESC
+            LIMIT 1
+        ) pd ON TRUE
+        LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
+        LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = uu."SpecialtyId"
+        """;
+
+    /// <summary>
     /// Soft-deletes an active user.
     /// <c>DeletedBy</c> is resolved from the caller's <c>UserCode</c> via a subquery.
     /// Affects 0 rows when the code does not match an active, non-deleted record.

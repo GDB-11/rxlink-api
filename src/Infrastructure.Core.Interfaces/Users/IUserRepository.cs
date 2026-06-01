@@ -29,6 +29,13 @@ public interface IUserRepository
         string roleName, Guid? specialtyCode,
         string username, string email, string? licenseNumber);
 
+    /// <summary>
+    /// Updates only the RoleId of an existing active user.
+    /// Specialty, username, email and license are preserved.
+    /// Returns <c>null</c> when the user is not found/deleted or the role name is invalid/inactive.
+    /// </summary>
+    Task<Result<UserRow?, UserRepositoryError>> UpdateRoleAsync(Guid code, string roleName);
+
     /// <summary>Soft-deletes an active user. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, UserRepositoryError>> DeactivateAsync(Guid code, Guid performedByUserCode);
 
