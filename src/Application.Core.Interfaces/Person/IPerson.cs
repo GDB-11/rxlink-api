@@ -10,6 +10,12 @@ public interface IPerson
     /// <summary>Returns a paginated list of persons. Supports optional text search on names or surnames.</summary>
     Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request);
 
+    /// <summary>
+    /// Returns persons available for linking (picker use). Optionally excludes those already
+    /// linked to a User or Patient record.
+    /// </summary>
+    Task<Result<PersonPageResponse, PersonError>> GetAvailableAsync(PersonAvailableRequest request);
+
     /// <summary>Registers a new person.</summary>
     Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request);
 

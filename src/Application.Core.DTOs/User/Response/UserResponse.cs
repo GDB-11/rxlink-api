@@ -3,8 +3,9 @@ namespace Application.Core.DTOs.User.Response;
 public sealed class UserResponse
 {
     public required Guid UserCode { get; init; }
+    public required Guid PersonCode { get; init; }
 
-    // Person
+    // Person (read-only — managed via /api/person)
     public required string Names { get; init; }
     public required string Surnames { get; init; }
     public required DateOnly BirthDate { get; init; }
@@ -18,9 +19,9 @@ public sealed class UserResponse
     public string? EmergencyContactPhone { get; init; }
 
     // PersonDocument
-    public required Guid DocumentTypeCode { get; init; }
-    public required string DocumentTypeName { get; init; }
-    public required string DocumentNumber { get; init; }
+    public Guid? DocumentTypeCode { get; init; }
+    public string? DocumentTypeName { get; init; }
+    public string? DocumentNumber { get; init; }
     public DateOnly? DocumentIssueDate { get; init; }
     public DateOnly? DocumentExpirationDate { get; init; }
 

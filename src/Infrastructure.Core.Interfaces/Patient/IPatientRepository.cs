@@ -9,19 +9,21 @@ public interface IPatientRepository
     /// <summary>Returns one page of patients, with a total count via window function.</summary>
     Task<Result<IEnumerable<PatientRow>, PatientRepositoryError>> GetPageAsync(int offset, int limit, string? search);
 
-    /// <summary>Inserts a new patient and returns the created row, or <c>null</c> on unexpected failure.</summary>
+    /// <summary>
+    /// Inserts a Patient linked to an existing Person identified by <paramref name="personCode"/>.
+    /// Auto-generates the MedicalRecordNumber (PAC-YYYYMM-NNNNN format).
+    /// <paramref name="allergiesJson"/> is a JSON array of <c>{ AllergyCode, Notes }</c> objects.
+    /// Returns <c>null</c> when PersonCode does not match any registered person.
+    /// </summary>
     Task<Result<PatientRow?, PatientRepositoryError>> InsertAsync(
-        string names, string surnames, DateOnly birthDate, string phone,
-        string? alternativePhone, string email, string? address,
-        string? emergencyContactName, string? emergencyContactPhone,
-        string medicalRecordNumber);
+        Guid personCode, string allergiesJson);
 
-    /// <summary>Updates an active patient by code. Returns <c>null</c> when no matching active row exists.</summary>
+    /// <summary>
+    /// Updates the MedicalRecordNumber of an active patient. Person data is immutable through this endpoint.
+    /// Returns <c>null</c> when no matching active row exists.
+    /// </summary>
     Task<Result<PatientRow?, PatientRepositoryError>> UpdateAsync(
-        Guid code, string names, string surnames, DateOnly birthDate, string phone,
-        string? alternativePhone, string email, string? address,
-        string? emergencyContactName, string? emergencyContactPhone,
-        string medicalRecordNumber);
+        Guid code, string medicalRecordNumber);
 
     /// <summary>Soft-deletes an active patient. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, PatientRepositoryError>> DeactivateAsync(Guid code, Guid performedByUserCode);

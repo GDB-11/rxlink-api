@@ -9,7 +9,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Administrador,Doctor")]
+[Authorize(Roles = "Administrador,Doctor,Enfermero")]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class PatientController : FunctionalController

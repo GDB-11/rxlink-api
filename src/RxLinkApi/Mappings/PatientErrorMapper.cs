@@ -13,6 +13,11 @@ public sealed class PatientErrorMapper : IErrorHttpMapper<PatientError>
                 message = error.Message
             }),
 
+            PatientPersonNotFoundError => new BadRequestObjectResult(new
+            {
+                message = error.Message
+            }),
+
             PatientDataAccessError dataError => new ObjectResult(new
             {
                 message = dataError.Message,

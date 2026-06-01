@@ -6,6 +6,10 @@ public abstract record PatientError(string Message, string? Details = null, Exce
 public sealed record PatientDataAccessError(string Message, string? Details = null, Exception? Exception = null)
     : PatientError(Message, Details, Exception);
 
+/// <summary>The provided PersonCode does not match any registered person.</summary>
+public sealed record PatientPersonNotFoundError()
+    : PatientError("La persona seleccionada no fue encontrada. Regístrela primero en el módulo de Personas.");
+
 /// <summary>The target patient does not exist or is already inactive.</summary>
 public sealed record PatientNotFoundError()
     : PatientError("El paciente no fue encontrado o ya está inactivo.");

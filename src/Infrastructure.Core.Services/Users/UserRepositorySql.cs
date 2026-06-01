@@ -4,18 +4,20 @@ namespace Infrastructure.Core.Services.Users;
 /// SQL used exclusively by <see cref="UserRepository"/>.
 /// All identifiers are double-quoted to honour the PascalCase DDL convention.
 /// Catalog integer IDs are never returned to the caller; only public UUIDs (codes) are projected.
+/// Person data is managed exclusively through /api/person; user operations only link to an existing Person.
 /// </summary>
 internal static class UserRepositorySql
 {
     /// <summary>
     /// Returns one page of users (not soft-deleted) ordered by surname then name.
     /// <c>COUNT(*) OVER()</c> embeds the total matching count in every row.
-    /// The LATERAL subquery picks the most recent PersonDocument per person.
+    /// The LATERAL subquery picks the most recent PersonDocument per person (LEFT JOIN — person may have none).
     /// Optional <c>@Search</c> filters by names, surnames, username, or email (case-insensitive).
     /// </summary>
     internal const string GetPage = """
         SELECT
             u."UserCode",
+            p."PersonCode",
             p."Names",
             p."Surnames",
             p."BirthDate",
@@ -45,14 +47,14 @@ internal static class UserRepositorySql
         FROM "User" u
         INNER JOIN "Person" p ON p."PersonId" = u."PersonId"
         INNER JOIN "Sex" s ON s."SexId" = p."SexId"
-        INNER JOIN LATERAL (
+        LEFT JOIN LATERAL (
             SELECT *
             FROM "PersonDocument"
             WHERE "PersonId" = p."PersonId"
             ORDER BY "PersonDocumentId" DESC
             LIMIT 1
         ) pd ON TRUE
-        INNER JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
+        LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
         INNER JOIN "Role" r ON r."RoleId" = u."RoleId"
         LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
         WHERE (@Search IS NULL OR
@@ -65,58 +67,29 @@ internal static class UserRepositorySql
         """;
 
     /// <summary>
-    /// Resolves all public catalog codes to internal IDs in a single <c>refs</c> CTE, then
-    /// inserts Person, PersonDocument and User in a dependency chain that guarantees atomicity:
-    /// if any code is invalid (<c>refs</c> returns 0 rows), nothing is inserted.
-    /// Returns no rows when any required catalog code does not match an active record.
+    /// Links an existing Person (identified by PersonCode) to a new User account.
+    /// Resolves catalog codes to internal IDs in a <c>refs</c> CTE, then inserts the User row.
+    /// Returns no rows when PersonCode is not found or any catalog code (role) is invalid.
     /// </summary>
     internal const string Insert = """
         WITH refs AS (
             SELECT
-                s."SexId",
-                s."SexCode",
-                s."Name"   AS "SexName",
-                dt."DocumentTypeId",
-                dt."DocumentTypeCode",
-                dt."Name"  AS "DocumentTypeName",
+                p."PersonId",
+                p."PersonCode",
                 r."RoleId",
                 r."RoleCode",
                 r."Name"   AS "RoleName",
                 sp."SpecialtyId",
                 sp."SpecialtyCode",
                 sp."Name"  AS "SpecialtyName"
-            FROM "Sex" s
-            CROSS JOIN "DocumentType" dt
+            FROM "Person" p
             CROSS JOIN "Role" r
             LEFT JOIN "Specialty" sp
                 ON sp."SpecialtyCode" = @SpecialtyCode
                AND sp."IsActive"      = TRUE
-            WHERE s."SexCode"           = @SexCode
-              AND dt."DocumentTypeCode" = @DocumentTypeCode
-              AND dt."IsActive"         = TRUE
-              AND r."Name"              = @RoleName
-              AND r."IsActive"          = TRUE
-        ),
-        new_person AS (
-            INSERT INTO "Person" (
-                "Names", "Surnames", "BirthDate", "SexId",
-                "Phone", "AlternativePhone", "Email", "Address",
-                "EmergencyContactName", "EmergencyContactPhone"
-            )
-            SELECT
-                @Names, @Surnames, @BirthDate, refs."SexId",
-                @Phone, @AlternativePhone, @PersonEmail, @Address,
-                @EmergencyContactName, @EmergencyContactPhone
-            FROM refs
-            RETURNING *
-        ),
-        new_document AS (
-            INSERT INTO "PersonDocument" (
-                "PersonId", "DocumentTypeId", "Number", "IssueDate", "ExpirationDate"
-            )
-            SELECT np."PersonId", refs."DocumentTypeId", @DocumentNumber, @DocumentIssueDate, @DocumentExpirationDate
-            FROM new_person np, refs
-            RETURNING *
+            WHERE p."PersonCode" = @PersonCode
+              AND r."Name"       = @RoleName
+              AND r."IsActive"   = TRUE
         ),
         new_user AS (
             INSERT INTO "User" (
@@ -124,34 +97,35 @@ internal static class UserRepositorySql
                 "Username", "Email", "PasswordHash", "LicenseNumber"
             )
             SELECT
-                nd."PersonId",
+                refs."PersonId",
                 refs."RoleId",
                 refs."SpecialtyId",
                 @Username,
                 @Email,
                 @PasswordHash,
                 @LicenseNumber
-            FROM new_document nd, refs
+            FROM refs
             RETURNING *
         )
         SELECT
             nu."UserCode",
-            np."Names",
-            np."Surnames",
-            np."BirthDate",
-            refs."SexCode",
-            refs."SexName",
-            np."Phone",
-            np."AlternativePhone",
-            np."Email"             AS "PersonEmail",
-            np."Address",
-            np."EmergencyContactName",
-            np."EmergencyContactPhone",
-            refs."DocumentTypeCode",
-            refs."DocumentTypeName",
-            nd."Number"            AS "DocumentNumber",
-            nd."IssueDate"         AS "DocumentIssueDate",
-            nd."ExpirationDate"    AS "DocumentExpirationDate",
+            refs."PersonCode",
+            p."Names",
+            p."Surnames",
+            p."BirthDate",
+            s."SexCode",
+            s."Name"                AS "SexName",
+            p."Phone",
+            p."AlternativePhone",
+            p."Email"               AS "PersonEmail",
+            p."Address",
+            p."EmergencyContactName",
+            p."EmergencyContactPhone",
+            dt."DocumentTypeCode",
+            dt."Name"               AS "DocumentTypeName",
+            pd."Number"             AS "DocumentNumber",
+            pd."IssueDate"          AS "DocumentIssueDate",
+            pd."ExpirationDate"     AS "DocumentExpirationDate",
             refs."RoleCode",
             refs."RoleName",
             refs."SpecialtyCode",
@@ -161,41 +135,41 @@ internal static class UserRepositorySql
             nu."LicenseNumber",
             nu."IsActive",
             nu."CreatedAt",
-            0                      AS "TotalCount"
-        FROM new_user nu, new_person np, new_document nd, refs
+            0                       AS "TotalCount"
+        FROM new_user nu
+        INNER JOIN refs ON refs."PersonId" = nu."PersonId"
+        INNER JOIN "Person" p ON p."PersonId" = nu."PersonId"
+        INNER JOIN "Sex" s ON s."SexId" = p."SexId"
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM "PersonDocument"
+            WHERE "PersonId" = p."PersonId"
+            ORDER BY "PersonDocumentId" DESC
+            LIMIT 1
+        ) pd ON TRUE
+        LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
         """;
 
     /// <summary>
-    /// Resolves catalog codes first via <c>refs</c>, then updates Person, PersonDocument and User
-    /// atomically via chained CTEs.
+    /// Updates only the account fields of an existing User. Person data is never touched.
+    /// Resolves catalog codes via <c>refs</c>, then updates the User row.
     /// Returns no rows when the user is not found/deleted or any catalog code is invalid.
     /// </summary>
     internal const string Update = """
         WITH refs AS (
             SELECT
-                s."SexId",
-                s."SexCode",
-                s."Name"   AS "SexName",
-                dt."DocumentTypeId",
-                dt."DocumentTypeCode",
-                dt."Name"  AS "DocumentTypeName",
                 r."RoleId",
                 r."RoleCode",
                 r."Name"   AS "RoleName",
                 sp."SpecialtyId",
                 sp."SpecialtyCode",
                 sp."Name"  AS "SpecialtyName"
-            FROM "Sex" s
-            CROSS JOIN "DocumentType" dt
-            CROSS JOIN "Role" r
+            FROM "Role" r
             LEFT JOIN "Specialty" sp
                 ON sp."SpecialtyCode" = @SpecialtyCode
                AND sp."IsActive"      = TRUE
-            WHERE s."SexCode"           = @SexCode
-              AND dt."DocumentTypeCode" = @DocumentTypeCode
-              AND dt."IsActive"         = TRUE
-              AND r."Name"              = @RoleName
-              AND r."IsActive"          = TRUE
+            WHERE r."Name"    = @RoleName
+              AND r."IsActive" = TRUE
         ),
         upd_user AS (
             UPDATE "User" u
@@ -213,53 +187,26 @@ internal static class UserRepositorySql
                       u."LicenseNumber", u."IsActive", u."CreatedAt",
                       refs."RoleCode", refs."RoleName",
                       refs."SpecialtyCode", refs."SpecialtyName"
-        ),
-        upd_person AS (
-            UPDATE "Person" p
-            SET
-                "Names"                 = @Names,
-                "Surnames"              = @Surnames,
-                "BirthDate"             = @BirthDate,
-                "SexId"                 = refs."SexId",
-                "Phone"                 = @Phone,
-                "AlternativePhone"      = @AlternativePhone,
-                "Email"                 = @PersonEmail,
-                "Address"               = @Address,
-                "EmergencyContactName"  = @EmergencyContactName,
-                "EmergencyContactPhone" = @EmergencyContactPhone
-            FROM upd_user uu, refs
-            WHERE p."PersonId" = uu."PersonId"
-            RETURNING p.*, refs."SexCode", refs."SexName"
-        ),
-        upd_doc AS (
-            UPDATE "PersonDocument" pd
-            SET
-                "DocumentTypeId"  = refs."DocumentTypeId",
-                "Number"          = @DocumentNumber,
-                "IssueDate"       = @DocumentIssueDate,
-                "ExpirationDate"  = @DocumentExpirationDate
-            FROM upd_person up, refs
-            WHERE pd."PersonId" = up."PersonId"
-            RETURNING pd.*, refs."DocumentTypeCode", refs."DocumentTypeName"
         )
         SELECT
             uu."UserCode",
-            up."Names",
-            up."Surnames",
-            up."BirthDate",
-            up."SexCode",
-            up."SexName",
-            up."Phone",
-            up."AlternativePhone",
-            up."Email"              AS "PersonEmail",
-            up."Address",
-            up."EmergencyContactName",
-            up."EmergencyContactPhone",
-            ud."DocumentTypeCode",
-            ud."DocumentTypeName",
-            ud."Number"             AS "DocumentNumber",
-            ud."IssueDate"          AS "DocumentIssueDate",
-            ud."ExpirationDate"     AS "DocumentExpirationDate",
+            p."PersonCode",
+            p."Names",
+            p."Surnames",
+            p."BirthDate",
+            s."SexCode",
+            s."Name"                AS "SexName",
+            p."Phone",
+            p."AlternativePhone",
+            p."Email"               AS "PersonEmail",
+            p."Address",
+            p."EmergencyContactName",
+            p."EmergencyContactPhone",
+            dt."DocumentTypeCode",
+            dt."Name"               AS "DocumentTypeName",
+            pd."Number"             AS "DocumentNumber",
+            pd."IssueDate"          AS "DocumentIssueDate",
+            pd."ExpirationDate"     AS "DocumentExpirationDate",
             uu."RoleCode",
             uu."RoleName",
             uu."SpecialtyCode",
@@ -271,8 +218,16 @@ internal static class UserRepositorySql
             uu."CreatedAt",
             0                       AS "TotalCount"
         FROM upd_user uu
-        INNER JOIN upd_person up ON up."PersonId" = uu."PersonId"
-        INNER JOIN upd_doc ud ON ud."PersonId" = up."PersonId"
+        INNER JOIN "Person" p ON p."PersonId" = uu."PersonId"
+        INNER JOIN "Sex" s ON s."SexId" = p."SexId"
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM "PersonDocument"
+            WHERE "PersonId" = p."PersonId"
+            ORDER BY "PersonDocumentId" DESC
+            LIMIT 1
+        ) pd ON TRUE
+        LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
         """;
 
     /// <summary>
@@ -290,7 +245,7 @@ internal static class UserRepositorySql
           AND "IsActive"  = TRUE
           AND "DeletedAt" IS NULL
         """;
-    
+
     /// <summary>
     /// Reactivates an active user.
     /// Affects 0 rows when the code does not match an active, non-deleted record.

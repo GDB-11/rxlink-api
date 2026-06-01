@@ -9,7 +9,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Administrador,Doctor")]
+[Authorize(Roles = "Administrador,Doctor,Enfermero")]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class PersonController : FunctionalController
@@ -40,6 +40,22 @@ public sealed class PersonController : FunctionalController
             operation: () => _personService.GetPageAsync(request),
             errorMapper: _errorMapper,
             operationName: nameof(GetPage)
+        );
+
+    /// <summary>
+    /// Returns persons available for linking. Optionally excludes persons already linked to
+    /// a User or Patient record. Intended for picker/autocomplete use.
+    /// </summary>
+    [HttpGet("available")]
+    [ProducesResponseType(typeof(PersonPageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetAvailable([FromQuery] PersonAvailableRequest request) =>
+        ExecuteAsync(
+            operation: () => _personService.GetAvailableAsync(request),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetAvailable)
         );
 
     /// <summary>

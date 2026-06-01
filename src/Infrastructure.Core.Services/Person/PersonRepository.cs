@@ -27,6 +27,25 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
         );
 
     /// <inheritdoc/>
+    public async Task<Result<IEnumerable<PersonRow>, PersonRepositoryError>> GetAvailableAsync(
+        int offset, int limit, string? search,
+        bool excludeLinkedUsers, bool excludeLinkedPatients) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteQueryAsync<object, PersonRow>(
+                _connection,
+                PersonRepositorySql.GetAvailable,
+                new
+                {
+                    Offset = offset,
+                    Limit = limit,
+                    Search = search,
+                    ExcludeLinkedUsers = excludeLinkedUsers,
+                    ExcludeLinkedPatients = excludeLinkedPatients
+                }),
+            errorFactory: PersonRepositoryError (ex) => new GetPersonsPageError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<PersonRow?, PersonRepositoryError>> InsertAsync(
         string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,

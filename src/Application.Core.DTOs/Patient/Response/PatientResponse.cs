@@ -3,8 +3,11 @@ namespace Application.Core.DTOs.Patient.Response;
 public sealed class PatientResponse
 {
     public required Guid PatientCode { get; init; }
+    public required Guid PersonCode { get; init; }
     public required string MedicalRecordNumber { get; init; }
     public required bool IsActive { get; init; }
+
+    // Person (read-only — managed via /api/person)
     public required string Names { get; init; }
     public required string Surnames { get; init; }
     public required DateOnly BirthDate { get; init; }
@@ -14,4 +17,6 @@ public sealed class PatientResponse
     public string? Address { get; init; }
     public string? EmergencyContactName { get; init; }
     public string? EmergencyContactPhone { get; init; }
+
+    public List<PatientAllergyResponse> Allergies { get; init; } = [];
 }

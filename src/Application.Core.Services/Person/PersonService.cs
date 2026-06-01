@@ -30,6 +30,18 @@ public sealed class PersonService : IPerson
     }
 
     /// <inheritdoc/>
+    public Task<Result<PersonPageResponse, PersonError>> GetAvailableAsync(PersonAvailableRequest request)
+    {
+        int offset = (request.Page - 1) * request.PageSize;
+
+        return _repository.GetAvailableAsync(
+                offset, request.PageSize, request.Search,
+                request.ExcludeLinkedUsers, request.ExcludeLinkedPatients)
+            .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
+            .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
+    }
+
+    /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>
         _repository.InsertAsync(
             request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,

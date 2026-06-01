@@ -10,6 +10,10 @@ public sealed record UserDataAccessError(string Message, string? Details = null,
 public sealed record UserNotFoundError()
     : UserError("El usuario no fue encontrado.");
 
+/// <summary>The provided PersonCode does not match any registered person.</summary>
+public sealed record UserPersonNotFoundError()
+    : UserError("La persona seleccionada no fue encontrada. Regístrela primero en el módulo de Personas.");
+
 /// <summary>The provided role does not exist, is inactive, or a unique constraint was violated on create.</summary>
 public sealed record UserRoleNotFoundError()
     : UserError("El rol proporcionado no existe o está inactivo.");

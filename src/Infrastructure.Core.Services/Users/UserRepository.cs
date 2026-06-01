@@ -31,11 +31,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
 
     /// <inheritdoc/>
     public async Task<Result<UserRow?, UserRepositoryError>> InsertAsync(
-        string names, string surnames, DateTime birthDate, Guid sexCode,
-        string phone, string? alternativePhone, string personEmail,
-        string? address, string? emergencyContactName, string? emergencyContactPhone,
-        Guid documentTypeCode, string documentNumber,
-        DateTime? documentIssueDate, DateTime? documentExpirationDate,
+        Guid personCode,
         string roleName, Guid? specialtyCode,
         string username, string email, string passwordHash, string? licenseNumber) =>
         await Result.TryAsync(
@@ -44,20 +40,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
                 UserRepositorySql.Insert,
                 new
                 {
-                    Names = names,
-                    Surnames = surnames,
-                    BirthDate = birthDate,
-                    SexCode = sexCode,
-                    Phone = phone,
-                    AlternativePhone = alternativePhone,
-                    PersonEmail = personEmail,
-                    Address = address,
-                    EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone,
-                    DocumentTypeCode = documentTypeCode,
-                    DocumentNumber = documentNumber,
-                    DocumentIssueDate = documentIssueDate,
-                    DocumentExpirationDate = documentExpirationDate,
+                    PersonCode = personCode,
                     RoleName = roleName,
                     SpecialtyCode = specialtyCode,
                     Username = username,
@@ -71,11 +54,6 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
     /// <inheritdoc/>
     public async Task<Result<UserRow?, UserRepositoryError>> UpdateAsync(
         Guid code,
-        string names, string surnames, DateTime birthDate, Guid sexCode,
-        string phone, string? alternativePhone, string personEmail,
-        string? address, string? emergencyContactName, string? emergencyContactPhone,
-        Guid documentTypeCode, string documentNumber,
-        DateTime? documentIssueDate, DateTime? documentExpirationDate,
         string roleName, Guid? specialtyCode,
         string username, string email, string? licenseNumber) =>
         await Result.TryAsync(
@@ -85,20 +63,6 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
                 new
                 {
                     Code = code,
-                    Names = names,
-                    Surnames = surnames,
-                    BirthDate = birthDate,
-                    SexCode = sexCode,
-                    Phone = phone,
-                    AlternativePhone = alternativePhone,
-                    PersonEmail = personEmail,
-                    Address = address,
-                    EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone,
-                    DocumentTypeCode = documentTypeCode,
-                    DocumentNumber = documentNumber,
-                    DocumentIssueDate = documentIssueDate,
-                    DocumentExpirationDate = documentExpirationDate,
                     RoleName = roleName,
                     SpecialtyCode = specialtyCode,
                     Username = username,
@@ -118,7 +82,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
                 new { Code = code, UserCode = performedByUserCode }),
             errorFactory: UserRepositoryError (ex) => new DeactivateUserError(ex.Message, ex)
         );
-    
+
     /// <inheritdoc/>
     public async Task<Result<int, UserRepositoryError>> ActivateAsync(Guid code) =>
         await Result.TryAsync(

@@ -13,6 +13,11 @@ public sealed class UserErrorMapper : IErrorHttpMapper<UserError>
                 message = error.Message
             }),
 
+            UserPersonNotFoundError => new BadRequestObjectResult(new
+            {
+                message = error.Message
+            }),
+
             UserRoleNotFoundError => new BadRequestObjectResult(new
             {
                 message = error.Message

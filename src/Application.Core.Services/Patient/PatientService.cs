@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Application.Core.DTOs.Patient.Errors;
 using Application.Core.DTOs.Patient.Request;
 using Application.Core.DTOs.Patient.Response;
@@ -12,6 +13,9 @@ namespace Application.Core.Services.Patient;
 public sealed class PatientService : IPatient
 {
     private readonly IPatientRepository _repository;
+
+    private static readonly JsonSerializerOptions JsonOptions =
+        new() { PropertyNameCaseInsensitive = true };
 
     public PatientService(IPatientRepository repository)
     {
@@ -29,23 +33,20 @@ public sealed class PatientService : IPatient
     }
 
     /// <inheritdoc/>
-    public Task<Result<PatientResponse, PatientError>> CreateAsync(CreatePatientRequest request) =>
-        _repository.InsertAsync(
-            request.Names, request.Surnames, request.BirthDate,
-            request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-            request.MedicalRecordNumber)
+    public Task<Result<PatientResponse, PatientError>> CreateAsync(CreatePatientRequest request)
+    {
+        string allergiesJson = JsonSerializer.Serialize(
+            request.Allergies.Select(a => new { AllergyCode = a.AllergyCode, Notes = a.Notes }));
+
+        return _repository.InsertAsync(request.PersonCode, allergiesJson)
             .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
-            .EnsureNotNullAsync(new PatientDataAccessError("No se pudo registrar el paciente."))
+            .EnsureNotNullAsync(new PatientPersonNotFoundError())
             .MapAsync(MapToResponse);
+    }
 
     /// <inheritdoc/>
     public Task<Result<PatientResponse, PatientError>> UpdateAsync(Guid code, UpdatePatientRequest request) =>
-        _repository.UpdateAsync(
-            code, request.Names, request.Surnames, request.BirthDate,
-            request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-            request.MedicalRecordNumber)
+        _repository.UpdateAsync(code, request.MedicalRecordNumber)
             .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
             .MapAsync(MapToResponse);
@@ -84,6 +85,7 @@ public sealed class PatientService : IPatient
         new()
         {
             PatientCode = row.PatientCode,
+            PersonCode = row.PersonCode,
             MedicalRecordNumber = row.MedicalRecordNumber,
             IsActive = row.IsActive,
             Names = row.Names,
@@ -94,6 +96,8 @@ public sealed class PatientService : IPatient
             Email = row.Email,
             Address = row.Address,
             EmergencyContactName = row.EmergencyContactName,
-            EmergencyContactPhone = row.EmergencyContactPhone
+            EmergencyContactPhone = row.EmergencyContactPhone,
+            Allergies = JsonSerializer.Deserialize<List<PatientAllergyResponse>>(
+                row.AllergiesJson, JsonOptions) ?? []
         };
 }

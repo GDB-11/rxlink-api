@@ -39,6 +39,53 @@ internal static class PersonRepositorySql
         LIMIT @Limit OFFSET @Offset
         """;
 
+    /// <summary>
+    /// Same projection as <see cref="GetPage"/> but adds optional NOT EXISTS filters to exclude
+    /// persons already linked to a User or Patient record. Used by the picker endpoint only.
+    /// </summary>
+    internal const string GetAvailable = """
+        SELECT
+            p."PersonCode",
+            p."Names",
+            p."Surnames",
+            p."BirthDate",
+            s."SexCode",
+            s."Name"  AS "SexName",
+            p."Phone",
+            p."AlternativePhone",
+            p."Email",
+            p."Address",
+            p."EmergencyContactName",
+            p."EmergencyContactPhone",
+            doc."DocumentTypeCode",
+            doc."DocumentTypeName",
+            doc."DocumentNumber",
+            COUNT(*) OVER () AS "TotalCount"
+        FROM "Person" p
+        JOIN "Sex" s ON s."SexId" = p."SexId"
+        LEFT JOIN LATERAL (
+            SELECT dt."DocumentTypeCode",
+                   dt."Name"   AS "DocumentTypeName",
+                   pd."Number" AS "DocumentNumber"
+            FROM   "PersonDocument" pd
+            JOIN   "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
+            WHERE  pd."PersonId" = p."PersonId"
+            ORDER  BY pd."PersonDocumentId"
+            LIMIT  1
+        ) doc ON TRUE
+        WHERE (@Search IS NULL
+               OR p."Names"    ILIKE '%' || @Search || '%'
+               OR p."Surnames" ILIKE '%' || @Search || '%')
+          AND (NOT @ExcludeLinkedUsers    OR NOT EXISTS (
+                  SELECT 1 FROM "User" u WHERE u."PersonId" = p."PersonId"
+              ))
+          AND (NOT @ExcludeLinkedPatients OR NOT EXISTS (
+                  SELECT 1 FROM "Patient" pt WHERE pt."PersonId" = p."PersonId"
+              ))
+        ORDER BY p."Surnames", p."Names"
+        LIMIT @Limit OFFSET @Offset
+        """;
+
     internal const string Insert = """
         WITH ins AS (
             INSERT INTO "Person" (

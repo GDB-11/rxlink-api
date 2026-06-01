@@ -31,36 +31,22 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
 
     /// <inheritdoc/>
     public async Task<Result<PatientRow?, PatientRepositoryError>> InsertAsync(
-        string names, string surnames, DateOnly birthDate, string phone,
-        string? alternativePhone, string email, string? address,
-        string? emergencyContactName, string? emergencyContactPhone,
-        string medicalRecordNumber) =>
+        Guid personCode, string allergiesJson) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
                 _connection,
                 PatientRepositorySql.Insert,
                 new
                 {
-                    Names = names,
-                    Surnames = surnames,
-                    BirthDate = birthDate,
-                    Phone = phone,
-                    AlternativePhone = alternativePhone,
-                    Email = email,
-                    Address = address,
-                    EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone,
-                    MedicalRecordNumber = medicalRecordNumber
+                    PersonCode = personCode,
+                    AllergiesJson = allergiesJson
                 }),
             errorFactory: PatientRepositoryError (ex) => new InsertPatientError(ex.Message, ex)
         );
 
     /// <inheritdoc/>
     public async Task<Result<PatientRow?, PatientRepositoryError>> UpdateAsync(
-        Guid code, string names, string surnames, DateOnly birthDate, string phone,
-        string? alternativePhone, string email, string? address,
-        string? emergencyContactName, string? emergencyContactPhone,
-        string medicalRecordNumber) =>
+        Guid code, string medicalRecordNumber) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
                 _connection,
@@ -68,15 +54,6 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
                 new
                 {
                     Code = code,
-                    Names = names,
-                    Surnames = surnames,
-                    BirthDate = birthDate,
-                    Phone = phone,
-                    AlternativePhone = alternativePhone,
-                    Email = email,
-                    Address = address,
-                    EmergencyContactName = emergencyContactName,
-                    EmergencyContactPhone = emergencyContactPhone,
                     MedicalRecordNumber = medicalRecordNumber
                 }),
             errorFactory: PatientRepositoryError (ex) => new UpdatePatientError(ex.Message, ex)

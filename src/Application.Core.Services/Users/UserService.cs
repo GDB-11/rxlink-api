@@ -5,7 +5,6 @@ using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Users;
 using BindSharp;
 using BindSharp.Extensions;
-using Common.Helpers;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Models.Users;
 
@@ -37,20 +36,7 @@ public sealed class UserService : IUser
         _password.HashPassword(request.Password)
             .MapError(UserError (_) => new UserPasswordError())
             .BindAsync(passwordHash => _repository.InsertAsync(
-                    names: request.Names,
-                    surnames: request.Surnames,
-                    birthDate: request.BirthDate.ToDateTime(),
-                    sexCode: request.SexCode,
-                    phone: request.Phone,
-                    alternativePhone: request.AlternativePhone,
-                    personEmail: request.PersonEmail,
-                    address: request.Address,
-                    emergencyContactName: request.EmergencyContactName,
-                    emergencyContactPhone: request.EmergencyContactPhone,
-                    documentTypeCode: request.DocumentTypeCode,
-                    documentNumber: request.DocumentNumber,
-                    documentIssueDate: request.DocumentIssueDate.ToDateTime(),
-                    documentExpirationDate: request.DocumentExpirationDate.ToDateTime(),
+                    personCode: request.PersonCode,
                     roleName: request.RoleName,
                     specialtyCode: request.SpecialtyCode,
                     username: request.Username,
@@ -65,20 +51,6 @@ public sealed class UserService : IUser
     public Task<Result<UserResponse, UserError>> UpdateAsync(Guid code, UpdateUserRequest request) =>
         _repository.UpdateAsync(
                 code: code,
-                names: request.Names,
-                surnames: request.Surnames,
-                birthDate: request.BirthDate.ToDateTime(),
-                sexCode: request.SexCode,
-                phone: request.Phone,
-                alternativePhone: request.AlternativePhone,
-                personEmail: request.PersonEmail,
-                address: request.Address,
-                emergencyContactName: request.EmergencyContactName,
-                emergencyContactPhone: request.EmergencyContactPhone,
-                documentTypeCode: request.DocumentTypeCode,
-                documentNumber: request.DocumentNumber,
-                documentIssueDate: request.DocumentIssueDate.ToDateTime(),
-                documentExpirationDate: request.DocumentExpirationDate.ToDateTime(),
                 roleName: request.RoleName,
                 specialtyCode: request.SpecialtyCode,
                 username: request.Username,
@@ -122,6 +94,7 @@ public sealed class UserService : IUser
         new()
         {
             UserCode = row.UserCode,
+            PersonCode = row.PersonCode,
             Names = row.Names,
             Surnames = row.Surnames,
             BirthDate = row.BirthDate,

@@ -2,16 +2,17 @@ namespace Infrastructure.Core.Models.Patient;
 
 /// <summary>
 /// Flat row returned by patient queries.
-/// Combines columns from Patient and Person.
-/// <c>TotalCount</c> is populated by the paginated query via a window function;
-/// single-row operations (insert/update) return 0.
+/// Combines columns from Patient and Person. AllergiesJson is a JSON array of allergy objects.
+/// <c>TotalCount</c> is populated by the paginated query; single-row operations return 0.
 /// </summary>
 public sealed class PatientRow
 {
     public required Guid PatientCode { get; init; }
+    public required Guid PersonCode { get; init; }
     public required string MedicalRecordNumber { get; init; }
     public required bool IsActive { get; init; }
     public required long TotalCount { get; init; }
+    public required string AllergiesJson { get; init; }
 
     // Person
     public required string Names { get; init; }
