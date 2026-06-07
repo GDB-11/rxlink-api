@@ -1,5 +1,4 @@
 using Application.Core.Config;
-using Application.Core.DTOs.Auth.Errors;
 using Application.Core.DTOs.PatientAuth.Errors;
 using Application.Core.DTOs.PatientAuth.Request;
 using Application.Core.DTOs.PatientAuth.Response;
@@ -8,6 +7,7 @@ using Application.Core.Interfaces.PatientAuth;
 using Application.Core.Interfaces.Shared;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.Interfaces.PatientAuth;
 using Infrastructure.Core.Models.PatientAuth;
 
@@ -66,9 +66,7 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
             .MapError(PatientAuthError (e) => new PatientPasswordHashError(e.Message, null, e.Exception));
 
         if (!hashResult.IsSuccess)
-            return Result<PatientAuthResponse, PatientAuthError>.Failure(hashResult.Error!);
-
-        string passwordHash = hashResult.Value!;
+            return Result<PatientAuthResponse, PatientAuthError>.Failure(hashResult.Error);
 
         Result<PatientCredential, PatientAuthError> credentialResult;
 
@@ -81,10 +79,10 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
                 .EnsureAsync(row => !row.HasCredentials, new PatientAlreadyRegisteredError())
                 .BindAsync(row => row.PatientCode.HasValue
                     ? _repository
-                        .AddCredentialsAsync(row.PersonCode, passwordHash)
+                        .AddCredentialsAsync(row.PersonCode, hashResult.Value)
                         .MapErrorAsync(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception))
                     : _repository
-                        .CreatePatientForPersonAsync(row.PersonCode, passwordHash)
+                        .CreatePatientForPersonAsync(row.PersonCode, hashResult.Value)
                         .MapErrorAsync(PatientAuthError (e) =>
                             new PatientRepositoryError(e.Message, null, e.Exception)));
         }
@@ -94,7 +92,7 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
             {
                 Names = request.Names,
                 Surnames = request.Surnames,
-                BirthDate = request.BirthDate,
+                BirthDate = request.BirthDate.ToDateTime(),
                 SexCode = request.SexCode,
                 Phone = request.Phone,
                 AlternativePhone = request.AlternativePhone,
@@ -107,7 +105,7 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
             };
 
             credentialResult = await _repository
-                .CreatePersonAndPatientAsync(data, passwordHash)
+                .CreatePersonAndPatientAsync(data, hashResult.Value)
                 .MapErrorAsync(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception));
         }
 

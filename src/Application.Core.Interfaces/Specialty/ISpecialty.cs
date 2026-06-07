@@ -13,4 +13,6 @@ public interface ISpecialty
     Task<Result<SpecialtyResponse, SpecialtyError>> UpdateAsync(Guid code, UpdateSpecialtyRequest request);
     Task<Result<Unit, SpecialtyError>> DeactivateAsync(Guid code, Guid performedByUserCode);
     Task<Result<Unit, SpecialtyError>> ActivateAsync(Guid code, Guid performedByUserCode);
+    Task<Result<IEnumerable<SpecialtyWithDoctorCountResponse>, SpecialtyError>> GetAllActiveWithDoctorCountAsync();
+    Task<Result<IEnumerable<DoctorSummaryResponse>, SpecialtyError>> GetDoctorsBySpecialtyCodeAsync(Guid specialtyCode);
 }

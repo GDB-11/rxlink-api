@@ -25,11 +25,8 @@ public sealed class PrescriptionService : IPrescription
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
-        CreatePrescriptionRequest request, Guid createdByUserCode)
-    {
-        string detailsJson = JsonSerializer.Serialize(request.Details);
-
-        return _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil, detailsJson, createdByUserCode)
+        CreatePrescriptionRequest request, Guid createdByUserCode) =>
+        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details), createdByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 InsertPrescriptionDuplicateError => new PrescriptionDuplicateError(),
@@ -37,7 +34,6 @@ public sealed class PrescriptionService : IPrescription
             })
             .EnsureNotNullAsync(new PrescriptionDiagnosticNotFoundError())
             .MapAsync(MapToResponse);
-    }
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> GetAsync(Guid code) =>
@@ -48,11 +44,8 @@ public sealed class PrescriptionService : IPrescription
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
-        Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode)
-    {
-        string detailsJson = JsonSerializer.Serialize(request.Details);
-
-        return _repository.UpdateAsync(code, request.Notes, request.ValidUntil, detailsJson, modifiedByUserCode)
+        Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
+        _repository.UpdateAsync(code, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details), modifiedByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 UpdatePrescriptionInvalidStatusError => new PrescriptionInvalidStatusError(),
@@ -60,7 +53,6 @@ public sealed class PrescriptionService : IPrescription
             })
             .EnsureNotNullAsync(new PrescriptionNotFoundError())
             .MapAsync(MapToResponse);
-    }
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> SignAsync(Guid code, Guid performedByUserCode) =>

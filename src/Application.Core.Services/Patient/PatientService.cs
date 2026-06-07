@@ -23,14 +23,10 @@ public sealed class PatientService : IPatient
     }
 
     /// <inheritdoc/>
-    public Task<Result<PatientPageResponse, PatientError>> GetPageAsync(PatientPageRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+    public Task<Result<PatientPageResponse, PatientError>> GetPageAsync(PatientPageRequest request) =>
+        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
     public Task<Result<PatientResponse, PatientError>> CreateAsync(CreatePatientRequest request)

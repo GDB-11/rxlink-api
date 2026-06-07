@@ -105,4 +105,34 @@ public sealed class SpecialtyController : FunctionalController
             operationName: nameof(Activate),
             successMapper: _ => NoContent()
         );
+
+    /// <summary>
+    /// Returns all active specialties with their doctor count. Public endpoint — no authentication required.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("/api/specialties")]
+    [ProducesResponseType(typeof(IEnumerable<SpecialtyWithDoctorCountResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetAllActive() =>
+        ExecuteAsync(
+            operation:     () => _specialtyService.GetAllActiveWithDoctorCountAsync(),
+            errorMapper:   _errorMapper,
+            operationName: nameof(GetAllActive)
+        );
+
+    /// <summary>
+    /// Returns active doctors assigned to the given specialty. Public endpoint — no authentication required.
+    /// Returns 404 when the specialty does not exist or is inactive.
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{code:guid}/doctors")]
+    [ProducesResponseType(typeof(IEnumerable<DoctorSummaryResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetDoctorsBySpecialty(Guid code) =>
+        ExecuteAsync(
+            operation:     () => _specialtyService.GetDoctorsBySpecialtyCodeAsync(code),
+            errorMapper:   _errorMapper,
+            operationName: nameof(GetDoctorsBySpecialty)
+        );
 }

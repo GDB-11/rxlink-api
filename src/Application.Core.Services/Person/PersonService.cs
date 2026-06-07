@@ -20,26 +20,18 @@ public sealed class PersonService : IPerson
     }
 
     /// <inheritdoc/>
-    public Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+    public Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request) =>
+        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
-    public Task<Result<PersonPageResponse, PersonError>> GetAvailableAsync(PersonAvailableRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetAvailableAsync(
-                offset, request.PageSize, request.Search,
+    public Task<Result<PersonPageResponse, PersonError>> GetAvailableAsync(PersonAvailableRequest request) =>
+        _repository.GetAvailableAsync(
+                (request.Page - 1) * request.PageSize, request.PageSize, request.Search,
                 request.ExcludeLinkedUsers, request.ExcludeLinkedPatients)
             .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>

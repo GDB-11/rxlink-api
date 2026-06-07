@@ -20,14 +20,10 @@ public sealed class SpecialtyService : ISpecialty
     
     
     /// <inheritdoc/>
-    public Task<Result<SpecialtyPageResponse, SpecialtyError>> GetPageAsync(SpecialtyPageRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+    public Task<Result<SpecialtyPageResponse, SpecialtyError>> GetPageAsync(SpecialtyPageRequest request) =>
+        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> CreateAsync(CreateSpecialtyRequest request) =>
@@ -59,6 +55,19 @@ public sealed class SpecialtyService : ISpecialty
     
 
 
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<SpecialtyWithDoctorCountResponse>, SpecialtyError>> GetAllActiveWithDoctorCountAsync() =>
+        _repository.GetAllActiveWithDoctorCountAsync()
+            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapAsync(rows => rows.Select(MapToPublicSpecialtyResponse));
+
+    /// <inheritdoc/>
+    public Task<Result<IEnumerable<DoctorSummaryResponse>, SpecialtyError>> GetDoctorsBySpecialtyCodeAsync(Guid specialtyCode) =>
+        _repository.GetDoctorsBySpecialtyCodeAsync(specialtyCode)
+            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new SpecialtyNotFoundError())
+            .MapAsync(rows => rows.Select(MapToDoctorSummaryResponse));
+
     private static SpecialtyPageResponse BuildPageResponse(IEnumerable<SpecialtyRow> rows, int page, int pageSize)
     {
         List<SpecialtyRow> list = rows.ToList();
@@ -81,5 +90,23 @@ public sealed class SpecialtyService : ISpecialty
             SpecialtyCode = row.SpecialtyCode,
             Name = row.Name,
             IsActive = row.IsActive,
+        };
+
+    private static SpecialtyWithDoctorCountResponse MapToPublicSpecialtyResponse(SpecialtyWithDoctorCountRow row) =>
+        new()
+        {
+            SpecialtyCode = row.SpecialtyCode,
+            Name = row.Name,
+            DoctorCount = row.DoctorCount
+        };
+
+    private static DoctorSummaryResponse MapToDoctorSummaryResponse(DoctorSummaryRow row) =>
+        new()
+        {
+            UserCode = row.UserCode!.Value,
+            Names = row.Names!,
+            Surnames = row.Surnames!,
+            LicenseNumber = row.LicenseNumber,
+            SpecialtyName = row.SpecialtyName
         };
 }

@@ -4,7 +4,7 @@ public sealed class NewPatientData
 {
     public required string Names { get; init; }
     public required string Surnames { get; init; }
-    public required DateOnly BirthDate { get; init; }
+    public required DateTime BirthDate { get; init; }
     public required Guid SexCode { get; init; }
     public required string Phone { get; init; }
     public string? AlternativePhone { get; init; }

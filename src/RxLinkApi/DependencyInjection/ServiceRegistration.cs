@@ -1,6 +1,7 @@
 using Application.Core.Interfaces.Allergy;
 using Application.Core.Interfaces.Diagnostic;
 using Application.Core.Interfaces.Auth;
+using Application.Core.Interfaces.DocumentType;
 using Application.Core.Interfaces.Lookup;
 using Application.Core.Interfaces.Medication;
 using Application.Core.Interfaces.Navigation;
@@ -9,12 +10,14 @@ using Application.Core.Interfaces.PatientAuth;
 using Application.Core.Interfaces.Person;
 using Application.Core.Interfaces.Prescription;
 using Application.Core.Interfaces.Role;
+using Application.Core.Interfaces.Sex;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Interfaces.Specialty;
 using Application.Core.Interfaces.Users;
 using Application.Core.Services.Allergy;
 using Application.Core.Services.Diagnostic;
 using Application.Core.Services.Auth;
+using Application.Core.Services.DocumentType;
 using Application.Core.Services.Lookup;
 using Application.Core.Services.Medication;
 using Application.Core.Services.Navigation;
@@ -23,6 +26,7 @@ using Application.Core.Services.PatientAuth;
 using Application.Core.Services.Person;
 using Application.Core.Services.Prescription;
 using Application.Core.Services.Role;
+using Application.Core.Services.Sex;
 using Application.Core.Services.Shared;
 using Application.Core.Services.Specialty;
 using Application.Core.Services.Users;
@@ -54,6 +58,8 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<IDiagnostic, DiagnosticService>();
             builder.Services.AddScoped<IPrescription, PrescriptionService>();
             builder.Services.AddScoped<IPatientAuthentication, PatientAuthenticationService>();
+            builder.Services.AddScoped<ISex, SexService>();
+            builder.Services.AddScoped<IDocumentType, DocumentTypeService>();
         }
     }
 }

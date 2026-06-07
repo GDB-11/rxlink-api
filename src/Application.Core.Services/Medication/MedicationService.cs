@@ -19,14 +19,10 @@ public sealed class MedicationService : IMedication
     }
 
     /// <inheritdoc/>
-    public Task<Result<MedicationPageResponse, MedicationError>> GetPageAsync(MedicationPageRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+    public Task<Result<MedicationPageResponse, MedicationError>> GetPageAsync(MedicationPageRequest request) =>
+        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
     public Task<Result<MedicationResponse, MedicationError>> CreateAsync(CreateMedicationRequest request) =>

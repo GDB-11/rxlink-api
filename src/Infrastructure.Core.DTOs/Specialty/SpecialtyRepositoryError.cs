@@ -12,3 +12,9 @@ public sealed record UpdateSpecialtyError(string? Details = null, Exception? Exc
 
 public sealed record DeactivateSpecialtyError(string? Details = null, Exception? Exception = null)
     : SpecialtyRepositoryError("Error inesperado al desactivar la especialidad.", Details, Exception);
+
+public sealed record GetActiveSpecialtiesWithCountError(string? Details = null, Exception? Exception = null)
+    : SpecialtyRepositoryError("Error inesperado al recuperar el listado de especialidades.", Details, Exception);
+
+public sealed record GetDoctorsBySpecialtyError(string? Details = null, Exception? Exception = null)
+    : SpecialtyRepositoryError("Error inesperado al recuperar los médicos de la especialidad.", Details, Exception);
