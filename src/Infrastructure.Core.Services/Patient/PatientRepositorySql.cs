@@ -202,4 +202,80 @@ internal static class PatientRepositorySql
         WHERE "PatientCode" = @Code
           AND "IsActive" = FALSE
         """;
+
+    /// <summary>
+    /// Inserts a new PatientAllergy or restores a previously soft-deleted one (upsert).
+    /// Returns no rows when PatientCode or AllergyCode are not found.
+    /// </summary>
+    internal const string AddAllergy = """
+        WITH ins AS (
+            INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "SeverityId", "Notes")
+            SELECT
+                pat."PatientId",
+                a."AllergyId",
+                (SELECT "SeverityId" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
+                @Notes
+            FROM "Patient" pat
+            JOIN "Allergy" a ON a."AllergyCode" = @AllergyCode AND a."IsActive" = TRUE
+            WHERE pat."PatientCode" = @PatientCode
+              AND pat."IsActive" = TRUE
+            ON CONFLICT ON CONSTRAINT uq_patient_allergy
+            DO UPDATE SET
+                "SeverityId" = EXCLUDED."SeverityId",
+                "Notes"      = EXCLUDED."Notes",
+                "DeletedAt"  = NULL,
+                "DeletedBy"  = NULL
+            RETURNING *
+        )
+        SELECT
+            ins."PatientAllergyCode",
+            a."AllergyCode",
+            a."Name"  AS "AllergyName",
+            sv."SeverityCode",
+            sv."Name" AS "SeverityName",
+            ins."Notes"
+        FROM ins
+        JOIN "Allergy" a ON a."AllergyId" = ins."AllergyId"
+        LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = ins."SeverityId"
+        """;
+
+    /// <summary>
+    /// Updates the severity and notes of a patient allergy identified by its code.
+    /// Returns no rows when not found or already deleted.
+    /// </summary>
+    internal const string UpdateAllergy = """
+        WITH upd AS (
+            UPDATE "PatientAllergy"
+            SET
+                "SeverityId" = (SELECT "SeverityId" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
+                "Notes"      = @Notes
+            WHERE "PatientAllergyCode" = @PatientAllergyCode
+              AND "PatientId" = (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode AND "IsActive" = TRUE)
+              AND "DeletedAt" IS NULL
+            RETURNING *
+        )
+        SELECT
+            upd."PatientAllergyCode",
+            a."AllergyCode",
+            a."Name"  AS "AllergyName",
+            sv."SeverityCode",
+            sv."Name" AS "SeverityName",
+            upd."Notes"
+        FROM upd
+        JOIN "Allergy" a ON a."AllergyId" = upd."AllergyId"
+        LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = upd."SeverityId"
+        """;
+
+    /// <summary>
+    /// Soft-deletes a patient allergy record.
+    /// </summary>
+    internal const string DeleteAllergy = """
+        UPDATE "PatientAllergy"
+        SET
+            "DeletedAt" = NOW(),
+            "DeletedBy" = (SELECT "UserId" FROM "User" WHERE "UserCode" = @PerformedByUserCode AND "IsActive" = TRUE)
+        WHERE "PatientAllergyCode" = @PatientAllergyCode
+          AND "PatientId" = (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode AND "IsActive" = TRUE)
+          AND "DeletedAt" IS NULL
+        """;
 }

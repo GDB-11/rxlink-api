@@ -47,4 +47,33 @@ internal static class LookupRepositorySql
         WHERE  "IsActive" = TRUE
         ORDER  BY "SortOrder"
         """;
+
+    internal const string GetActivePrescriptionStatuses = """
+        SELECT "PrescriptionStatusCode" AS "Code", "Name"
+        FROM   "PrescriptionStatus"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "PrescriptionStatusId"
+        """;
+
+    internal const string GetActiveMedications = """
+        SELECT "MedicationCode" AS "Code", "GenericName" AS "Name"
+        FROM   "Medication"
+        WHERE  "IsActive" = TRUE
+          AND  "DeletedAt" IS NULL
+        ORDER  BY "GenericName"
+        """;
+
+    internal const string GetActiveAdministrationRoutes = """
+        SELECT "AdministrationRouteCode" AS "Code", "Name"
+        FROM   "AdministrationRoute"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "Name"
+        """;
+
+    internal const string GetActiveFrequencies = """
+        SELECT "FrequencyCode" AS "Code", "Description" AS "Name"
+        FROM   "Frequency"
+        WHERE  "IsActive" = TRUE
+        ORDER  BY "IntervalHours"
+        """;
 }

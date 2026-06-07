@@ -65,6 +65,30 @@ public sealed class PatientService : IPatient
             .EnsureAsync(affected => affected > 0, new PatientNotFoundError())
             .MapAsync(_ => Unit.Value);
 
+    /// <inheritdoc/>
+    public Task<Result<PatientAllergyResponse, PatientError>> AddAllergyAsync(
+        Guid patientCode, PatientAllergyRequest request) =>
+        _repository.AddAllergyAsync(patientCode, request.AllergyCode, request.SeverityCode, request.Notes)
+            .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new PatientNotFoundError())
+            .MapAsync(MapAllergyToResponse);
+
+    /// <inheritdoc/>
+    public Task<Result<PatientAllergyResponse, PatientError>> UpdateAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, PatientAllergyRequest request) =>
+        _repository.UpdateAllergyAsync(patientCode, patientAllergyCode, request.SeverityCode, request.Notes)
+            .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new PatientAllergyNotFoundError())
+            .MapAsync(MapAllergyToResponse);
+
+    /// <inheritdoc/>
+    public Task<Result<Unit, PatientError>> RemoveAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode) =>
+        _repository.DeleteAllergyAsync(patientCode, patientAllergyCode, performedByUserCode)
+            .MapErrorAsync(PatientError (error) => new PatientDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureAsync(affected => affected > 0, new PatientAllergyNotFoundError())
+            .MapAsync(_ => Unit.Value);
+
     private static PatientPageResponse BuildPageResponse(IEnumerable<PatientRow> rows, int page, int pageSize)
     {
         List<PatientRow> list = rows.ToList();
@@ -80,6 +104,17 @@ public sealed class PatientService : IPatient
             TotalPages = totalPages
         };
     }
+
+    private static PatientAllergyResponse MapAllergyToResponse(PatientAllergyRow row) =>
+        new()
+        {
+            PatientAllergyCode = row.PatientAllergyCode,
+            AllergyCode        = row.AllergyCode,
+            AllergyName        = row.AllergyName,
+            SeverityCode       = row.SeverityCode,
+            SeverityName       = row.SeverityName,
+            Notes              = row.Notes
+        };
 
     private static PatientResponse MapToResponse(PatientRow row) =>
         new()

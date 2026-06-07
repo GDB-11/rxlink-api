@@ -7,6 +7,7 @@ using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Shared;
 using BindSharp;
 using Infrastructure.Core.Models.Account;
+using Infrastructure.Core.Models.PatientAuth;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -29,6 +30,12 @@ public sealed class JwtService : IJwt
             errorFactory: AuthenticationError (ex) => new JwtGenerationError(ex.Message, ex)
         );
 
+    public Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GeneratePatientAccessToken(PatientCredential patient) =>
+        Result.Try(
+            operation: () => CreatePatientAccessToken(patient),
+            errorFactory: AuthenticationError (ex) => new JwtGenerationError(ex.Message, ex)
+        );
+
     private (string AccessToken, DateTime ExpiresAt) CreateAccessToken(User user)
     {
         DateTime issuedAt = _timeProvider.UtcNow;
@@ -45,6 +52,30 @@ public sealed class JwtService : IJwt
                 ? (Claim[])[new Claim("license_number", user.LicenseNumber)]
                 : []
         ];
+
+        return BuildToken(claims, issuedAt);
+    }
+
+    private (string AccessToken, DateTime ExpiresAt) CreatePatientAccessToken(PatientCredential patient)
+    {
+        DateTime issuedAt = _timeProvider.UtcNow;
+
+        Claim[] claims =
+        [
+            new(JwtRegisteredClaimNames.Sub,   patient.Email),
+            new(JwtRegisteredClaimNames.Email, patient.Email),
+            new(JwtRegisteredClaimNames.Name,  $"{patient.Names} {patient.Surnames}"),
+            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+            new(ClaimTypes.Role, "Patient"),
+            new("patient_code", patient.PatientCode.ToString())
+        ];
+
+        return BuildToken(claims, issuedAt);
+    }
+
+    private (string AccessToken, DateTime ExpiresAt) BuildToken(Claim[] claims, DateTime issuedAt)
+    {
+        DateTime expiresAt = issuedAt.AddMinutes(_jwtConfig.AccessTokenExpiryMinutes);
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

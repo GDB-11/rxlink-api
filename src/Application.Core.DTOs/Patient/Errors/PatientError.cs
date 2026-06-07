@@ -13,3 +13,7 @@ public sealed record PatientPersonNotFoundError()
 /// <summary>The target patient does not exist or is already inactive.</summary>
 public sealed record PatientNotFoundError()
     : PatientError("El paciente no fue encontrado o ya está inactivo.");
+
+/// <summary>The allergy record does not exist on this patient or was already removed.</summary>
+public sealed record PatientAllergyNotFoundError()
+    : PatientError("La alergia no fue encontrada en este paciente o ya fue eliminada.");

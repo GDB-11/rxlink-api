@@ -8,7 +8,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Administrador,Doctor")]
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class LookupsController : FunctionalController
@@ -29,6 +29,7 @@ public sealed class LookupsController : FunctionalController
     /// <summary>
     /// Returns pharmaceutical forms and administration routes used by the medication catalog.
     /// </summary>
+    [Authorize(Roles = "Administrador,Doctor")]
     [HttpGet("medications")]
     [ProducesResponseType(typeof(MedicationLookupsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -44,6 +45,7 @@ public sealed class LookupsController : FunctionalController
     /// <summary>
     /// Returns sexes, document types, roles and active specialties used by the user form.
     /// </summary>
+    [Authorize(Roles = "Administrador,Doctor")]
     [HttpGet("users")]
     [ProducesResponseType(typeof(UserLookupsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -59,6 +61,7 @@ public sealed class LookupsController : FunctionalController
     /// <summary>
     /// Returns allergy severities used by the patient form.
     /// </summary>
+    [Authorize(Roles = "Administrador,Doctor")]
     [HttpGet("patients")]
     [ProducesResponseType(typeof(PatientLookupsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -69,5 +72,21 @@ public sealed class LookupsController : FunctionalController
             operation:     () => _lookupService.GetPatientLookupsAsync(),
             errorMapper:   _errorMapper,
             operationName: nameof(GetPatientLookups)
+        );
+
+    /// <summary>
+    /// Returns prescription statuses, medications, administration routes and frequencies for the prescription form.
+    /// </summary>
+    [Authorize(Roles = "Doctor,Enfermero")]
+    [HttpGet("prescriptions")]
+    [ProducesResponseType(typeof(PrescriptionLookupsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetPrescriptionLookups() =>
+        ExecuteAsync(
+            operation:     () => _lookupService.GetPrescriptionLookupsAsync(),
+            errorMapper:   _errorMapper,
+            operationName: nameof(GetPrescriptionLookups)
         );
 }

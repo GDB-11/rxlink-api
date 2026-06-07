@@ -85,6 +85,38 @@ public sealed class LookupService : ILookup
         });
     }
 
+    /// <inheritdoc/>
+    public async Task<Result<PrescriptionLookupsResponse, LookupError>> GetPrescriptionLookupsAsync()
+    {
+        var statusesResult = await _repository.GetActivePrescriptionStatusesAsync();
+        if (statusesResult.IsFailure)
+            return Result<PrescriptionLookupsResponse, LookupError>.Failure(
+                new LookupDataAccessError(statusesResult.Error!.Message, statusesResult.Error.Details, statusesResult.Error.Exception));
+
+        var medicationsResult = await _repository.GetActiveMedicationsAsync();
+        if (medicationsResult.IsFailure)
+            return Result<PrescriptionLookupsResponse, LookupError>.Failure(
+                new LookupDataAccessError(medicationsResult.Error!.Message, medicationsResult.Error.Details, medicationsResult.Error.Exception));
+
+        var routesResult = await _repository.GetActiveAdministrationRoutesAsync();
+        if (routesResult.IsFailure)
+            return Result<PrescriptionLookupsResponse, LookupError>.Failure(
+                new LookupDataAccessError(routesResult.Error!.Message, routesResult.Error.Details, routesResult.Error.Exception));
+
+        var frequenciesResult = await _repository.GetActiveFrequenciesAsync();
+        if (frequenciesResult.IsFailure)
+            return Result<PrescriptionLookupsResponse, LookupError>.Failure(
+                new LookupDataAccessError(frequenciesResult.Error!.Message, frequenciesResult.Error.Details, frequenciesResult.Error.Exception));
+
+        return Result<PrescriptionLookupsResponse, LookupError>.Success(new PrescriptionLookupsResponse
+        {
+            PrescriptionStatuses = [.. statusesResult.Value!.Select(ToGuidItem)],
+            Medications          = [.. medicationsResult.Value!.Select(ToGuidItem)],
+            AdministrationRoutes = [.. routesResult.Value!.Select(ToGuidItem)],
+            Frequencies          = [.. frequenciesResult.Value!.Select(ToGuidItem)]
+        });
+    }
+
     private static LookupItemResponse ToItem(LookupRow row) =>
         new() { Id = row.Id, Name = row.Name };
 

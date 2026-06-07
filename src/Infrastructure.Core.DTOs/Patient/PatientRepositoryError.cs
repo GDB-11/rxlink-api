@@ -13,3 +13,12 @@ public sealed record UpdatePatientError(string? Details = null, Exception? Excep
 
 public sealed record DeactivatePatientError(string? Details = null, Exception? Exception = null)
     : PatientRepositoryError("Error inesperado al desactivar el paciente.", Details, Exception);
+
+public sealed record AddPatientAllergyError(string? Details = null, Exception? Exception = null)
+    : PatientRepositoryError("Error inesperado al agregar la alergia.", Details, Exception);
+
+public sealed record UpdatePatientAllergyError(string? Details = null, Exception? Exception = null)
+    : PatientRepositoryError("Error inesperado al actualizar la alergia.", Details, Exception);
+
+public sealed record DeletePatientAllergyError(string? Details = null, Exception? Exception = null)
+    : PatientRepositoryError("Error inesperado al eliminar la alergia.", Details, Exception);

@@ -18,6 +18,11 @@ public sealed class PatientErrorMapper : IErrorHttpMapper<PatientError>
                 message = error.Message
             }),
 
+            PatientAllergyNotFoundError => new NotFoundObjectResult(new
+            {
+                message = error.Message
+            }),
+
             PatientDataAccessError dataError => new ObjectResult(new
             {
                 message = dataError.Message,

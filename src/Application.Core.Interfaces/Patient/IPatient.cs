@@ -7,6 +7,19 @@ namespace Application.Core.Interfaces.Patient;
 
 public interface IPatient
 {
+    /// <summary>Adds an allergy to an existing patient.</summary>
+    Task<Result<PatientAllergyResponse, PatientError>> AddAllergyAsync(
+        Guid patientCode, PatientAllergyRequest request);
+
+    /// <summary>Updates the severity and notes of an existing patient allergy.</summary>
+    Task<Result<PatientAllergyResponse, PatientError>> UpdateAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, PatientAllergyRequest request);
+
+    /// <summary>Soft-deletes a patient allergy.</summary>
+    Task<Result<Unit, PatientError>> RemoveAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode);
+
+
     /// <summary>Returns a paginated list of patients. Supports optional text search on names or surnames.</summary>
     Task<Result<PatientPageResponse, PatientError>> GetPageAsync(PatientPageRequest request);
 

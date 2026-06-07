@@ -107,4 +107,58 @@ public sealed class PatientController : FunctionalController
             operationName: nameof(Activate),
             successMapper: _ => NoContent()
         );
+
+    /// <summary>
+    /// Adds an allergy to an existing patient.
+    /// </summary>
+    [HttpPost("{code:guid}/allergies")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(PatientAllergyResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> AddAllergy(Guid code, [FromBody] PatientAllergyRequest request) =>
+        ExecuteAsync(
+            operation: () => _patientService.AddAllergyAsync(code, request),
+            errorMapper: _errorMapper,
+            operationName: nameof(AddAllergy),
+            successMapper: allergy => Created($"api/patient/{code}/allergies/{allergy.PatientAllergyCode}", allergy)
+        );
+
+    /// <summary>
+    /// Updates the severity and notes of an existing patient allergy.
+    /// </summary>
+    [HttpPut("{code:guid}/allergies/{allergyCode:guid}")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(PatientAllergyResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> UpdateAllergy(Guid code, Guid allergyCode, [FromBody] PatientAllergyRequest request) =>
+        ExecuteAsync(
+            operation: () => _patientService.UpdateAllergyAsync(code, allergyCode, request),
+            errorMapper: _errorMapper,
+            operationName: nameof(UpdateAllergy)
+        );
+
+    /// <summary>
+    /// Removes an allergy from a patient (soft-delete).
+    /// </summary>
+    [HttpDelete("{code:guid}/allergies/{allergyCode:guid}")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> DeleteAllergy(Guid code, Guid allergyCode) =>
+        ExecuteAuthenticatedAsync(
+            operation: userCode => _patientService.RemoveAllergyAsync(code, allergyCode, userCode),
+            errorMapper: _errorMapper,
+            operationName: nameof(DeleteAllergy),
+            successMapper: _ => NoContent()
+        );
 }

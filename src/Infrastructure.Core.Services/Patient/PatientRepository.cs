@@ -4,6 +4,7 @@ using Infrastructure.Core.DTOs.Patient;
 using Infrastructure.Core.Interfaces.Patient;
 using Infrastructure.Core.Models.Patient;
 
+
 namespace Infrastructure.Core.Services.Patient;
 
 /// <summary>
@@ -78,5 +79,38 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
                 PatientRepositorySql.Activate,
                 new { Code = code }),
             errorFactory: PatientRepositoryError (ex) => new DeactivatePatientError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<PatientAllergyRow?, PatientRepositoryError>> AddAllergyAsync(
+        Guid patientCode, Guid allergyCode, Guid severityCode, string? notes) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
+                _connection,
+                PatientRepositorySql.AddAllergy,
+                new { PatientCode = patientCode, AllergyCode = allergyCode, SeverityCode = severityCode, Notes = notes }),
+            errorFactory: PatientRepositoryError (ex) => new AddPatientAllergyError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<PatientAllergyRow?, PatientRepositoryError>> UpdateAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid severityCode, string? notes) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
+                _connection,
+                PatientRepositorySql.UpdateAllergy,
+                new { PatientCode = patientCode, PatientAllergyCode = patientAllergyCode, SeverityCode = severityCode, Notes = notes }),
+            errorFactory: PatientRepositoryError (ex) => new UpdatePatientAllergyError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<int, PatientRepositoryError>> DeleteAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                PatientRepositorySql.DeleteAllergy,
+                new { PatientCode = patientCode, PatientAllergyCode = patientAllergyCode, PerformedByUserCode = performedByUserCode }),
+            errorFactory: PatientRepositoryError (ex) => new DeletePatientAllergyError(ex.Message, ex)
         );
 }

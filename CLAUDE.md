@@ -1,5 +1,27 @@
 # RxLink API — Claude Code Guidelines
 
+## Prescription lifecycle (PrescriptionStatusId maps to PrescriptionStatus table):
+
+Borrador — Default status when a doctor creates a prescription. Not clinically valid yet.
+Activo — Set when the doctor explicitly signs the prescription via the sign button. Required before a nurse can dispense it.
+Suspendido — The doctor can suspend an Activo prescription at any time before it is dispensed. This is temporary; the doctor can reactivate it back to Activo.
+Cancelado — The doctor can permanently cancel a prescription that has not yet been dispensed. This action is irreversible and invalidates the prescription.
+Dispensado — Set by a nurse (Enfermero) through the dispensing module, only possible when the prescription is Activo.
+Finalizado — Applied when today's date exceeds ValidUntil AND the prescription was already Dispensado.
+Caducado — Applied when today's date exceeds ValidUntil AND the prescription was NOT dispensed (i.e., still Activo or Suspendido).
+
+Allowed transitions:
+Borrador   → Activo      (doctor signs)
+Borrador   → Cancelado   (doctor cancels)
+Activo     → Suspendido  (doctor suspends)
+Activo     → Cancelado   (doctor cancels — irreversible)
+Activo     → Dispensado  (nurse dispenses)
+Activo     → Caducado    (ValidUntil exceeded, not dispensed)
+Suspendido → Activo      (doctor reactivates)
+Suspendido → Cancelado   (doctor cancels — irreversible)
+Suspendido → Caducado    (ValidUntil exceeded, not dispensed)
+Dispensado → Finalizado  (ValidUntil exceeded, already dispensed)
+
 ## Repository layout
 
 | Path | Purpose |

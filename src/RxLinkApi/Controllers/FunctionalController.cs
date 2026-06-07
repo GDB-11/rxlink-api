@@ -105,6 +105,32 @@ public abstract class FunctionalController : ControllerBase
     }
 
     /// <summary>
+    /// Executes an async operation with the authenticated patient context.
+    /// Extracts and validates the <c>patient_code</c> custom claim from the JWT.
+    /// Returns <c>401 Unauthorized</c> when the claim is absent or not a valid Guid.
+    /// </summary>
+    protected async Task<IActionResult> ExecuteAuthenticatedPatientAsync<T, TError>(
+        Func<Guid, Task<Result<T, TError>>> operation,
+        IErrorHttpMapper<TError> errorMapper,
+        string operationName,
+        Func<T, IActionResult>? successMapper = null)
+    {
+        string? patientCodeClaim = User.FindFirst("patient_code")?.Value;
+
+        if (string.IsNullOrEmpty(patientCodeClaim) || !Guid.TryParse(patientCodeClaim, out Guid patientCode))
+        {
+            await _logger.LogErrorAsync(operationName, "Invalid or missing patient_code in JWT token");
+            return Unauthorized();
+        }
+
+        Result<T, TError> result = await operation(patientCode);
+
+        return result
+            .LogResult(_logger, operationName)
+            .ToHttpResult(errorMapper, successMapper);
+    }
+
+    /// <summary>
     /// Executes an operation that returns NoContent on success.
     /// </summary>
     protected IActionResult ExecuteNoContent<T, TError>(

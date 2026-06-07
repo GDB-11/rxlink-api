@@ -6,6 +6,19 @@ namespace Infrastructure.Core.Interfaces.Patient;
 
 public interface IPatientRepository
 {
+    /// <summary>Adds an allergy to the patient (upsert: restores a soft-deleted record if it exists).</summary>
+    Task<Result<PatientAllergyRow?, PatientRepositoryError>> AddAllergyAsync(
+        Guid patientCode, Guid allergyCode, Guid severityCode, string? notes);
+
+    /// <summary>Updates the severity and notes of an existing patient allergy.</summary>
+    Task<Result<PatientAllergyRow?, PatientRepositoryError>> UpdateAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid severityCode, string? notes);
+
+    /// <summary>Soft-deletes a patient allergy. Returns the number of affected rows.</summary>
+    Task<Result<int, PatientRepositoryError>> DeleteAllergyAsync(
+        Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode);
+
+
     /// <summary>Returns one page of patients, with a total count via window function.</summary>
     Task<Result<IEnumerable<PatientRow>, PatientRepositoryError>> GetPageAsync(int offset, int limit, string? search);
 
