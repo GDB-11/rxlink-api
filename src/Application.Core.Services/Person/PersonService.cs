@@ -22,7 +22,8 @@ public sealed class PersonService : IPerson
     /// <inheritdoc/>
     public Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request) =>
         _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
-            .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PersonError (error) =>
+                new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
 
     /// <inheritdoc/>
@@ -30,28 +31,31 @@ public sealed class PersonService : IPerson
         _repository.GetAvailableAsync(
                 (request.Page - 1) * request.PageSize, request.PageSize, request.Search,
                 request.ExcludeLinkedUsers, request.ExcludeLinkedPatients)
-            .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PersonError (error) =>
+                new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>
         _repository.InsertAsync(
-            request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
-            request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-            request.DocumentTypeCode, request.DocumentNumber)
-            .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
+                request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
+                request.Phone, request.AlternativePhone, request.Email,
+                request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
+                request.DocumentTypeCode, request.DocumentNumber)
+            .MapErrorAsync(PersonError (error) =>
+                new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PersonDataAccessError("No se pudo registrar la persona."))
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> UpdateAsync(Guid code, UpdatePersonRequest request) =>
         _repository.UpdateAsync(
-            code, request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
-            request.Phone, request.AlternativePhone, request.Email,
-            request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-            request.DocumentTypeCode, request.DocumentNumber)
-            .MapErrorAsync(PersonError (error) => new PersonDataAccessError(error.Message, error.Details, error.Exception))
+                code, request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
+                request.Phone, request.AlternativePhone, request.Email,
+                request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
+                request.DocumentTypeCode, request.DocumentNumber)
+            .MapErrorAsync(PersonError (error) =>
+                new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PersonNotFoundError())
             .MapAsync(MapToResponse);
 

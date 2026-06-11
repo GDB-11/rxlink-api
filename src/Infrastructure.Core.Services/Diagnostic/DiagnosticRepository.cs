@@ -35,11 +35,11 @@ public sealed class DiagnosticRepository : BaseDatabaseService, IDiagnosticRepos
                 DiagnosticRepositorySql.Insert,
                 new
                 {
-                    PatientCode        = patientCode,
-                    Description        = description,
-                    DiagnosedAt        = diagnosedAt,
-                    Notes              = notes,
-                    CreatedByUserCode  = createdByUserCode
+                    PatientCode = patientCode,
+                    Description = description,
+                    DiagnosedAt = diagnosedAt,
+                    Notes = notes,
+                    CreatedByUserCode = createdByUserCode
                 }),
             errorFactory: DiagnosticRepositoryError (ex) => new InsertDiagnosticError(ex.Message, ex)
         );
@@ -53,10 +53,10 @@ public sealed class DiagnosticRepository : BaseDatabaseService, IDiagnosticRepos
                 DiagnosticRepositorySql.Update,
                 new
                 {
-                    Code               = code,
-                    Description        = description,
-                    DiagnosedAt        = diagnosedAt,
-                    Notes              = notes,
+                    Code = code,
+                    Description = description,
+                    DiagnosedAt = diagnosedAt,
+                    Notes = notes,
                     ModifiedByUserCode = modifiedByUserCode
                 }),
             errorFactory: DiagnosticRepositoryError (ex) => new UpdateDiagnosticError(ex.Message, ex)

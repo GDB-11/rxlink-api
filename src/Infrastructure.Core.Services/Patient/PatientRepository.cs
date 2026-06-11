@@ -88,7 +88,10 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
                 _connection,
                 PatientRepositorySql.AddAllergy,
-                new { PatientCode = patientCode, AllergyCode = allergyCode, SeverityCode = severityCode, Notes = notes }),
+                new
+                {
+                    PatientCode = patientCode, AllergyCode = allergyCode, SeverityCode = severityCode, Notes = notes
+                }),
             errorFactory: PatientRepositoryError (ex) => new AddPatientAllergyError(ex.Message, ex)
         );
 
@@ -99,7 +102,11 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
                 _connection,
                 PatientRepositorySql.UpdateAllergy,
-                new { PatientCode = patientCode, PatientAllergyCode = patientAllergyCode, SeverityCode = severityCode, Notes = notes }),
+                new
+                {
+                    PatientCode = patientCode, PatientAllergyCode = patientAllergyCode, SeverityCode = severityCode,
+                    Notes = notes
+                }),
             errorFactory: PatientRepositoryError (ex) => new UpdatePatientAllergyError(ex.Message, ex)
         );
 
@@ -110,7 +117,11 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
             operation: async () => await ExecuteNonQueryAsync(
                 _connection,
                 PatientRepositorySql.DeleteAllergy,
-                new { PatientCode = patientCode, PatientAllergyCode = patientAllergyCode, PerformedByUserCode = performedByUserCode }),
+                new
+                {
+                    PatientCode = patientCode, PatientAllergyCode = patientAllergyCode,
+                    PerformedByUserCode = performedByUserCode
+                }),
             errorFactory: PatientRepositoryError (ex) => new DeletePatientAllergyError(ex.Message, ex)
         );
 }

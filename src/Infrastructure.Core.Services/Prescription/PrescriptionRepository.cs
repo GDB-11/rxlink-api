@@ -23,7 +23,11 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PrescriptionRow>(
                 _connection,
                 PrescriptionRepositorySql.Insert,
-                new { DiagnosticCode = diagnosticCode, Notes = notes, ValidUntil = validUntil, DetailsJson = detailsJson, CreatedByUserCode = createdByUserCode }),
+                new
+                {
+                    DiagnosticCode = diagnosticCode, Notes = notes, ValidUntil = validUntil, DetailsJson = detailsJson,
+                    CreatedByUserCode = createdByUserCode
+                }),
             errorFactory: PrescriptionRepositoryError (ex) =>
                 ex.Message.Contains("uq_prescription_diagnostic") || ex.Message.Contains("23505")
                     ? new InsertPrescriptionDuplicateError(ex.Message, ex)
@@ -72,7 +76,11 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
 
             PrescriptionRow? row = await _connection.QueryFirstOrDefaultAsync<PrescriptionRow>(
                 PrescriptionRepositorySql.Update,
-                new { Code = code, Notes = notes, ValidUntil = validUntil, DetailsJson = detailsJson, ModifiedByUserCode = modifiedByUserCode },
+                new
+                {
+                    Code = code, Notes = notes, ValidUntil = validUntil, DetailsJson = detailsJson,
+                    ModifiedByUserCode = modifiedByUserCode
+                },
                 transaction
             );
 

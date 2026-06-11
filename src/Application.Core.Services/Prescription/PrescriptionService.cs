@@ -26,7 +26,8 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
         CreatePrescriptionRequest request, Guid createdByUserCode) =>
-        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details), createdByUserCode)
+        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil,
+                JsonSerializer.Serialize(request.Details), createdByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 InsertPrescriptionDuplicateError => new PrescriptionDuplicateError(),
@@ -38,14 +39,16 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> GetAsync(Guid code) =>
         _repository.GetByCodeAsync(code)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PrescriptionNotFoundError())
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
-        _repository.UpdateAsync(code, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details), modifiedByUserCode)
+        _repository.UpdateAsync(code, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details),
+                modifiedByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 UpdatePrescriptionInvalidStatusError => new PrescriptionInvalidStatusError(),
@@ -57,35 +60,40 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> SignAsync(Guid code, Guid performedByUserCode) =>
         _repository.SignAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> SuspendAsync(Guid code, Guid performedByUserCode) =>
         _repository.SuspendAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> ReactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.ReactivateAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> CancelAsync(Guid code, Guid performedByUserCode) =>
         _repository.CancelAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> DispenseAsync(Guid code, Guid performedByUserCode) =>
         _repository.DispenseAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 
@@ -97,16 +105,16 @@ public sealed class PrescriptionService : IPrescription
 
         return new PrescriptionResponse
         {
-            PrescriptionCode      = row.PrescriptionCode,
-            DiagnosticCode        = row.DiagnosticCode,
+            PrescriptionCode = row.PrescriptionCode,
+            DiagnosticCode = row.DiagnosticCode,
             DiagnosticDescription = row.DiagnosticDescription,
-            PatientCode           = row.PatientCode,
-            StatusName            = row.StatusName,
-            StatusCode            = row.StatusCode,
-            Notes                 = row.Notes,
-            ValidUntil            = row.ValidUntil,
-            CreatedAt             = row.CreatedAt,
-            Details               = details
+            PatientCode = row.PatientCode,
+            StatusName = row.StatusName,
+            StatusCode = row.StatusCode,
+            Notes = row.Notes,
+            ValidUntil = row.ValidUntil,
+            CreatedAt = row.CreatedAt,
+            Details = details
         };
     }
 }

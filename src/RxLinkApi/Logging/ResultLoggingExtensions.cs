@@ -19,7 +19,7 @@ public static class ResultLoggingExtensions
             .Do(
                 onSuccess: value => logger.LogSuccess(operation, value),
                 onFailure: error => logger.LogError(operation, error)
-                );
+            );
 
     /// <summary>
     /// Asynchronously logs the result using the TapAsync pattern
@@ -30,12 +30,12 @@ public static class ResultLoggingExtensions
         string operation)
     {
         Result<T, TError> result = await resultTask;
-    
+
         if (result.IsSuccess)
             await logger.LogSuccessAsync(operation, result.Value);
         else
             await logger.LogErrorAsync(operation, result.Error);
-    
+
         return result;
     }
 

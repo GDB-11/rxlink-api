@@ -4,4 +4,5 @@ namespace Infrastructure.Core.DTOs.Navigation;
 public abstract record NavigationRepositoryError(string Message, string? Details = null, Exception? Exception = null);
 
 public sealed record GetNavigationRowsError(string? Details = null, Exception? Exception = null)
-    : NavigationRepositoryError("Error inesperado al recuperar la navegación desde la base de datos.", Details, Exception);
+    : NavigationRepositoryError("Error inesperado al recuperar la navegación desde la base de datos.", Details,
+        Exception);

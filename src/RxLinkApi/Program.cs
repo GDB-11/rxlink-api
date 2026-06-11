@@ -31,7 +31,7 @@ builder.Services.AddControllers()
 
             return new BadRequestObjectResult(new
             {
-                title  = "One or more validation errors occurred.",
+                title = "One or more validation errors occurred.",
                 errors
             });
         };
@@ -65,7 +65,7 @@ builder.Services.AddCors(options =>
         string[] allowedOrigins = builder.Configuration
             .GetSection("AllowedOrigins")
             .Get<string[]>() ?? [];
-        
+
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -79,7 +79,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    
+
     app.MapScalarApiReference(options =>
     {
         options

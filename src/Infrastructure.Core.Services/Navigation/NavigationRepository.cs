@@ -19,7 +19,8 @@ public sealed class NavigationRepository : BaseDatabaseService, INavigationRepos
     }
 
     /// <inheritdoc/>
-    public async Task<Result<IEnumerable<NavigationRow>, NavigationRepositoryError>> GetRowsByRoleAsync(string roleName) =>
+    public async Task<Result<IEnumerable<NavigationRow>, NavigationRepositoryError>>
+        GetRowsByRoleAsync(string roleName) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, NavigationRow>(
                 _connection,

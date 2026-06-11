@@ -24,35 +24,40 @@ public sealed class AllergyService : IAllergy
         int offset = (request.Page - 1) * request.PageSize;
 
         return _repository.GetPageAsync(offset, request.PageSize, request.Search)
-            .MapErrorAsync(AllergyError (error) => new AllergyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AllergyError (error) =>
+                new AllergyDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
     }
 
     /// <inheritdoc/>
     public Task<Result<AllergyResponse, AllergyError>> CreateAsync(CreateAllergyRequest request) =>
         _repository.InsertAsync(request.Name, request.Description)
-            .MapErrorAsync(AllergyError (error) => new AllergyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AllergyError (error) =>
+                new AllergyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new AllergyDataAccessError("No se pudo registrar la alergia."))
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<AllergyResponse, AllergyError>> UpdateAsync(Guid code, UpdateAllergyRequest request) =>
         _repository.UpdateAsync(code, request.Name, request.Description)
-            .MapErrorAsync(AllergyError (error) => new AllergyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AllergyError (error) =>
+                new AllergyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new AllergyNotFoundError())
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<Unit, AllergyError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.DeactivateAsync(code, performedByUserCode)
-            .MapErrorAsync(AllergyError (error) => new AllergyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AllergyError (error) =>
+                new AllergyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new AllergyNotFoundError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, AllergyError>> ActivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.ActivateAsync(code)
-            .MapErrorAsync(AllergyError (error) => new AllergyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AllergyError (error) =>
+                new AllergyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new AllergyNotFoundError())
             .MapAsync(_ => Unit.Value);
 

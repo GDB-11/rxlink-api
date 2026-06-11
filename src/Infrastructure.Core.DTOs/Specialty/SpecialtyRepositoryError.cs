@@ -1,4 +1,5 @@
 ﻿namespace Infrastructure.Core.DTOs.Specialty;
+
 public abstract record SpecialtyRepositoryError(string Message, string? Details = null, Exception? Exception = null);
 
 public sealed record GetSpecialtyPageError(string? Details = null, Exception? Exception = null)

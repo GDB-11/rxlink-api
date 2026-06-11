@@ -24,7 +24,7 @@ public sealed class PrescriptionController : FunctionalController
         : base(logger)
     {
         _prescriptionService = prescriptionService;
-        _errorMapper         = errorMapper;
+        _errorMapper = errorMapper;
     }
 
     /// <summary>
@@ -41,8 +41,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Create([FromBody] CreatePrescriptionRequest request) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.CreateAsync(request, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.CreateAsync(request, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Create),
             successMapper: prescription => Created($"api/prescription/{prescription.PrescriptionCode}", prescription)
         );
@@ -58,8 +58,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetByCode(Guid code) =>
         ExecuteAsync(
-            operation:     () => _prescriptionService.GetAsync(code),
-            errorMapper:   _errorMapper,
+            operation: () => _prescriptionService.GetAsync(code),
+            errorMapper: _errorMapper,
             operationName: nameof(GetByCode)
         );
 
@@ -77,8 +77,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Update(Guid code, [FromBody] UpdatePrescriptionRequest request) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.UpdateAsync(code, request, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.UpdateAsync(code, request, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Update)
         );
 
@@ -95,8 +95,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Sign(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.SignAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.SignAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Sign),
             successMapper: _ => NoContent()
         );
@@ -113,8 +113,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Suspend(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.SuspendAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.SuspendAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Suspend),
             successMapper: _ => NoContent()
         );
@@ -131,8 +131,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Reactivate(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.ReactivateAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.ReactivateAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Reactivate),
             successMapper: _ => NoContent()
         );
@@ -149,8 +149,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Cancel(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.CancelAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.CancelAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Cancel),
             successMapper: _ => NoContent()
         );
@@ -167,8 +167,8 @@ public sealed class PrescriptionController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Dispense(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _prescriptionService.DispenseAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _prescriptionService.DispenseAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Dispense),
             successMapper: _ => NoContent()
         );

@@ -19,7 +19,8 @@ public sealed class NavigationService : INavigation
     /// <inheritdoc/>
     public Task<Result<NavigationResponse, NavigationError>> GetNavigationAsync(string roleName) =>
         _navigationRepository.GetRowsByRoleAsync(roleName)
-            .MapErrorAsync(NavigationError (error) => new NavigationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(NavigationError (error) =>
+                new NavigationDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(BuildNavigationResponse);
 
     private static NavigationResponse BuildNavigationResponse(IEnumerable<NavigationRow> rows)

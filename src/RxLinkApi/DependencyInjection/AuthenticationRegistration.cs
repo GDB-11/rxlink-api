@@ -39,7 +39,9 @@ internal static class AuthenticationRegistration
                             var log = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<JwtBearerEvents>>();
                             var header = ctx.Request.Headers.Authorization.FirstOrDefault();
                             log.LogDebug("[JWT] OnMessageReceived — Authorization header: {Header}",
-                                string.IsNullOrEmpty(header) ? "<missing>" : header[..Math.Min(40, header.Length)] + "...");
+                                string.IsNullOrEmpty(header)
+                                    ? "<missing>"
+                                    : header[..Math.Min(40, header.Length)] + "...");
                             return Task.CompletedTask;
                         },
 

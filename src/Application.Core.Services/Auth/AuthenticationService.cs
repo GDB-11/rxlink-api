@@ -39,7 +39,8 @@ public sealed class AuthenticationService : IAuthentication
 
     public Task<Result<LoginResponse, AuthenticationError>> LoginAsync(LoginRequest request) =>
         _credentialRepository.GetByUsernameAsync(request.Username)
-            .MapErrorAsync(AuthenticationError (error) => new GetByUsernameAsyncDomainError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(AuthenticationError (error) =>
+                new GetByUsernameAsyncDomainError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new UserNotFoundError())
             .EnsureAsync(user => user.IsActive, new UserInactiveError())
             .BindAsync(user => ValidatePasswordAndGenerateTokens(user, request.Password));
@@ -47,7 +48,8 @@ public sealed class AuthenticationService : IAuthentication
     public Task<Result<LoginResponse, AuthenticationError>> RefreshTokenAsync(RefreshTokenRequest request) =>
         EncryptTokenForLookup(request.RefreshToken)
             .BindAsync(tokenHash => _credentialRepository.GetByRefreshTokenAsync(tokenHash)
-                .MapErrorAsync(AuthenticationError (error) => new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)))
+                .MapErrorAsync(AuthenticationError (error) =>
+                    new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)))
             .EnsureNotNullAsync(new RefreshTokenNotFoundError())
             .EnsureAsync(user => user.IsActive, new UserInactiveError())
             .BindAsync(GenerateAndStoreNewTokens);
@@ -55,14 +57,18 @@ public sealed class AuthenticationService : IAuthentication
     public Task<Result<Unit, AuthenticationError>> LogoutAsync(LogoutRequest request) =>
         EncryptTokenForLookup(request.RefreshToken)
             .BindAsync(tokenHash => _credentialRepository.GetByRefreshTokenAsync(tokenHash)
-                .MapErrorAsync(AuthenticationError (error) => new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)))
+                .MapErrorAsync(AuthenticationError (error) =>
+                    new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)))
             .EnsureNotNullAsync(new RefreshTokenNotFoundError())
             .BindAsync(user => _credentialRepository.ClearRefreshTokenAsync(user.UserCode)
-                .MapErrorAsync(AuthenticationError (error) => new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)));
+                .MapErrorAsync(AuthenticationError (error) =>
+                    new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)));
 
-    private Task<Result<LoginResponse, AuthenticationError>> ValidatePasswordAndGenerateTokens(User user, string password) =>
+    private Task<Result<LoginResponse, AuthenticationError>> ValidatePasswordAndGenerateTokens(User user,
+        string password) =>
         _passwordService.VerifyPassword(password, user.PasswordHash)
-            .MapError(AuthenticationError (error) => new ChaChaDecryptError(error.Message, error.Details, error.Exception))
+            .MapError(AuthenticationError (error) =>
+                new ChaChaDecryptError(error.Message, error.Details, error.Exception))
             .Ensure(isValid => isValid, new IncorrectPasswordError())
             .BindAsync(_ => GenerateAndStoreNewTokens(user));
 
@@ -77,7 +83,8 @@ public sealed class AuthenticationService : IAuthentication
                     .MapError(AuthenticationError (error) => new JwtStorageError(error.Details, error.Exception))
                     .BindAsync(tokenHash =>
                         StoreRefreshToken(user.UserCode, tokenHash)
-                            .MapAsync(_ => GenerateLoginResponse(user, tokens.AccessToken, rawToken, tokens.ExpiresAt))));
+                            .MapAsync(_ =>
+                                GenerateLoginResponse(user, tokens.AccessToken, rawToken, tokens.ExpiresAt))));
     }
 
     private Task<Result<Unit, AuthenticationError>> StoreRefreshToken(Guid userCode, string tokenHash) =>
@@ -85,7 +92,8 @@ public sealed class AuthenticationService : IAuthentication
                 userCode,
                 tokenHash,
                 _timeProvider.UtcNow.AddMinutes(_jwtConfig.RefreshTokenExpiryMinutes))
-            .MapErrorAsync(AuthenticationError (error) => new StoreRefreshTokenError(error.Message, error.Details, error.Exception));
+            .MapErrorAsync(AuthenticationError (error) =>
+                new StoreRefreshTokenError(error.Message, error.Details, error.Exception));
 
     /// <summary>
     /// Deterministically encrypts a raw token received from the client so it can be
@@ -94,7 +102,8 @@ public sealed class AuthenticationService : IAuthentication
     private Task<Result<string, AuthenticationError>> EncryptTokenForLookup(string rawToken) =>
         Task.FromResult(
             _deterministicEncryption.Encrypt(rawToken)
-                .MapError(AuthenticationError (error) => new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)));
+                .MapError(AuthenticationError (error) =>
+                    new GetByRefreshTokenAsyncDomainError(error.Message, error.Details, error.Exception)));
 
     private static LoginResponse GenerateLoginResponse(
         User user,

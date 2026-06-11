@@ -16,7 +16,7 @@ public sealed class SpecialtyController : FunctionalController
 {
     private readonly ISpecialty _specialtyService;
     private readonly IErrorHttpMapper<SpecialtyError> _errorMapper;
-    
+
     public SpecialtyController(
         ISpecialty specialtyService,
         IErrorHttpMapper<SpecialtyError> errorMapper,
@@ -24,8 +24,9 @@ public sealed class SpecialtyController : FunctionalController
         : base(logger)
     {
         _specialtyService = specialtyService;
-        _errorMapper       = errorMapper;
+        _errorMapper = errorMapper;
     }
+
     /// <summary>
     /// Returns a paginated list of specialties. 
     /// </summary>
@@ -35,11 +36,12 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetPage([FromQuery] SpecialtyPageRequest request) =>
-            ExecuteAsync(
-                operation:     () => _specialtyService.GetPageAsync(request),
-                errorMapper:   _errorMapper,
-                operationName: nameof(GetPage)
-            );
+        ExecuteAsync(
+            operation: () => _specialtyService.GetPageAsync(request),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetPage)
+        );
+
     /// <summary>
     /// Registers a new specialty in the catalog.
     /// </summary>
@@ -49,13 +51,13 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Create([FromBody] CreateSpecialtyRequest request) =>
-            ExecuteAsync(
-                operation:     () => _specialtyService.CreateAsync(request),
-                errorMapper:   _errorMapper,
-                operationName: nameof(Create),
-                successMapper : specialty => Created($"api/especialidades/{specialty.SpecialtyCode}", specialty)
-            );
-   
+        ExecuteAsync(
+            operation: () => _specialtyService.CreateAsync(request),
+            errorMapper: _errorMapper,
+            operationName: nameof(Create),
+            successMapper: specialty => Created($"api/especialidades/{specialty.SpecialtyCode}", specialty)
+        );
+
     /// <summary>
     /// Updates an existing active specialty identified by its code.
     /// </summary>
@@ -67,11 +69,11 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Update(Guid code, [FromBody] UpdateSpecialtyRequest request) =>
         ExecuteAsync(
-            operation:     () => _specialtyService.UpdateAsync(code, request),
-            errorMapper:   _errorMapper,
+            operation: () => _specialtyService.UpdateAsync(code, request),
+            errorMapper: _errorMapper,
             operationName: nameof(Update)
         );
-    
+
     /// <summary>
     /// Deactivates a specialty (soft-delete). The record is preserved to maintain FK integrity.
     /// </summary>
@@ -83,12 +85,12 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Deactivate(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _specialtyService.DeactivateAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _specialtyService.DeactivateAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Deactivate),
             successMapper: _ => NoContent()
         );
-    
+
     /// <summary>
     /// Activates a specialty.
     /// </summary>
@@ -100,8 +102,8 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> Activate(Guid code) =>
         ExecuteAuthenticatedAsync(
-            operation:     userCode => _specialtyService.ActivateAsync(code, userCode),
-            errorMapper:   _errorMapper,
+            operation: userCode => _specialtyService.ActivateAsync(code, userCode),
+            errorMapper: _errorMapper,
             operationName: nameof(Activate),
             successMapper: _ => NoContent()
         );
@@ -115,8 +117,8 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetAllActive() =>
         ExecuteAsync(
-            operation:     () => _specialtyService.GetAllActiveWithDoctorCountAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _specialtyService.GetAllActiveWithDoctorCountAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetAllActive)
         );
 
@@ -131,8 +133,8 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetDoctorsBySpecialty(Guid code) =>
         ExecuteAsync(
-            operation:     () => _specialtyService.GetDoctorsBySpecialtyCodeAsync(code),
-            errorMapper:   _errorMapper,
+            operation: () => _specialtyService.GetDoctorsBySpecialtyCodeAsync(code),
+            errorMapper: _errorMapper,
             operationName: nameof(GetDoctorsBySpecialty)
         );
 }

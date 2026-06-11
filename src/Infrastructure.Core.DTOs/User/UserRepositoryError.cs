@@ -13,6 +13,6 @@ public sealed record UpdateUserError(string? Details = null, Exception? Exceptio
 
 public sealed record DeactivateUserError(string? Details = null, Exception? Exception = null)
     : UserRepositoryError("Error inesperado al desactivar el usuario.", Details, Exception);
-    
+
 public sealed record ActivateUserError(string? Details = null, Exception? Exception = null)
-    : UserRepositoryError("Error inesperado al activar el usuario.", Details, Exception);    
+    : UserRepositoryError("Error inesperado al activar el usuario.", Details, Exception);

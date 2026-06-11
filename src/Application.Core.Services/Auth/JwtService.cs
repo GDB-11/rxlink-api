@@ -30,7 +30,8 @@ public sealed class JwtService : IJwt
             errorFactory: AuthenticationError (ex) => new JwtGenerationError(ex.Message, ex)
         );
 
-    public Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GeneratePatientAccessToken(PatientCredential patient) =>
+    public Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GeneratePatientAccessToken(
+        PatientCredential patient) =>
         Result.Try(
             operation: () => CreatePatientAccessToken(patient),
             errorFactory: AuthenticationError (ex) => new JwtGenerationError(ex.Message, ex)
@@ -43,10 +44,10 @@ public sealed class JwtService : IJwt
 
         Claim[] claims =
         [
-            new(JwtRegisteredClaimNames.Sub,   user.UserCode.ToString()),
+            new(JwtRegisteredClaimNames.Sub, user.UserCode.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new(JwtRegisteredClaimNames.Name,  $"{user.Names} {user.Surnames}"),
-            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Name, $"{user.Names} {user.Surnames}"),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.Role, user.RoleName),
             .. user.LicenseNumber is not null
                 ? (Claim[])[new Claim("license_number", user.LicenseNumber)]
@@ -62,10 +63,10 @@ public sealed class JwtService : IJwt
 
         Claim[] claims =
         [
-            new(JwtRegisteredClaimNames.Sub,   patient.Email),
+            new(JwtRegisteredClaimNames.Sub, patient.Email),
             new(JwtRegisteredClaimNames.Email, patient.Email),
-            new(JwtRegisteredClaimNames.Name,  $"{patient.Names} {patient.Surnames}"),
-            new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Name, $"{patient.Names} {patient.Surnames}"),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.Role, "Patient"),
             new("patient_code", patient.PatientCode.ToString())
         ];

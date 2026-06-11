@@ -1,4 +1,6 @@
 using Application.Core.Interfaces.Allergy;
+using Application.Core.Interfaces.Appointment;
+using Application.Core.Interfaces.Availability;
 using Application.Core.Interfaces.Diagnostic;
 using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.DocumentType;
@@ -15,6 +17,8 @@ using Application.Core.Interfaces.Shared;
 using Application.Core.Interfaces.Specialty;
 using Application.Core.Interfaces.Users;
 using Application.Core.Services.Allergy;
+using Application.Core.Services.Appointment;
+using Application.Core.Services.Availability;
 using Application.Core.Services.Diagnostic;
 using Application.Core.Services.Auth;
 using Application.Core.Services.DocumentType;
@@ -40,6 +44,8 @@ internal static class ServiceRegistration
         internal void RegisterApplicationServices()
         {
             builder.Services.AddScoped<IAllergy, AllergyService>();
+            builder.Services.AddScoped<IAppointment, AppointmentService>();
+            builder.Services.AddScoped<IAvailability, AvailabilityService>();
             builder.Services.AddScoped<IPerson, PersonService>();
             builder.Services.AddScoped<IPatient, PatientService>();
             builder.Services.AddScoped<IJwt, JwtService>();

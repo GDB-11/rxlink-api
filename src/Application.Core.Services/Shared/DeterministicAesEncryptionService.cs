@@ -46,14 +46,14 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
     public Result<string, DeterministicEncryptionError> Decrypt(string ciphertext) =>
         ValidateCipherText(ciphertext)
             .Bind(text => Result.Try(
-                () => Convert.FromBase64String(text),
-                DeterministicEncryptionError (ex) => new GetBytesFromBase64StringDeterministicError(ex.Message, ex)
-            )
-            .Bind(DecryptBytes)
-            .Bind(bytes => Result.Try(
-                () => Encoding.UTF8.GetString(bytes),
-                DeterministicEncryptionError (ex) => new GetBytesDeterministicError(ex.Message, ex)
-            )));
+                    () => Convert.FromBase64String(text),
+                    DeterministicEncryptionError (ex) => new GetBytesFromBase64StringDeterministicError(ex.Message, ex)
+                )
+                .Bind(DecryptBytes)
+                .Bind(bytes => Result.Try(
+                    () => Encoding.UTF8.GetString(bytes),
+                    DeterministicEncryptionError (ex) => new GetBytesDeterministicError(ex.Message, ex)
+                )));
 
     private static Result<string, DeterministicEncryptionError> ValidatePlainText(string plaintext) =>
         !string.IsNullOrEmpty(plaintext)
@@ -104,17 +104,17 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
 
     private Result<byte[], DeterministicEncryptionError> PerformAesEncryption(byte[] plainBytes, byte[] iv) =>
         Result.Try(() =>
-                {
-                    using Aes aes = Aes.Create();
-                    aes.Key = _encryptionKey;
-                    aes.IV = iv;
-                    aes.Mode = CipherMode.CBC;
-                    aes.Padding = PaddingMode.PKCS7;
+            {
+                using Aes aes = Aes.Create();
+                aes.Key = _encryptionKey;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
 
-                    using ICryptoTransform encryptor = aes.CreateEncryptor();
-                    return encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-                },
-                DeterministicEncryptionError (ex) => new AesEncryptionError(ex.Message, ex));
+                using ICryptoTransform encryptor = aes.CreateEncryptor();
+                return encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+            },
+            DeterministicEncryptionError (ex) => new AesEncryptionError(ex.Message, ex));
 
     private (byte[] iv, byte[] authTag, byte[] ciphertext) AddAuthenticationTag(byte[] iv, byte[] ciphertext)
     {
@@ -145,7 +145,6 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
                 Buffer.BlockCopy(encryptedBytes, BlockSize + HmacSize, ciphertext, 0, ciphertextLength);
 
                 return (iv, authTag, ciphertext);
-                
             },
             DeterministicEncryptionError (ex) => new AesEncryptedPartsExtractionError(ex.Message, ex));
 
@@ -170,9 +169,9 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
 
                 using ICryptoTransform decryptor = aes.CreateDecryptor();
                 return decryptor.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
-                
             },
-            DeterministicEncryptionError (ex) => new AesDecryptionError("Decryption failed. Data might be corrupted or tampered with", ex.Message, ex));
+            DeterministicEncryptionError (ex) =>
+                new AesDecryptionError("Decryption failed. Data might be corrupted or tampered with", ex.Message, ex));
 
     private byte[] ComputeHmac(byte[] iv, byte[] ciphertext)
     {
@@ -217,10 +216,12 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
         ValidateKeyLengths((byte[] encryptionKey, byte[] ivGenerationKey) keys)
     {
         if (keys.encryptionKey.Length != 32)
-            return new InvalidEncryptionKeyConfigurationError($"Encryption key must be 32 bytes (256 bits), got {keys.encryptionKey.Length} bytes");
+            return new InvalidEncryptionKeyConfigurationError(
+                $"Encryption key must be 32 bytes (256 bits), got {keys.encryptionKey.Length} bytes");
 
-        return keys.ivGenerationKey.Length != 32 
-            ? new InvalidIvGenerationKeyConfigurationError($"IV generation key must be 32 bytes (256 bits), got {keys.ivGenerationKey.Length} bytes")
+        return keys.ivGenerationKey.Length != 32
+            ? new InvalidIvGenerationKeyConfigurationError(
+                $"IV generation key must be 32 bytes (256 bits), got {keys.ivGenerationKey.Length} bytes")
             : keys;
     }
 
@@ -252,6 +253,7 @@ public sealed class DeterministicAesEncryptionService : IDeterministicEncryption
             Array.Clear(_encryptionKey, 0, _encryptionKey.Length);
             Array.Clear(_ivGenerationKey, 0, _ivGenerationKey.Length);
         }
+
         _disposed = true;
     }
 

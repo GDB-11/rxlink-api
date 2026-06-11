@@ -25,12 +25,12 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
                 new { Offset = offset, Limit = limit, Search = search }),
             errorFactory: SpecialtyRepositoryError (ex) => new GetSpecialtyPageError(ex.Message, ex)
         );
-    
-     /// <inheritdoc/>
+
+    /// <inheritdoc/>
     public async Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> InsertAsync(
         string name) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, SpecialtyRow>(      
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, SpecialtyRow>(
                 _connection,
                 SpecialtyRepositorySql.Insert,
                 new
@@ -65,19 +65,20 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
                 new { Code = code, PerformedByUserCode = performedByUserCode }),
             errorFactory: SpecialtyRepositoryError (ex) => new DeactivateSpecialtyError(ex.Message, ex)
         );
-    
-    /// <inheritdoc/>
-    public async Task<Result<int, SpecialtyRepositoryError>> ActivateAsync(Guid code) =>
-    await Result.TryAsync(
-        operation: async () => await ExecuteNonQueryAsync(
-            _connection,
-            SpecialtyRepositorySql.Activate,
-            new { Code = code }),
-        errorFactory: SpecialtyRepositoryError (ex) => new DeactivateSpecialtyError(ex.Message, ex)
-    );
 
     /// <inheritdoc/>
-    public async Task<Result<IEnumerable<SpecialtyWithDoctorCountRow>, SpecialtyRepositoryError>> GetAllActiveWithDoctorCountAsync() =>
+    public async Task<Result<int, SpecialtyRepositoryError>> ActivateAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                SpecialtyRepositorySql.Activate,
+                new { Code = code }),
+            errorFactory: SpecialtyRepositoryError (ex) => new DeactivateSpecialtyError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<SpecialtyWithDoctorCountRow>, SpecialtyRepositoryError>>
+        GetAllActiveWithDoctorCountAsync() =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, SpecialtyWithDoctorCountRow>(
                 _connection,

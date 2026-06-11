@@ -43,7 +43,8 @@ public sealed class UserService : IUser
                     email: request.Email,
                     passwordHash: passwordHash,
                     licenseNumber: request.LicenseNumber)
-                .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
+                .MapErrorAsync(UserError (error) =>
+                    new UserDataAccessError(error.Message, error.Details, error.Exception))
                 .EnsureNotNullAsync(new UserRoleNotFoundError())
                 .MapAsync(MapToResponse));
 

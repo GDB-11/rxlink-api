@@ -1,4 +1,6 @@
 using Application.Core.DTOs.Allergy.Errors;
+using Application.Core.DTOs.Appointment.Errors;
+using Application.Core.DTOs.Availability.Errors;
 using Application.Core.DTOs.Diagnostic.Errors;
 using Application.Core.DTOs.Auth.Errors;
 using Application.Core.DTOs.Encryption.Errors;
@@ -23,6 +25,8 @@ internal static class ErrorMapperRegistration
         internal void RegisterErrorMappers()
         {
             builder.Services.AddScoped<IErrorHttpMapper<AllergyError>, AllergyErrorMapper>();
+            builder.Services.AddScoped<IErrorHttpMapper<AppointmentError>, AppointmentErrorMapper>();
+            builder.Services.AddScoped<IErrorHttpMapper<AvailabilityError>, AvailabilityErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<PersonError>, PersonErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<PatientError>, PatientErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<ChaChaEncryptionError>, ChaChaEncryptionErrorMapper>();

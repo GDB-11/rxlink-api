@@ -94,8 +94,8 @@ public sealed class UserController : FunctionalController
             operationName: nameof(Deactivate),
             successMapper: _ => NoContent()
         );
-    
-/// <summary>
+
+    /// <summary>
     /// Activates a platform user. The record is preserved to maintain FK integrity.
     /// The authenticated caller must be an active Administrador.
     /// </summary>
@@ -115,7 +115,7 @@ public sealed class UserController : FunctionalController
 
     /// <summary>
     /// Updates only the role of an existing active user.
-    /// Specialty, username, email and license are preserved.
+    /// Specialty, username, email and licence are preserved.
     /// </summary>
     [HttpPatch("{code:guid}/role")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]

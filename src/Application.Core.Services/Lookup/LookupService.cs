@@ -24,13 +24,15 @@ public sealed class LookupService : ILookup
 
         if (formsResult.IsFailure)
             return Result<MedicationLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(formsResult.Error!.Message, formsResult.Error.Details, formsResult.Error.Exception));
+                new LookupDataAccessError(formsResult.Error!.Message, formsResult.Error.Details,
+                    formsResult.Error.Exception));
 
         Result<IEnumerable<LookupRow>, InfraError> routesResult = await _repository.GetAdministrationRoutesAsync();
 
         if (routesResult.IsFailure)
             return Result<MedicationLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(routesResult.Error!.Message, routesResult.Error.Details, routesResult.Error.Exception));
+                new LookupDataAccessError(routesResult.Error!.Message, routesResult.Error.Details,
+                    routesResult.Error.Exception));
 
         return Result<MedicationLookupsResponse, LookupError>.Success(new MedicationLookupsResponse
         {
@@ -45,29 +47,33 @@ public sealed class LookupService : ILookup
         var sexesResult = await _repository.GetSexesAsync();
         if (sexesResult.IsFailure)
             return Result<UserLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(sexesResult.Error!.Message, sexesResult.Error.Details, sexesResult.Error.Exception));
+                new LookupDataAccessError(sexesResult.Error!.Message, sexesResult.Error.Details,
+                    sexesResult.Error.Exception));
 
         var docTypesResult = await _repository.GetActiveDocumentTypesAsync();
         if (docTypesResult.IsFailure)
             return Result<UserLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(docTypesResult.Error!.Message, docTypesResult.Error.Details, docTypesResult.Error.Exception));
+                new LookupDataAccessError(docTypesResult.Error!.Message, docTypesResult.Error.Details,
+                    docTypesResult.Error.Exception));
 
         var rolesResult = await _repository.GetActiveRolesAsync();
         if (rolesResult.IsFailure)
             return Result<UserLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(rolesResult.Error!.Message, rolesResult.Error.Details, rolesResult.Error.Exception));
+                new LookupDataAccessError(rolesResult.Error!.Message, rolesResult.Error.Details,
+                    rolesResult.Error.Exception));
 
         var specialtiesResult = await _repository.GetActiveSpecialtiesAsync();
         if (specialtiesResult.IsFailure)
             return Result<UserLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(specialtiesResult.Error!.Message, specialtiesResult.Error.Details, specialtiesResult.Error.Exception));
+                new LookupDataAccessError(specialtiesResult.Error!.Message, specialtiesResult.Error.Details,
+                    specialtiesResult.Error.Exception));
 
         return Result<UserLookupsResponse, LookupError>.Success(new UserLookupsResponse
         {
-            Sexes         = [.. sexesResult.Value!.Select(ToGuidItem)],
+            Sexes = [.. sexesResult.Value!.Select(ToGuidItem)],
             DocumentTypes = [.. docTypesResult.Value!.Select(ToGuidItem)],
-            Roles         = [.. rolesResult.Value!.Select(ToGuidItem)],
-            Specialties   = [.. specialtiesResult.Value!.Select(ToGuidItem)]
+            Roles = [.. rolesResult.Value!.Select(ToGuidItem)],
+            Specialties = [.. specialtiesResult.Value!.Select(ToGuidItem)]
         });
     }
 
@@ -77,7 +83,8 @@ public sealed class LookupService : ILookup
         var severitiesResult = await _repository.GetAllergySeveritiesAsync();
         if (severitiesResult.IsFailure)
             return Result<PatientLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(severitiesResult.Error!.Message, severitiesResult.Error.Details, severitiesResult.Error.Exception));
+                new LookupDataAccessError(severitiesResult.Error!.Message, severitiesResult.Error.Details,
+                    severitiesResult.Error.Exception));
 
         return Result<PatientLookupsResponse, LookupError>.Success(new PatientLookupsResponse
         {
@@ -91,29 +98,33 @@ public sealed class LookupService : ILookup
         var statusesResult = await _repository.GetActivePrescriptionStatusesAsync();
         if (statusesResult.IsFailure)
             return Result<PrescriptionLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(statusesResult.Error!.Message, statusesResult.Error.Details, statusesResult.Error.Exception));
+                new LookupDataAccessError(statusesResult.Error!.Message, statusesResult.Error.Details,
+                    statusesResult.Error.Exception));
 
         var medicationsResult = await _repository.GetActiveMedicationsAsync();
         if (medicationsResult.IsFailure)
             return Result<PrescriptionLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(medicationsResult.Error!.Message, medicationsResult.Error.Details, medicationsResult.Error.Exception));
+                new LookupDataAccessError(medicationsResult.Error!.Message, medicationsResult.Error.Details,
+                    medicationsResult.Error.Exception));
 
         var routesResult = await _repository.GetActiveAdministrationRoutesAsync();
         if (routesResult.IsFailure)
             return Result<PrescriptionLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(routesResult.Error!.Message, routesResult.Error.Details, routesResult.Error.Exception));
+                new LookupDataAccessError(routesResult.Error!.Message, routesResult.Error.Details,
+                    routesResult.Error.Exception));
 
         var frequenciesResult = await _repository.GetActiveFrequenciesAsync();
         if (frequenciesResult.IsFailure)
             return Result<PrescriptionLookupsResponse, LookupError>.Failure(
-                new LookupDataAccessError(frequenciesResult.Error!.Message, frequenciesResult.Error.Details, frequenciesResult.Error.Exception));
+                new LookupDataAccessError(frequenciesResult.Error!.Message, frequenciesResult.Error.Details,
+                    frequenciesResult.Error.Exception));
 
         return Result<PrescriptionLookupsResponse, LookupError>.Success(new PrescriptionLookupsResponse
         {
             PrescriptionStatuses = [.. statusesResult.Value!.Select(ToGuidItem)],
-            Medications          = [.. medicationsResult.Value!.Select(ToGuidItem)],
+            Medications = [.. medicationsResult.Value!.Select(ToGuidItem)],
             AdministrationRoutes = [.. routesResult.Value!.Select(ToGuidItem)],
-            Frequencies          = [.. frequenciesResult.Value!.Select(ToGuidItem)]
+            Frequencies = [.. frequenciesResult.Value!.Select(ToGuidItem)]
         });
     }
 

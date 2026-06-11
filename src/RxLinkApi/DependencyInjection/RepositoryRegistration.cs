@@ -1,5 +1,7 @@
 using Infrastructure.Core.Interfaces.Account;
 using Infrastructure.Core.Interfaces.Allergy;
+using Infrastructure.Core.Interfaces.Appointment;
+using Infrastructure.Core.Interfaces.Availability;
 using Infrastructure.Core.Interfaces.Diagnostic;
 using Infrastructure.Core.Interfaces.Lookup;
 using Infrastructure.Core.Interfaces.Medication;
@@ -13,6 +15,8 @@ using Infrastructure.Core.Interfaces.Specialty;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Services.Account;
 using Infrastructure.Core.Services.Allergy;
+using Infrastructure.Core.Services.Appointment;
+using Infrastructure.Core.Services.Availability;
 using Infrastructure.Core.Services.Diagnostic;
 using Infrastructure.Core.Services.Lookup;
 using Infrastructure.Core.Services.Medication;
@@ -35,6 +39,8 @@ internal static class RepositoryRegistration
         {
             builder.Services.AddScoped<ICredentialRepository, CredentialRepository>();
             builder.Services.AddScoped<IAllergyRepository, AllergyRepository>();
+            builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+            builder.Services.AddScoped<IAvailabilityRepository, AvailabilityRepository>();
             builder.Services.AddScoped<IPersonRepository, PersonRepository>();
             builder.Services.AddScoped<IPatientRepository, PatientRepository>();
             builder.Services.AddScoped<INavigationRepository, NavigationRepository>();

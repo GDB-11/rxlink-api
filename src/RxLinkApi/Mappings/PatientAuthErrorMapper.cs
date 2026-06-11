@@ -9,8 +9,8 @@ public sealed class PatientAuthErrorMapper : IErrorHttpMapper<PatientAuthError>
         error switch
         {
             PatientNotFoundError or
-            PatientIncorrectPasswordError or
-            PatientNoCredentialsError => new UnauthorizedObjectResult(new { message = error.Message }),
+                PatientIncorrectPasswordError or
+                PatientNoCredentialsError => new UnauthorizedObjectResult(new { message = error.Message }),
 
             PatientInactiveError => new UnauthorizedObjectResult(new { message = error.Message }),
 

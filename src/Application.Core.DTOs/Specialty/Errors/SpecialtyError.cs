@@ -1,4 +1,5 @@
 ﻿namespace Application.Core.DTOs.Specialty.Errors;
+
 public abstract record SpecialtyError(string Message, string? Details = null, Exception? Exception = null);
 
 /// <summary>Wraps an infrastructure-level repository failure.</summary>

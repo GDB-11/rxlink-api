@@ -23,7 +23,7 @@ public sealed class DocumentTypeController : FunctionalController
         : base(logger)
     {
         _documentTypeService = documentTypeService;
-        _errorMapper         = errorMapper;
+        _errorMapper = errorMapper;
     }
 
     /// <summary>
@@ -35,8 +35,8 @@ public sealed class DocumentTypeController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetAllActive() =>
         ExecuteAsync(
-            operation:     () => _documentTypeService.GetAllActiveAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _documentTypeService.GetAllActiveAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetAllActive)
         );
 }

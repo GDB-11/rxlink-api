@@ -7,7 +7,8 @@ namespace Infrastructure.Core.Interfaces.Medication;
 public interface IMedicationRepository
 {
     /// <summary>Returns one page of medications, with a total count via window function.</summary>
-    Task<Result<IEnumerable<MedicationRow>, MedicationRepositoryError>> GetPageAsync(int offset, int limit, string? search);
+    Task<Result<IEnumerable<MedicationRow>, MedicationRepositoryError>> GetPageAsync(int offset, int limit,
+        string? search);
 
     /// <summary>Inserts a new medication and returns the created row, or <c>null</c> on unexpected failure.</summary>
     Task<Result<MedicationRow?, MedicationRepositoryError>> InsertAsync(
@@ -21,7 +22,7 @@ public interface IMedicationRepository
 
     /// <summary>Soft-deletes an active medication. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, MedicationRepositoryError>> DeactivateAsync(Guid code, Guid performedByUserCode);
-    
+
     /// <summary>Reactivates a previously deactivated medication. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, MedicationRepositoryError>> ActivateAsync(Guid code);
 }

@@ -4,7 +4,7 @@ public abstract record EncryptionError(string Message, string? Details = null, E
 
 public sealed record GenerateNewKeyPairAsyncError(string? Details = null, Exception? Exception = null)
     : EncryptionError("An unexpected error occurred while generating a key pair.", Details, Exception);
-    
+
 public sealed record PersistKeyPairAsyncError(string? Details = null, Exception? Exception = null)
     : EncryptionError("An unexpected error occurred while saving the key pair in the database.", Details, Exception);
 
@@ -22,12 +22,12 @@ public sealed record ImportPrivateKeyError()
 
 public sealed record KeyNotFoundError()
     : EncryptionError("They key was not found or has expired.");
-    
-public sealed record KeyAlreadyUsedError() 
+
+public sealed record KeyAlreadyUsedError()
     : EncryptionError("The key has already been used.");
-    
+
 public sealed record DecryptValueError(Exception? Exception = null)
     : EncryptionError("Unexpected error when decrypting value.", string.Empty, Exception);
-    
+
 public sealed record CopyPropertyError(Exception? Exception = null)
     : EncryptionError("Unexpected error when copying property value.", string.Empty, Exception);

@@ -15,7 +15,8 @@ public sealed record UpdatePrescriptionError(string? Details = null, Exception? 
     : PrescriptionRepositoryError("Error inesperado al actualizar la receta.", Details, Exception);
 
 public sealed record UpdatePrescriptionInvalidStatusError(string? Details = null, Exception? Exception = null)
-    : PrescriptionRepositoryError("La receta no se puede modificar porque no está en estado Borrador.", Details, Exception);
+    : PrescriptionRepositoryError("La receta no se puede modificar porque no está en estado Borrador.", Details,
+        Exception);
 
 public sealed record ChangeStatusPrescriptionError(string? Details = null, Exception? Exception = null)
     : PrescriptionRepositoryError("Error inesperado al cambiar el estado de la receta.", Details, Exception);

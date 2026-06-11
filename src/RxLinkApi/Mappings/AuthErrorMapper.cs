@@ -12,7 +12,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
             {
                 message = error.Message
             }),
-            
+
             IncorrectPasswordError => new UnauthorizedObjectResult(new
             {
                 message = error.Message

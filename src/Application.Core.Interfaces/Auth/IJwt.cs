@@ -12,7 +12,8 @@ public interface IJwt
     Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GenerateAccessToken(User user);
 
     /// <summary>Generates a signed JWT access token for a patient (Android app).</summary>
-    Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GeneratePatientAccessToken(PatientCredential patient);
+    Result<(string AccessToken, DateTime ExpiresAt), AuthenticationError> GeneratePatientAccessToken(
+        PatientCredential patient);
 
     /// <summary>
     /// Generates a cryptographically secure, opaque refresh token.

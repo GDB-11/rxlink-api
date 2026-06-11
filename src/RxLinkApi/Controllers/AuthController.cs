@@ -25,7 +25,7 @@ public sealed class AuthController : FunctionalController
         _authenticationService = authenticationService;
         _errorMapper = errorMapper;
     }
-    
+
     /// <summary>
     /// Authenticates a user and returns JWT tokens
     /// </summary>

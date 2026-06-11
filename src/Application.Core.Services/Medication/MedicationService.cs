@@ -21,7 +21,8 @@ public sealed class MedicationService : IMedication
     /// <inheritdoc/>
     public Task<Result<MedicationPageResponse, MedicationError>> GetPageAsync(MedicationPageRequest request) =>
         _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
-            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(MedicationError (error) =>
+                new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
 
     /// <inheritdoc/>
@@ -32,7 +33,8 @@ public sealed class MedicationService : IMedication
                 request.GenericName,
                 request.CommercialName,
                 request.Concentration)
-            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(MedicationError (error) =>
+                new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new MedicationDataAccessError("No se pudo registrar el medicamento."))
             .MapAsync(MapToResponse);
 
@@ -45,21 +47,24 @@ public sealed class MedicationService : IMedication
                 request.GenericName,
                 request.CommercialName,
                 request.Concentration)
-            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(MedicationError (error) =>
+                new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new MedicationNotFoundError())
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<Unit, MedicationError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.DeactivateAsync(code, performedByUserCode)
-            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(MedicationError (error) =>
+                new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new MedicationNotFoundError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, MedicationError>> ActivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.ActivateAsync(code)
-            .MapErrorAsync(MedicationError (error) => new MedicationDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(MedicationError (error) =>
+                new MedicationDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new MedicationNotFoundError())
             .MapAsync(_ => Unit.Value);
 

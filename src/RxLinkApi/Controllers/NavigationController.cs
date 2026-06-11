@@ -15,7 +15,7 @@ public sealed class NavigationController : FunctionalController
 {
     private readonly INavigation _navigationService;
     private readonly IErrorHttpMapper<NavigationError> _errorMapper;
- 
+
     public NavigationController(
         INavigation navigationService,
         IErrorHttpMapper<NavigationError> errorMapper,
@@ -23,9 +23,9 @@ public sealed class NavigationController : FunctionalController
         : base(logger)
     {
         _navigationService = navigationService;
-        _errorMapper       = errorMapper;
+        _errorMapper = errorMapper;
     }
- 
+
     /// <summary>
     /// Returns the navigation tree (topbar modules + sidebar items) for the authenticated user's role.
     /// </summary>
@@ -36,8 +36,8 @@ public sealed class NavigationController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetNavigation() =>
         ExecuteWithRoleAsync(
-            operation:     roleName => _navigationService.GetNavigationAsync(roleName),
-            errorMapper:   _errorMapper,
+            operation: roleName => _navigationService.GetNavigationAsync(roleName),
+            errorMapper: _errorMapper,
             operationName: nameof(GetNavigation)
         );
 }

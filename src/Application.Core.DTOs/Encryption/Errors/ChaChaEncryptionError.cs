@@ -16,6 +16,6 @@ public sealed record ChaChaDecryptError(string Details, Exception? Exception = n
 
 public sealed record PerformDecryption(string Details, Exception? Exception = null)
     : ChaChaEncryptionError("Decryption failed. Data might be corrupted or tampered with", Details, Exception);
-    
+
 public sealed record ExtractEncryptedPartsError(string Details, Exception? Exception = null)
     : ChaChaEncryptionError("Failed extracting encrypted parts", Details, Exception);

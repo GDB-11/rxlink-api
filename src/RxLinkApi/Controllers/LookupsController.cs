@@ -23,7 +23,7 @@ public sealed class LookupsController : FunctionalController
         : base(logger)
     {
         _lookupService = lookupService;
-        _errorMapper   = errorMapper;
+        _errorMapper = errorMapper;
     }
 
     /// <summary>
@@ -37,8 +37,8 @@ public sealed class LookupsController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetMedicationLookups() =>
         ExecuteAsync(
-            operation:     () => _lookupService.GetMedicationLookupsAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _lookupService.GetMedicationLookupsAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetMedicationLookups)
         );
 
@@ -53,8 +53,8 @@ public sealed class LookupsController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetUserLookups() =>
         ExecuteAsync(
-            operation:     () => _lookupService.GetUserLookupsAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _lookupService.GetUserLookupsAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetUserLookups)
         );
 
@@ -69,8 +69,8 @@ public sealed class LookupsController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetPatientLookups() =>
         ExecuteAsync(
-            operation:     () => _lookupService.GetPatientLookupsAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _lookupService.GetPatientLookupsAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetPatientLookups)
         );
 
@@ -85,8 +85,8 @@ public sealed class LookupsController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetPrescriptionLookups() =>
         ExecuteAsync(
-            operation:     () => _lookupService.GetPrescriptionLookupsAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _lookupService.GetPrescriptionLookupsAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetPrescriptionLookups)
         );
 }

@@ -12,7 +12,7 @@ public sealed class NavigationErrorMapper : IErrorHttpMapper<NavigationError>
             {
                 message = error.Message
             }),
- 
+
             NavigationDataAccessError dataError => new ObjectResult(new
             {
                 message = dataError.Message,
@@ -21,7 +21,7 @@ public sealed class NavigationErrorMapper : IErrorHttpMapper<NavigationError>
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
- 
+
             _ => new ObjectResult(new
             {
                 message = "Error inesperado al procesar la navegación."

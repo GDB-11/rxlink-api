@@ -22,7 +22,7 @@ public sealed class SexController : FunctionalController
         IResultLogger logger)
         : base(logger)
     {
-        _sexService  = sexService;
+        _sexService = sexService;
         _errorMapper = errorMapper;
     }
 
@@ -35,8 +35,8 @@ public sealed class SexController : FunctionalController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetAll() =>
         ExecuteAsync(
-            operation:     () => _sexService.GetAllAsync(),
-            errorMapper:   _errorMapper,
+            operation: () => _sexService.GetAllAsync(),
+            errorMapper: _errorMapper,
             operationName: nameof(GetAll)
         );
 }

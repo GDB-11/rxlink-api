@@ -17,54 +17,62 @@ public sealed class SpecialtyService : ISpecialty
     {
         _repository = repository;
     }
-    
-    
+
+
     /// <inheritdoc/>
     public Task<Result<SpecialtyPageResponse, SpecialtyError>> GetPageAsync(SpecialtyPageRequest request) =>
         _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
 
     /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> CreateAsync(CreateSpecialtyRequest request) =>
-            _repository.InsertAsync(request.Name)
-                .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
-                .EnsureNotNullAsync(new SpecialtyDataAccessError("No se pudo registrar la especialidad."))
-                .MapAsync(MapToResponse);
+        _repository.InsertAsync(request.Name)
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new SpecialtyDataAccessError("No se pudo registrar la especialidad."))
+            .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> UpdateAsync(Guid code, UpdateSpecialtyRequest request) =>
         _repository.UpdateAsync(code, request.Name)
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyNotFoundError())
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<Unit, SpecialtyError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.DeactivateAsync(code, performedByUserCode)
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new SpecialtyNotFoundError())
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
     public Task<Result<Unit, SpecialtyError>> ActivateAsync(Guid code, Guid performedByUserCode) =>
         _repository.ActivateAsync(code)
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureAsync(affected => affected > 0, new SpecialtyNotFoundError())
             .MapAsync(_ => Unit.Value);
-    
 
 
     /// <inheritdoc/>
-    public Task<Result<IEnumerable<SpecialtyWithDoctorCountResponse>, SpecialtyError>> GetAllActiveWithDoctorCountAsync() =>
+    public Task<Result<IEnumerable<SpecialtyWithDoctorCountResponse>, SpecialtyError>>
+        GetAllActiveWithDoctorCountAsync() =>
         _repository.GetAllActiveWithDoctorCountAsync()
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => rows.Select(MapToPublicSpecialtyResponse));
 
     /// <inheritdoc/>
-    public Task<Result<IEnumerable<DoctorSummaryResponse>, SpecialtyError>> GetDoctorsBySpecialtyCodeAsync(Guid specialtyCode) =>
+    public Task<Result<IEnumerable<DoctorSummaryResponse>, SpecialtyError>> GetDoctorsBySpecialtyCodeAsync(
+        Guid specialtyCode) =>
         _repository.GetDoctorsBySpecialtyCodeAsync(specialtyCode)
-            .MapErrorAsync(SpecialtyError (error) => new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
+            .MapErrorAsync(SpecialtyError (error) =>
+                new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyNotFoundError())
             .MapAsync(rows => rows.Select(MapToDoctorSummaryResponse));
 
@@ -83,7 +91,7 @@ public sealed class SpecialtyService : ISpecialty
             TotalPages = totalPages
         };
     }
-    
+
     private static SpecialtyResponse MapToResponse(SpecialtyRow row) =>
         new()
         {

@@ -47,7 +47,7 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
                 CredentialRepositorySql.GetByRefreshToken,
                 new
                 {
-                    TokenHash   = tokenHash,
+                    TokenHash = tokenHash,
                     CurrentDate = DateTime.UtcNow
                 }),
             errorFactory: CredentialError (ex) => new GetByRefreshTokenAsyncError(ex.Message, ex)
@@ -60,8 +60,8 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
     /// hashed token is inserted in the same round-trip.
     /// </remarks>
     public async Task<Result<Unit, CredentialError>> UpdateRefreshTokenAsync(
-        Guid     userCode,
-        string   tokenHash,
+        Guid userCode,
+        string tokenHash,
         DateTime expiresAt) =>
         await Result.TryAsync(
             operation: async () => await ExecuteNonQueryAsync(
@@ -69,7 +69,7 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
                 CredentialRepositorySql.UpdateRefreshToken,
                 new
                 {
-                    UserCode  = userCode,
+                    UserCode = userCode,
                     TokenHash = tokenHash,
                     ExpiresAt = expiresAt,
                     RevokedAt = DateTime.UtcNow
@@ -93,7 +93,7 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
                 CredentialRepositorySql.ClearRefreshToken,
                 new
                 {
-                    UserCode  = userCode,
+                    UserCode = userCode,
                     RevokedAt = DateTime.UtcNow
                 }),
             errorFactory: CredentialError (ex) => new ClearRefreshTokenAsyncError(ex.Message, ex)

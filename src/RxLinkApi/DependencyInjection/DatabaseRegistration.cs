@@ -9,7 +9,7 @@ internal static class DatabaseRegistration
     {
         internal void RegisterDatabase()
         {
-            builder.Services.AddTransient<IDbConnection>(sp => 
+            builder.Services.AddTransient<IDbConnection>(sp =>
                 new NpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
         }
     }

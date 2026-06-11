@@ -19,14 +19,10 @@ public sealed class RoleService : IRole
     }
 
     /// <inheritdoc/>
-    public Task<Result<RolePageResponse, RoleError>> GetPageAsync(RolePageRequest request)
-    {
-        int offset = (request.Page - 1) * request.PageSize;
-
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+    public Task<Result<RolePageResponse, RoleError>> GetPageAsync(RolePageRequest request) =>
+        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(RoleError (error) => new RoleDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
-    }
 
     /// <inheritdoc/>
     public Task<Result<RoleResponse, RoleError>> CreateAsync(CreateRoleRequest request) =>
