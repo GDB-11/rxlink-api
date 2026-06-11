@@ -5,6 +5,7 @@ using Application.Core.DTOs.Diagnostic.Response;
 using Application.Core.Interfaces.Diagnostic;
 using BindSharp;
 using BindSharp.Extensions;
+using Infrastructure.Core.DTOs.Diagnostic;
 using Infrastructure.Core.Interfaces.Diagnostic;
 using Infrastructure.Core.Models.Diagnostic;
 
@@ -35,14 +36,31 @@ public sealed class DiagnosticService : IDiagnostic
     }
 
     /// <inheritdoc/>
-    public Task<Result<DiagnosticResponse, DiagnosticError>> CreateAsync(
-        CreateDiagnosticRequest request, Guid createdByUserCode) =>
-        _repository.InsertAsync(request.PatientCode, request.Description, request.DiagnosedAt, request.Notes,
-                createdByUserCode)
-            .MapErrorAsync(DiagnosticError (error) =>
-                new DiagnosticDataAccessError(error.Message, error.Details, error.Exception))
-            .EnsureNotNullAsync(new DiagnosticPatientNotFoundError())
-            .MapAsync(MapToResponse);
+    public async Task<Result<DiagnosticResponse, DiagnosticError>> CreateAsync(
+        CreateDiagnosticRequest request, Guid createdByUserCode)
+    {
+        var result = await _repository.InsertAsync(
+            request.AppointmentCode,
+            request.Description,
+            request.DiagnosedAt,
+            request.Notes,
+            createdByUserCode);
+
+        if (result.IsFailure)
+        {
+            return result.Error switch
+            {
+                InsertDiagnosticDuplicateError => new DiagnosticDuplicateError(),
+                var e => new DiagnosticDataAccessError(e.Message, e.Details, e.Exception)
+            };
+        }
+
+        // null means appointment not found or status not Confirmado/Completado
+        if (result.Value is null)
+            return new DiagnosticInvalidAppointmentError();
+
+        return MapToResponse(result.Value);
+    }
 
     /// <inheritdoc/>
     public Task<Result<DiagnosticResponse, DiagnosticError>> UpdateAsync(
@@ -89,6 +107,7 @@ public sealed class DiagnosticService : IDiagnostic
         new()
         {
             DiagnosticCode = row.DiagnosticCode,
+            AppointmentCode = row.AppointmentCode,
             PatientCode = row.PatientCode,
             StatusCode = row.StatusCode,
             StatusName = row.StatusName,

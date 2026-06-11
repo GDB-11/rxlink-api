@@ -6,13 +6,20 @@ public abstract record DiagnosticError(string Message, string? Details = null, E
 public sealed record DiagnosticDataAccessError(string Message, string? Details = null, Exception? Exception = null)
     : DiagnosticError(Message, Details, Exception);
 
-/// <summary>The patient was not found or is inactive.</summary>
-public sealed record DiagnosticPatientNotFoundError()
-    : DiagnosticError("El paciente no fue encontrado o está inactivo.");
-
 /// <summary>The diagnostic record does not exist or was deleted.</summary>
 public sealed record DiagnosticNotFoundError()
     : DiagnosticError("El diagnóstico no fue encontrado.");
+
+/// <summary>
+/// The appointment was not found or its status does not allow creating a diagnostic
+/// (must be Confirmado or Completado).
+/// </summary>
+public sealed record DiagnosticInvalidAppointmentError()
+    : DiagnosticError("La cita no fue encontrada o no se encuentra en un estado válido para crear un diagnóstico.");
+
+/// <summary>A non-deleted diagnostic already exists for this appointment.</summary>
+public sealed record DiagnosticDuplicateError()
+    : DiagnosticError("Ya existe un diagnóstico activo para esta cita.");
 
 /// <summary>The requested state transition is not valid for the current status.</summary>
 public sealed record DiagnosticInvalidTransitionError()

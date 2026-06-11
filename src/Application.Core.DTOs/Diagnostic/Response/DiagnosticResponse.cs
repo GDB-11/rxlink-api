@@ -3,6 +3,7 @@ namespace Application.Core.DTOs.Diagnostic.Response;
 public sealed class DiagnosticResponse
 {
     public required Guid DiagnosticCode { get; init; }
+    public required Guid AppointmentCode { get; init; }
     public required Guid PatientCode { get; init; }
     public required Guid StatusCode { get; init; }
     public required string StatusName { get; init; }

@@ -8,15 +8,24 @@ public sealed class DiagnosticErrorMapper : IErrorHttpMapper<DiagnosticError>
     public IActionResult MapToHttp(DiagnosticError error) =>
         error switch
         {
-            DiagnosticNotFoundError or DiagnosticPatientNotFoundError => new NotFoundObjectResult(new
+            DiagnosticNotFoundError => new NotFoundObjectResult(new
             {
                 message = error.Message
             }),
 
-            DiagnosticInvalidTransitionError => new ConflictObjectResult(new
+            DiagnosticInvalidAppointmentError => new ObjectResult(new
             {
                 message = error.Message
-            }),
+            })
+            {
+                StatusCode = StatusCodes.Status422UnprocessableEntity
+            },
+
+            DiagnosticDuplicateError
+                or DiagnosticInvalidTransitionError => new ConflictObjectResult(new
+                {
+                    message = error.Message
+                }),
 
             DiagnosticDataAccessError dataError => new ObjectResult(new
             {

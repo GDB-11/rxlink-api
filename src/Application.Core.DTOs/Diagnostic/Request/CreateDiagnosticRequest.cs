@@ -4,8 +4,8 @@ namespace Application.Core.DTOs.Diagnostic.Request;
 
 public sealed record CreateDiagnosticRequest
 {
-    [Required(ErrorMessage = "PatientCode is required.")]
-    public required Guid PatientCode { get; init; }
+    [Required(ErrorMessage = "AppointmentCode is required.")]
+    public required Guid AppointmentCode { get; init; }
 
     [Required(ErrorMessage = "Description is required.")]
     [MaxLength(1000, ErrorMessage = "Description must not exceed 1000 characters.")]

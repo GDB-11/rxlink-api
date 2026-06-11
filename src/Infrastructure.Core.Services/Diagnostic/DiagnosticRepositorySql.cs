@@ -3,6 +3,8 @@ namespace Infrastructure.Core.Services.Diagnostic;
 /// <summary>
 /// SQL used exclusively by <see cref="DiagnosticRepository"/>.
 /// All identifiers are double-quoted to honour the PascalCase DDL convention.
+/// Diagnostic.PatientId was replaced by Diagnostic.AppointmentId in V008;
+/// PatientCode is now obtained via Diagnostic → Appointment → Patient.
 /// </summary>
 internal static class DiagnosticRepositorySql
 {
@@ -29,10 +31,12 @@ internal static class DiagnosticRepositorySql
 
     /// <summary>
     /// Returns one page of diagnostics for a patient with their prescription summary (if any).
+    /// PatientCode is resolved via Diagnostic → Appointment → Patient.
     /// </summary>
     internal const string GetPage = $"""
                                      SELECT
                                          d."DiagnosticCode",
+                                         appt."AppointmentCode",
                                          pat."PatientCode",
                                          ds."DiagnosticStatusCode" AS "StatusCode",
                                          ds."Name"                 AS "StatusName",
@@ -43,8 +47,9 @@ internal static class DiagnosticRepositorySql
                                          {PrescriptionSummarySubquery} AS "PrescriptionSummaryJson",
                                          COUNT(*) OVER () AS "TotalCount"
                                      FROM "Diagnostic" d
-                                     JOIN "DiagnosticStatus" ds  ON ds."DiagnosticStatusId" = d."DiagnosticStatusId"
-                                     JOIN "Patient" pat          ON pat."PatientId"         = d."PatientId"
+                                     JOIN "DiagnosticStatus" ds ON ds."DiagnosticStatusId"  = d."DiagnosticStatusId"
+                                     JOIN "Appointment" appt    ON appt."AppointmentId"     = d."AppointmentId"
+                                     JOIN "Patient" pat         ON pat."PatientId"          = appt."PatientId"
                                      WHERE pat."PatientCode" = @PatientCode
                                        AND d."DeletedAt" IS NULL
                                      ORDER BY d."DiagnosedAt" DESC, d."DiagnosticId" DESC
@@ -52,26 +57,35 @@ internal static class DiagnosticRepositorySql
                                      """;
 
     /// <summary>
-    /// Inserts a diagnostic with status Activo (resolved by name, never hard-coded ID).
-    /// Returns no rows when PatientCode does not match an active patient.
+    /// Inserts a diagnostic with status Activo linked to the given appointment.
+    /// Returns no rows when:
+    ///   - the appointment does not exist, or
+    ///   - the appointment status is not Confirmado or Completado.
+    /// Throws a unique constraint exception (uq_diagnostic_appointment) when a non-deleted
+    /// diagnostic already exists for the appointment.
     /// </summary>
     internal const string Insert = """
                                    WITH ins AS (
-                                       INSERT INTO "Diagnostic" ("PatientId", "DiagnosticStatusId", "Description", "DiagnosedAt", "Notes", "CreatedBy")
+                                       INSERT INTO "Diagnostic"
+                                           ("AppointmentId", "DiagnosticStatusId", "Description", "DiagnosedAt", "Notes", "CreatedBy")
                                        SELECT
-                                           pat."PatientId",
+                                           appt."AppointmentId",
                                            (SELECT "DiagnosticStatusId" FROM "DiagnosticStatus" WHERE "Name" = 'Activo'),
                                            @Description,
                                            @DiagnosedAt,
                                            @Notes,
                                            (SELECT "UserId" FROM "User" WHERE "UserCode" = @CreatedByUserCode AND "IsActive" = TRUE)
-                                       FROM "Patient" pat
-                                       WHERE pat."PatientCode" = @PatientCode
-                                         AND pat."IsActive" = TRUE
+                                       FROM "Appointment" appt
+                                       WHERE appt."AppointmentCode" = @AppointmentCode
+                                         AND appt."AppointmentStatusId" IN (
+                                             SELECT "AppointmentStatusId" FROM "AppointmentStatus"
+                                             WHERE "Name" IN ('Confirmado', 'Completado')
+                                         )
                                        RETURNING *
                                    )
                                    SELECT
                                        ins."DiagnosticCode",
+                                       appt."AppointmentCode",
                                        pat."PatientCode",
                                        ds."DiagnosticStatusCode" AS "StatusCode",
                                        ds."Name"                 AS "StatusName",
@@ -83,11 +97,13 @@ internal static class DiagnosticRepositorySql
                                        0          AS "TotalCount"
                                    FROM ins
                                    JOIN "DiagnosticStatus" ds ON ds."DiagnosticStatusId" = ins."DiagnosticStatusId"
-                                   JOIN "Patient" pat         ON pat."PatientId"         = ins."PatientId"
+                                   JOIN "Appointment" appt    ON appt."AppointmentId"    = ins."AppointmentId"
+                                   JOIN "Patient" pat         ON pat."PatientId"         = appt."PatientId"
                                    """;
 
     /// <summary>
     /// Updates description, date and notes. Returns no rows when not found or deleted.
+    /// PatientCode is resolved via Diagnostic → Appointment → Patient.
     /// </summary>
     internal const string Update = """
                                    WITH upd AS (
@@ -104,6 +120,7 @@ internal static class DiagnosticRepositorySql
                                    ), d AS (SELECT * FROM upd)
                                    SELECT
                                        d."DiagnosticCode",
+                                       appt."AppointmentCode",
                                        pat."PatientCode",
                                        ds."DiagnosticStatusCode" AS "StatusCode",
                                        ds."Name"                 AS "StatusName",
@@ -132,7 +149,8 @@ internal static class DiagnosticRepositorySql
                                        0 AS "TotalCount"
                                    FROM d
                                    JOIN "DiagnosticStatus" ds ON ds."DiagnosticStatusId" = d."DiagnosticStatusId"
-                                   JOIN "Patient" pat         ON pat."PatientId"         = d."PatientId"
+                                   JOIN "Appointment" appt    ON appt."AppointmentId"    = d."AppointmentId"
+                                   JOIN "Patient" pat         ON pat."PatientId"         = appt."PatientId"
                                    """;
 
     /// <summary>

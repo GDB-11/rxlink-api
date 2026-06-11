@@ -28,20 +28,23 @@ public sealed class DiagnosticRepository : BaseDatabaseService, IDiagnosticRepos
 
     /// <inheritdoc/>
     public async Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> InsertAsync(
-        Guid patientCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode) =>
+        Guid appointmentCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, DiagnosticRow>(
                 _connection,
                 DiagnosticRepositorySql.Insert,
                 new
                 {
-                    PatientCode = patientCode,
+                    AppointmentCode = appointmentCode,
                     Description = description,
                     DiagnosedAt = diagnosedAt,
                     Notes = notes,
                     CreatedByUserCode = createdByUserCode
                 }),
-            errorFactory: DiagnosticRepositoryError (ex) => new InsertDiagnosticError(ex.Message, ex)
+            errorFactory: DiagnosticRepositoryError (ex) =>
+                ex.Message.Contains("uq_diagnostic_appointment") || ex.Message.Contains("23505")
+                    ? new InsertDiagnosticDuplicateError(ex.Message, ex)
+                    : new InsertDiagnosticError(ex.Message, ex)
         );
 
     /// <inheritdoc/>

@@ -11,11 +11,12 @@ public interface IDiagnosticRepository
         Guid patientCode, int offset, int limit);
 
     /// <summary>
-    /// Inserts a new diagnostic with status Activo.
-    /// Returns null when the patient is not found or inactive.
+    /// Inserts a new diagnostic with status Activo for the given appointment.
+    /// Returns null when the appointment is not found or not in Confirmado/Completado status.
+    /// Throws a unique constraint exception when a non-deleted diagnostic already exists for the appointment.
     /// </summary>
     Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> InsertAsync(
-        Guid patientCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode);
+        Guid appointmentCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode);
 
     /// <summary>
     /// Updates description, date and notes.
