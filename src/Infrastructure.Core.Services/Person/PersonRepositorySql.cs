@@ -86,6 +86,39 @@ internal static class PersonRepositorySql
                                          LIMIT @Limit OFFSET @Offset
                                          """;
 
+    internal const string GetByCode = """
+                                      SELECT
+                                          p."PersonCode",
+                                          p."Names",
+                                          p."Surnames",
+                                          p."BirthDate",
+                                          s."SexCode",
+                                          s."Name"  AS "SexName",
+                                          p."Phone",
+                                          p."AlternativePhone",
+                                          p."Email",
+                                          p."Address",
+                                          p."EmergencyContactName",
+                                          p."EmergencyContactPhone",
+                                          doc."DocumentTypeCode",
+                                          doc."DocumentTypeName",
+                                          doc."DocumentNumber",
+                                          1 AS "TotalCount"
+                                      FROM "Person" p
+                                      JOIN "Sex" s ON s."SexId" = p."SexId"
+                                      LEFT JOIN LATERAL (
+                                          SELECT dt."DocumentTypeCode",
+                                                 dt."Name"   AS "DocumentTypeName",
+                                                 pd."Number" AS "DocumentNumber"
+                                          FROM   "PersonDocument" pd
+                                          JOIN   "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
+                                          WHERE  pd."PersonId" = p."PersonId"
+                                          ORDER  BY pd."PersonDocumentId"
+                                          LIMIT  1
+                                      ) doc ON TRUE
+                                      WHERE p."PersonCode" = @Code
+                                      """;
+
     internal const string Insert = """
                                    WITH ins AS (
                                        INSERT INTO "Person" (

@@ -20,6 +20,14 @@ public sealed class PersonService : IPerson
     }
 
     /// <inheritdoc/>
+    public Task<Result<PersonResponse, PersonError>> GetByCodeAsync(Guid code) =>
+        _repository.GetByCodeAsync(code)
+            .MapErrorAsync(PersonError (error) =>
+                new PersonDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new PersonNotFoundError())
+            .MapAsync(MapToResponse);
+
+    /// <inheritdoc/>
     public Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request) =>
         _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
             .MapErrorAsync(PersonError (error) =>

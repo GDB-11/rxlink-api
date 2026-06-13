@@ -16,6 +16,16 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
     }
 
     /// <inheritdoc/>
+    public async Task<Result<PersonRow?, PersonRepositoryError>> GetByCodeAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
+                _connection,
+                PersonRepositorySql.GetByCode,
+                new { Code = code }),
+            errorFactory: PersonRepositoryError (ex) => new GetPersonsPageError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<IEnumerable<PersonRow>, PersonRepositoryError>> GetPageAsync(
         int offset, int limit, string? search) =>
         await Result.TryAsync(

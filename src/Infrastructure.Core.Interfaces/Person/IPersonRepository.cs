@@ -6,6 +6,9 @@ namespace Infrastructure.Core.Interfaces.Person;
 
 public interface IPersonRepository
 {
+    /// <summary>Returns a single person by its code, or <c>null</c> if not found.</summary>
+    Task<Result<PersonRow?, PersonRepositoryError>> GetByCodeAsync(Guid code);
+
     /// <summary>Returns one page of persons, with a total count via window function.</summary>
     Task<Result<IEnumerable<PersonRow>, PersonRepositoryError>> GetPageAsync(int offset, int limit, string? search);
 

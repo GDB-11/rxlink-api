@@ -28,6 +28,22 @@ public sealed class PersonController : FunctionalController
     }
 
     /// <summary>
+    /// Returns a single person by its code.
+    /// </summary>
+    [HttpGet("{code:guid}")]
+    [ProducesResponseType(typeof(PersonResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetByCode(Guid code) =>
+        ExecuteAsync(
+            operation: () => _personService.GetByCodeAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetByCode)
+        );
+
+    /// <summary>
     /// Returns a paginated list of persons. Supports optional text search on names or surnames.
     /// </summary>
     [HttpGet]

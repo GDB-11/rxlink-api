@@ -119,7 +119,8 @@ public sealed class AuthenticationService : IAuthentication
             {
                 UserCode = user.UserCode,
                 Username = user.Username,
-                FullName = $"{user.Names} {user.Surnames}"
+                FullName = $"{user.Names} {user.Surnames}",
+                RoleName = user.RoleName
             }
         };
 }

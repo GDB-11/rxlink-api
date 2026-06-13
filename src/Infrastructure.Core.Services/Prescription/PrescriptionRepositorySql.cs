@@ -10,9 +10,12 @@ internal static class PrescriptionRepositorySql
                                      COALESCE(
                                          (SELECT json_agg(json_build_object(
                                              'PrescriptionDetailCode',  pd."PrescriptionDetailCode",
+                                             'MedicationCode',          m."MedicationCode",
                                              'MedicationName',          m."GenericName",
                                              'Dose',                    pd."Dose",
+                                             'AdministrationRouteCode', ar."AdministrationRouteCode",
                                              'AdministrationRouteName', ar."Name",
+                                             'FrequencyCode',           f."FrequencyCode",
                                              'FrequencyDescription',    f."Description",
                                              'DurationDays',            pd."DurationDays",
                                              'Instructions',            pd."Instructions"
@@ -121,9 +124,12 @@ internal static class PrescriptionRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PrescriptionDetailCode',  id."PrescriptionDetailCode",
+                                               'MedicationCode',          m."MedicationCode",
                                                'MedicationName',          m."GenericName",
                                                'Dose',                    id."Dose",
+                                               'AdministrationRouteCode', ar."AdministrationRouteCode",
                                                'AdministrationRouteName', ar."Name",
+                                               'FrequencyCode',           f."FrequencyCode",
                                                'FrequencyDescription',    f."Description",
                                                'DurationDays',            id."DurationDays",
                                                'Instructions',            id."Instructions"
@@ -192,9 +198,12 @@ internal static class PrescriptionRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PrescriptionDetailCode',  id."PrescriptionDetailCode",
+                                               'MedicationCode',          m."MedicationCode",
                                                'MedicationName',          m."GenericName",
                                                'Dose',                    id."Dose",
+                                               'AdministrationRouteCode', ar."AdministrationRouteCode",
                                                'AdministrationRouteName', ar."Name",
+                                               'FrequencyCode',           f."FrequencyCode",
                                                'FrequencyDescription',    f."Description",
                                                'DurationDays',            id."DurationDays",
                                                'Instructions',            id."Instructions"

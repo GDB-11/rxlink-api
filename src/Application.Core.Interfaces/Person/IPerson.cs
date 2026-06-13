@@ -7,6 +7,9 @@ namespace Application.Core.Interfaces.Person;
 
 public interface IPerson
 {
+    /// <summary>Returns a single person by code, or <see cref="PersonNotFoundError"/> if it does not exist.</summary>
+    Task<Result<PersonResponse, PersonError>> GetByCodeAsync(Guid code);
+
     /// <summary>Returns a paginated list of persons. Supports optional text search on names or surnames.</summary>
     Task<Result<PersonPageResponse, PersonError>> GetPageAsync(PersonPageRequest request);
 
