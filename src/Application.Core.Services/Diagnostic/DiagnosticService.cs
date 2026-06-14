@@ -36,31 +36,21 @@ public sealed class DiagnosticService : IDiagnostic
     }
 
     /// <inheritdoc/>
-    public async Task<Result<DiagnosticResponse, DiagnosticError>> CreateAsync(
-        CreateDiagnosticRequest request, Guid createdByUserCode)
-    {
-        var result = await _repository.InsertAsync(
-            request.AppointmentCode,
-            request.Description,
-            request.DiagnosedAt,
-            request.Notes,
-            createdByUserCode);
-
-        if (result.IsFailure)
-        {
-            return result.Error switch
+    public Task<Result<DiagnosticResponse, DiagnosticError>> CreateAsync(
+        CreateDiagnosticRequest request, Guid createdByUserCode) =>
+        _repository.InsertAsync(
+                request.AppointmentCode,
+                request.Description,
+                request.DiagnosedAt,
+                request.Notes,
+                createdByUserCode)
+            .MapErrorAsync(DiagnosticError (error) => error switch
             {
                 InsertDiagnosticDuplicateError => new DiagnosticDuplicateError(),
                 var e => new DiagnosticDataAccessError(e.Message, e.Details, e.Exception)
-            };
-        }
-
-        // null means appointment not found or status not Confirmado/Completado
-        if (result.Value is null)
-            return new DiagnosticInvalidAppointmentError();
-
-        return MapToResponse(result.Value);
-    }
+            })
+            .EnsureNotNullAsync(new DiagnosticInvalidAppointmentError())
+            .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<DiagnosticResponse, DiagnosticError>> UpdateAsync(

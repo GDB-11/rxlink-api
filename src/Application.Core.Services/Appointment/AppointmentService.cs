@@ -20,17 +20,13 @@ public sealed class AppointmentService : IAppointment
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AppointmentResponse, AppointmentError>> CreateAsync(
-        CreateAppointmentRequest request, Guid patientCode)
-    {
-        var result = await _repository.InsertAsync(
-            patientCode,
-            request.AvailabilityCode,
-            request.ConsultationTypeCode);
-
-        if (result.IsFailure)
-        {
-            return result.Error switch
+    public Task<Result<AppointmentResponse, AppointmentError>> CreateAsync(
+        CreateAppointmentRequest request, Guid patientCode) =>
+        _repository.InsertAsync(
+                patientCode,
+                request.AvailabilityCode,
+                request.ConsultationTypeCode)
+            .MapErrorAsync(AppointmentError (error) => error switch
             {
                 InsertPatientNotFoundError => new AppointmentPatientNotFoundError(),
                 InsertSlotNotFoundError => new AppointmentSlotNotFoundError(),
@@ -38,15 +34,9 @@ public sealed class AppointmentService : IAppointment
                 InsertSlotExpiredError => new AppointmentSlotExpiredError(),
                 InsertConsultationTypeNotFoundError => new AppointmentConsultationTypeNotFoundError(),
                 var e => new AppointmentDataAccessError(e.Message, e.Details, e.Exception)
-            };
-        }
-
-        // null value means race condition: slot was booked between checks and lock
-        if (result.Value is null)
-            return new AppointmentSlotAlreadyBookedError();
-
-        return MapToResponse(result.Value);
-    }
+            })
+            .EnsureNotNullAsync(new AppointmentSlotAlreadyBookedError())
+            .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<Unit, AppointmentError>> ConfirmPaymentAsync(Guid code, Guid patientCode) =>
@@ -70,31 +60,23 @@ public sealed class AppointmentService : IAppointment
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Unit, AppointmentError>> CompleteAsync(
-        Guid code, Guid callerUserCode, string callerRole)
-    {
-        if (callerRole == "Doctor")
-        {
-            var appointmentResult = await _repository.GetByCodeAsync(code)
+    public Task<Result<Unit, AppointmentError>> CompleteAsync(
+        Guid code, Guid callerUserCode, string callerRole) =>
+        Result<Unit, AppointmentError>.Success(Unit.Value)
+            .AsTask()
+            .BindIfAsync(
+                _ => callerRole == "Doctor",
+                _ => _repository.GetByCodeAsync(code)
+                    .MapErrorAsync(AppointmentError (error) =>
+                        new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+                    .EnsureNotNullAsync(new AppointmentNotFoundError())
+                    .EnsureAsync(row => row.DoctorCode == callerUserCode, new AppointmentForbiddenError())
+                    .MapAsync(_ => Unit.Value))
+            .BindAsync(_ => _repository.CompleteAsync(code, callerUserCode)
                 .MapErrorAsync(AppointmentError (error) =>
-                    new AppointmentDataAccessError(error.Message, error.Details, error.Exception));
-
-            if (appointmentResult.IsFailure)
-                return appointmentResult.Error;
-
-            if (appointmentResult.Value is null)
-                return new AppointmentNotFoundError();
-
-            if (appointmentResult.Value.DoctorCode != callerUserCode)
-                return new AppointmentForbiddenError();
-        }
-
-        return await _repository.CompleteAsync(code, callerUserCode)
-            .MapErrorAsync(AppointmentError (error) =>
-                new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
-            .EnsureAsync(affected => affected > 0, new AppointmentInvalidTransitionError())
-            .MapAsync(_ => Unit.Value);
-    }
+                    new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+                .EnsureAsync(affected => affected > 0, new AppointmentInvalidTransitionError())
+                .MapAsync(_ => Unit.Value));
 
     /// <inheritdoc/>
     public Task<Result<Unit, AppointmentError>> NoShowAsync(Guid code, Guid adminUserCode) =>
@@ -105,50 +87,32 @@ public sealed class AppointmentService : IAppointment
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
-    public async Task<Result<AppointmentResponse, AppointmentError>> GetAsync(
-        Guid code, Guid callerCode, string callerRole)
-    {
-        var result = await _repository.GetByCodeAsync(code)
+    public Task<Result<AppointmentResponse, AppointmentError>> GetAsync(
+        Guid code, Guid callerCode, string callerRole) =>
+        _repository.GetByCodeAsync(code)
             .MapErrorAsync(AppointmentError (error) =>
-                new AppointmentDataAccessError(error.Message, error.Details, error.Exception));
-
-        if (result.IsFailure)
-            return result.Error;
-
-        if (result.Value is null)
-            return new AppointmentNotFoundError();
-
-        AppointmentRow row = result.Value;
-
-        bool authorized = callerRole switch
-        {
-            "Patient" => row.PatientCode == callerCode,
-            "Doctor" => row.DoctorCode == callerCode,
-            "Administrador" => true,
-            _ => false
-        };
-
-        if (!authorized)
-            return new AppointmentForbiddenError();
-
-        return MapToResponse(row);
-    }
+                new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new AppointmentNotFoundError())
+            .EnsureAsync(row => callerRole switch
+            {
+                "Patient" => row.PatientCode == callerCode,
+                "Doctor" => row.DoctorCode == callerCode,
+                "Administrador" => true,
+                _ => false
+            }, new AppointmentForbiddenError())
+            .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
-    public async Task<Result<AppointmentPageResponse, AppointmentError>> GetPatientAppointmentsAsync(
-        Guid patientCode, AppointmentPageRequest request)
-    {
-        var result = await _repository.GetPatientAppointmentsAsync(patientCode, request.Page, request.PageSize);
-
-        if (result.IsFailure)
-            return new AppointmentDataAccessError(result.Error!.Message, result.Error.Details, result.Error.Exception);
-
-        return new AppointmentPageResponse(
-            Items: result.Value.Items.Select(MapToResponse).ToList(),
-            Total: result.Value.Total,
-            Page: request.Page,
-            PageSize: request.PageSize);
-    }
+    public Task<Result<AppointmentPageResponse, AppointmentError>> GetPatientAppointmentsAsync(
+        Guid patientCode, AppointmentPageRequest request) =>
+        _repository.GetPatientAppointmentsAsync(patientCode, request.Page, request.PageSize)
+            .MapErrorAsync(AppointmentError (error) =>
+                new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+            .MapAsync(page => new AppointmentPageResponse(
+                Items: page.Items.Select(MapToResponse).ToList(),
+                Total: page.Total,
+                Page: request.Page,
+                PageSize: request.PageSize));
 
     private static AppointmentResponse MapToResponse(AppointmentRow row) =>
         new(

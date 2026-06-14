@@ -30,30 +30,29 @@ public sealed class AvailabilityService : IAvailability
             parsedSlots.Add((slot.Date, time));
         }
 
-        var doctorResult = await _repository.GetDoctorUserIdAsync(doctorCode)
-            .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception));
+        return await _repository.GetDoctorUserIdAsync(doctorCode)
+            .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
+            .EnsureAsync(id => id.HasValue, new AvailabilityDoctorNotFoundError())
+            .MapAsync(id => id!.Value)
+            .BindAsync(async doctorUserId =>
+            {
+                Task<Result<List<AvailabilityRow>, AvailabilityError>> accumulated =
+                    Task.FromResult(
+                        Result<List<AvailabilityRow>, AvailabilityError>.Success(new List<AvailabilityRow>()));
 
-        if (doctorResult.IsFailure)
-            return doctorResult.Error;
-        if (!doctorResult.Value.HasValue)
-            return new AvailabilityDoctorNotFoundError();
+                foreach (var (date, startTime) in parsedSlots)
+                    accumulated = accumulated.BindAsync(list =>
+                        _repository.InsertOneAsync(doctorUserId, date, startTime, createdByUserCode)
+                            .MapErrorAsync(AvailabilityError (e) =>
+                                new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
+                            .MapAsync(row =>
+                            {
+                                if (row is not null) list.Add(row);
+                                return list;
+                            }));
 
-        int doctorUserId = doctorResult.Value.Value;
-
-        var created = new List<AvailabilityRow>();
-        foreach (var (date, startTime) in parsedSlots)
-        {
-            var insertResult = await _repository.InsertOneAsync(doctorUserId, date, startTime, createdByUserCode)
-                .MapErrorAsync(AvailabilityError (e) =>
-                    new AvailabilityDataAccessError(e.Message, e.Details, e.Exception));
-
-            if (insertResult.IsFailure)
-                return insertResult.Error;
-            if (insertResult.Value is not null)
-                created.Add(insertResult.Value);
-        }
-
-        return created.Select(MapToResponse).ToList();
+                return (await accumulated).Map(list => list.Select(MapToResponse));
+            });
     }
 
     /// <inheritdoc/>
@@ -70,23 +69,16 @@ public sealed class AvailabilityService : IAvailability
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Unit, AvailabilityError>> DeleteAsync(Guid availabilityCode, Guid deletedByUserCode)
-    {
-        var isBookedResult = await _repository.GetIsBookedAsync(availabilityCode)
-            .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception));
-
-        if (isBookedResult.IsFailure)
-            return isBookedResult.Error;
-        if (isBookedResult.Value is null)
-            return new AvailabilityNotFoundError();
-        if (isBookedResult.Value is true)
-            return new AvailabilityAlreadyBookedError();
-
-        return await _repository.SoftDeleteAsync(availabilityCode, deletedByUserCode)
+    public Task<Result<Unit, AvailabilityError>> DeleteAsync(Guid availabilityCode, Guid deletedByUserCode) =>
+        _repository.GetIsBookedAsync(availabilityCode)
             .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
-            .EnsureAsync(rows => rows > 0, new AvailabilityNotFoundError())
-            .MapAsync(_ => Unit.Value);
-    }
+            .EnsureAsync(b => b.HasValue, new AvailabilityNotFoundError())
+            .EnsureAsync(b => b == false, new AvailabilityAlreadyBookedError())
+            .BindAsync(_ => _repository.SoftDeleteAsync(availabilityCode, deletedByUserCode)
+                .MapErrorAsync(AvailabilityError (e) =>
+                    new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
+                .EnsureAsync(rows => rows > 0, new AvailabilityNotFoundError())
+                .MapAsync(_ => Unit.Value));
 
     /// <inheritdoc/>
     public Task<Result<AvailableDatesResponse, AvailabilityError>> GetAvailableDatesAsync(Guid doctorCode) =>
