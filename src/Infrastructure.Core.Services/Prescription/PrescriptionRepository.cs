@@ -18,7 +18,7 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
 
     /// <inheritdoc/>
     public async Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> InsertAsync(
-        Guid diagnosticCode, string? notes, DateOnly validUntil, string detailsJson, Guid createdByUserCode) =>
+        Guid diagnosticCode, string? notes, DateTime validUntil, string detailsJson, Guid createdByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PrescriptionRow>(
                 _connection,
@@ -46,7 +46,7 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
 
     /// <inheritdoc/>
     public async Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> UpdateAsync(
-        Guid code, string? notes, DateOnly validUntil, string detailsJson, Guid modifiedByUserCode)
+        Guid code, string? notes, DateTime validUntil, string detailsJson, Guid modifiedByUserCode)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();

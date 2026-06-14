@@ -28,7 +28,7 @@ public sealed class DiagnosticRepository : BaseDatabaseService, IDiagnosticRepos
 
     /// <inheritdoc/>
     public async Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> InsertAsync(
-        Guid appointmentCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode) =>
+        Guid appointmentCode, string description, DateTime diagnosedAt, string? notes, Guid createdByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, DiagnosticRow>(
                 _connection,
@@ -49,7 +49,7 @@ public sealed class DiagnosticRepository : BaseDatabaseService, IDiagnosticRepos
 
     /// <inheritdoc/>
     public async Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> UpdateAsync(
-        Guid code, string description, DateOnly diagnosedAt, string? notes, Guid modifiedByUserCode) =>
+        Guid code, string description, DateTime diagnosedAt, string? notes, Guid modifiedByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, DiagnosticRow>(
                 _connection,

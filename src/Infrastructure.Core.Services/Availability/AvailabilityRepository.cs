@@ -27,7 +27,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
 
     /// <inheritdoc/>
     public async Task<Result<AvailabilityRow?, AvailabilityRepositoryError>> InsertOneAsync(
-        int doctorUserId, DateOnly date, TimeOnly startTime, Guid createdByUserCode) =>
+        int doctorUserId, DateTime date, TimeOnly startTime, Guid createdByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, AvailabilityRow>(
                 _connection,
@@ -42,7 +42,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AvailabilityRow>, AvailabilityRepositoryError>> GetByDoctorAndMonthAsync(
-        Guid doctorCode, DateOnly startDate, DateOnly endDate) =>
+        Guid doctorCode, DateTime startDate, DateTime endDate) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, AvailabilityRow>(
                 _connection,
@@ -85,7 +85,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<AvailableSlotRow>, AvailabilityRepositoryError>> GetAvailableSlotsAsync(
-        Guid doctorCode, DateOnly date) =>
+        Guid doctorCode, DateTime date) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, AvailableSlotRow>(
                 _connection,

@@ -4,6 +4,7 @@ using Application.Core.DTOs.Availability.Response;
 using Application.Core.Interfaces.Availability;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.Interfaces.Availability;
 using Infrastructure.Core.Models.Availability;
 
@@ -42,7 +43,7 @@ public sealed class AvailabilityService : IAvailability
 
                 foreach (var (date, startTime) in parsedSlots)
                     accumulated = accumulated.BindAsync(list =>
-                        _repository.InsertOneAsync(doctorUserId, date, startTime, createdByUserCode)
+                        _repository.InsertOneAsync(doctorUserId, date.ToDateTime(), startTime, createdByUserCode)
                             .MapErrorAsync(AvailabilityError (e) =>
                                 new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
                             .MapAsync(row =>
@@ -63,7 +64,7 @@ public sealed class AvailabilityService : IAvailability
         var startDate = new DateOnly(monthDate.Year, monthDate.Month, 1);
         var endDate = startDate.AddMonths(1);
 
-        return _repository.GetByDoctorAndMonthAsync(doctorCode, startDate, endDate)
+        return _repository.GetByDoctorAndMonthAsync(doctorCode, startDate.ToDateTime(), endDate.ToDateTime())
             .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
             .MapAsync(rows => rows.Select(MapToResponse));
     }
@@ -93,7 +94,7 @@ public sealed class AvailabilityService : IAvailability
     /// <inheritdoc/>
     public Task<Result<AvailableSlotsResponse, AvailabilityError>> GetAvailableSlotsAsync(
         Guid doctorCode, AvailableSlotsRequest request) =>
-        _repository.GetAvailableSlotsAsync(doctorCode, request.Date)
+        _repository.GetAvailableSlotsAsync(doctorCode, request.Date.ToDateTime())
             .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
             .MapAsync(rows => new AvailableSlotsResponse
             {

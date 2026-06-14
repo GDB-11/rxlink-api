@@ -16,14 +16,14 @@ public interface IDiagnosticRepository
     /// Throws a unique constraint exception when a non-deleted diagnostic already exists for the appointment.
     /// </summary>
     Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> InsertAsync(
-        Guid appointmentCode, string description, DateOnly diagnosedAt, string? notes, Guid createdByUserCode);
+        Guid appointmentCode, string description, DateTime diagnosedAt, string? notes, Guid createdByUserCode);
 
     /// <summary>
     /// Updates description, date and notes.
     /// Returns null when the diagnostic is not found or was deleted.
     /// </summary>
     Task<Result<DiagnosticRow?, DiagnosticRepositoryError>> UpdateAsync(
-        Guid code, string description, DateOnly diagnosedAt, string? notes, Guid modifiedByUserCode);
+        Guid code, string description, DateTime diagnosedAt, string? notes, Guid modifiedByUserCode);
 
     /// <summary>
     /// Transitions Activo → Inactivo.

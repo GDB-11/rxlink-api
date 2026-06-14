@@ -5,6 +5,7 @@ using Application.Core.DTOs.Diagnostic.Response;
 using Application.Core.Interfaces.Diagnostic;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.DTOs.Diagnostic;
 using Infrastructure.Core.Interfaces.Diagnostic;
 using Infrastructure.Core.Models.Diagnostic;
@@ -41,7 +42,7 @@ public sealed class DiagnosticService : IDiagnostic
         _repository.InsertAsync(
                 request.AppointmentCode,
                 request.Description,
-                request.DiagnosedAt,
+                request.DiagnosedAt.ToDateTime(),
                 request.Notes,
                 createdByUserCode)
             .MapErrorAsync(DiagnosticError (error) => error switch
@@ -55,7 +56,7 @@ public sealed class DiagnosticService : IDiagnostic
     /// <inheritdoc/>
     public Task<Result<DiagnosticResponse, DiagnosticError>> UpdateAsync(
         Guid code, UpdateDiagnosticRequest request, Guid modifiedByUserCode) =>
-        _repository.UpdateAsync(code, request.Description, request.DiagnosedAt, request.Notes, modifiedByUserCode)
+        _repository.UpdateAsync(code, request.Description, request.DiagnosedAt.ToDateTime(), request.Notes, modifiedByUserCode)
             .MapErrorAsync(DiagnosticError (error) =>
                 new DiagnosticDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new DiagnosticNotFoundError())

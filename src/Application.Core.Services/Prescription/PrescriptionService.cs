@@ -5,6 +5,7 @@ using Application.Core.DTOs.Prescription.Response;
 using Application.Core.Interfaces.Prescription;
 using BindSharp;
 using BindSharp.Extensions;
+using Common.Helpers;
 using Infrastructure.Core.DTOs.Prescription;
 using Infrastructure.Core.Interfaces.Prescription;
 using Infrastructure.Core.Models.Prescription;
@@ -26,7 +27,7 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
         CreatePrescriptionRequest request, Guid createdByUserCode) =>
-        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil,
+        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil.ToDateTime(),
                 JsonSerializer.Serialize(request.Details), createdByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
@@ -47,7 +48,7 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
-        _repository.UpdateAsync(code, request.Notes, request.ValidUntil, JsonSerializer.Serialize(request.Details),
+        _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(), JsonSerializer.Serialize(request.Details),
                 modifiedByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {

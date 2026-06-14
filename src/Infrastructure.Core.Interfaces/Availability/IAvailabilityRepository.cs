@@ -11,11 +11,11 @@ public interface IAvailabilityRepository
 
     /// <summary>Inserts one slot. Returns null when ignored due to a duplicate conflict.</summary>
     Task<Result<AvailabilityRow?, AvailabilityRepositoryError>> InsertOneAsync(
-        int doctorUserId, DateOnly date, TimeOnly startTime, Guid createdByUserCode);
+        int doctorUserId, DateTime date, TimeOnly startTime, Guid createdByUserCode);
 
     /// <summary>Returns all non-deleted slots for a doctor in the given date range [startDate, endDate).</summary>
     Task<Result<IEnumerable<AvailabilityRow>, AvailabilityRepositoryError>> GetByDoctorAndMonthAsync(
-        Guid doctorCode, DateOnly startDate, DateOnly endDate);
+        Guid doctorCode, DateTime startDate, DateTime endDate);
 
     /// <summary>Returns IsBooked for the slot, or null if not found or already soft-deleted.</summary>
     Task<Result<bool?, AvailabilityRepositoryError>> GetIsBookedAsync(Guid availabilityCode);
@@ -28,5 +28,5 @@ public interface IAvailabilityRepository
 
     /// <summary>Returns all free slots for a doctor on the specified date.</summary>
     Task<Result<IEnumerable<AvailableSlotRow>, AvailabilityRepositoryError>> GetAvailableSlotsAsync(
-        Guid doctorCode, DateOnly date);
+        Guid doctorCode, DateTime date);
 }

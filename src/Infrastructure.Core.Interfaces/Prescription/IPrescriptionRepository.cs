@@ -12,7 +12,7 @@ public interface IPrescriptionRepository
     /// Returns <see cref="InsertPrescriptionDuplicateError"/> when a non-deleted prescription already exists for the diagnostic.
     /// </summary>
     Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> InsertAsync(
-        Guid diagnosticCode, string? notes, DateOnly validUntil, string detailsJson, Guid createdByUserCode);
+        Guid diagnosticCode, string? notes, DateTime validUntil, string detailsJson, Guid createdByUserCode);
 
     /// <summary>
     /// Returns the full prescription with detail lines.
@@ -26,7 +26,7 @@ public interface IPrescriptionRepository
     /// Returns <see cref="UpdatePrescriptionInvalidStatusError"/> when status is not Borrador.
     /// </summary>
     Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> UpdateAsync(
-        Guid code, string? notes, DateOnly validUntil, string detailsJson, Guid modifiedByUserCode);
+        Guid code, string? notes, DateTime validUntil, string detailsJson, Guid modifiedByUserCode);
 
     /// <summary>Transitions Borrador → Activo. Returns 0 when the transition is invalid.</summary>
     Task<Result<int, PrescriptionRepositoryError>> SignAsync(Guid code, Guid performedByUserCode);
