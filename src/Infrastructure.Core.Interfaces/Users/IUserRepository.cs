@@ -6,8 +6,12 @@ namespace Infrastructure.Core.Interfaces.Users;
 
 public interface IUserRepository
 {
-    /// <summary>Returns one page of users, with a total count via window function.</summary>
-    Task<Result<IEnumerable<UserRow>, UserRepositoryError>> GetPageAsync(int offset, int limit, string? search);
+    /// <summary>Returns one page of users, with a total count via window function. Optionally filtered by role name.</summary>
+    Task<Result<IEnumerable<UserRow>, UserRepositoryError>> GetPageAsync(int offset, int limit, string? search,
+        string? role = null);
+
+    /// <summary>Returns a single user by their public code, or null when not found or soft-deleted.</summary>
+    Task<Result<UserRow?, UserRepositoryError>> GetByCodeAsync(Guid code);
 
     /// <summary>
     /// Inserts a User linked to an existing Person identified by <paramref name="personCode"/>.

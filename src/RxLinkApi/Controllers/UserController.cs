@@ -28,7 +28,24 @@ public sealed class UserController : FunctionalController
     }
 
     /// <summary>
+    /// Returns a single platform user by their public code.
+    /// </summary>
+    [HttpGet("{code:guid}")]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetByCode(Guid code) =>
+        ExecuteAsync(
+            operation: () => _userService.GetByCodeAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetByCode)
+        );
+
+    /// <summary>
     /// Returns a paginated list of platform users. Supports optional text search on names, surnames, username or email.
+    /// Optionally filtered by role name via the <c>role</c> query parameter.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(UserPageResponse), StatusCodes.Status200OK)]

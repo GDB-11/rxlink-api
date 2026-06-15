@@ -27,7 +27,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
 
     /// <inheritdoc/>
     public async Task<Result<AvailabilityRow?, AvailabilityRepositoryError>> InsertOneAsync(
-        int doctorUserId, DateTime date, TimeOnly startTime, Guid createdByUserCode) =>
+        int doctorUserId, DateTime date, TimeSpan startTime, Guid createdByUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, AvailabilityRow>(
                 _connection,

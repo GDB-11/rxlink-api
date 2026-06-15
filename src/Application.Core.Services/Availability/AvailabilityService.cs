@@ -43,7 +43,7 @@ public sealed class AvailabilityService : IAvailability
 
                 foreach (var (date, startTime) in parsedSlots)
                     accumulated = accumulated.BindAsync(list =>
-                        _repository.InsertOneAsync(doctorUserId, date.ToDateTime(), startTime, createdByUserCode)
+                        _repository.InsertOneAsync(doctorUserId, date.ToDateTime(), startTime.ToTimeSpan(), createdByUserCode)
                             .MapErrorAsync(AvailabilityError (e) =>
                                 new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
                             .MapAsync(row =>

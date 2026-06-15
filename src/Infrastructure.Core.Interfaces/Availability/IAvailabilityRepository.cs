@@ -11,7 +11,7 @@ public interface IAvailabilityRepository
 
     /// <summary>Inserts one slot. Returns null when ignored due to a duplicate conflict.</summary>
     Task<Result<AvailabilityRow?, AvailabilityRepositoryError>> InsertOneAsync(
-        int doctorUserId, DateTime date, TimeOnly startTime, Guid createdByUserCode);
+        int doctorUserId, DateTime date, TimeSpan startTime, Guid createdByUserCode);
 
     /// <summary>Returns all non-deleted slots for a doctor in the given date range [startDate, endDate).</summary>
     Task<Result<IEnumerable<AvailabilityRow>, AvailabilityRepositoryError>> GetByDoctorAndMonthAsync(

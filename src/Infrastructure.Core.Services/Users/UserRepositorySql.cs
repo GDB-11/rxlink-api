@@ -62,9 +62,60 @@ internal static class UserRepositorySql
                                            p."Surnames" ILIKE '%' || @Search || '%' OR
                                            u."Username" ILIKE '%' || @Search || '%' OR
                                            u."Email"    ILIKE '%' || @Search || '%')
+                                      AND (@Role IS NULL OR r."Name" = @Role)
                                     ORDER BY p."Surnames", p."Names"
                                     LIMIT @Limit OFFSET @Offset
                                     """;
+
+    /// <summary>
+    /// Returns a single user by their public code, or no rows when not found or soft-deleted.
+    /// </summary>
+    internal const string GetByCode = """
+                                      SELECT
+                                          u."UserCode",
+                                          p."PersonCode",
+                                          p."Names",
+                                          p."Surnames",
+                                          p."BirthDate",
+                                          s."SexCode",
+                                          s."Name"                AS "SexName",
+                                          p."Phone",
+                                          p."AlternativePhone",
+                                          p."Email"               AS "PersonEmail",
+                                          p."Address",
+                                          p."EmergencyContactName",
+                                          p."EmergencyContactPhone",
+                                          dt."DocumentTypeCode",
+                                          dt."Name"               AS "DocumentTypeName",
+                                          pd."Number"             AS "DocumentNumber",
+                                          pd."IssueDate"          AS "DocumentIssueDate",
+                                          pd."ExpirationDate"     AS "DocumentExpirationDate",
+                                          r."RoleCode",
+                                          r."Name"                AS "RoleName",
+                                          sp."SpecialtyCode",
+                                          sp."Name"               AS "SpecialtyName",
+                                          u."Username",
+                                          u."Email",
+                                          u."LicenseNumber",
+                                          u."IsActive",
+                                          u."CreatedAt",
+                                          0                       AS "TotalCount"
+                                      FROM "User" u
+                                      INNER JOIN "Person" p ON p."PersonId" = u."PersonId"
+                                      INNER JOIN "Sex" s ON s."SexId" = p."SexId"
+                                      LEFT JOIN LATERAL (
+                                          SELECT *
+                                          FROM "PersonDocument"
+                                          WHERE "PersonId" = p."PersonId"
+                                          ORDER BY "PersonDocumentId" DESC
+                                          LIMIT 1
+                                      ) pd ON TRUE
+                                      LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
+                                      INNER JOIN "Role" r ON r."RoleId" = u."RoleId"
+                                      LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
+                                      WHERE u."UserCode"  = @Code
+                                        AND u."DeletedAt" IS NULL
+                                      """;
 
     /// <summary>
     /// Links an existing Person (identified by PersonCode) to a new User account.

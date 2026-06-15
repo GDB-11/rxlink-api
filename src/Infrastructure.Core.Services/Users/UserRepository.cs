@@ -20,12 +20,22 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<UserRow>, UserRepositoryError>> GetPageAsync(
-        int offset, int limit, string? search) =>
+        int offset, int limit, string? search, string? role = null) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, UserRow>(
                 _connection,
                 UserRepositorySql.GetPage,
-                new { Offset = offset, Limit = limit, Search = search }),
+                new { Offset = offset, Limit = limit, Search = search, Role = role }),
+            errorFactory: UserRepositoryError (ex) => new GetUsersPageError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<UserRow?, UserRepositoryError>> GetByCodeAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, UserRow>(
+                _connection,
+                UserRepositorySql.GetByCode,
+                new { Code = code }),
             errorFactory: UserRepositoryError (ex) => new GetUsersPageError(ex.Message, ex)
         );
 

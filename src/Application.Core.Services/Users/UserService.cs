@@ -26,10 +26,17 @@ public sealed class UserService : IUser
     {
         int offset = (request.Page - 1) * request.PageSize;
 
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search)
+        return _repository.GetPageAsync(offset, request.PageSize, request.Search, request.Role)
             .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
     }
+
+    /// <inheritdoc/>
+    public Task<Result<UserResponse, UserError>> GetByCodeAsync(Guid code) =>
+        _repository.GetByCodeAsync(code)
+            .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new UserNotFoundError())
+            .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
     public Task<Result<UserResponse, UserError>> CreateAsync(CreateUserRequest request) =>
