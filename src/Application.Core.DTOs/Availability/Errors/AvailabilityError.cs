@@ -16,3 +16,9 @@ public sealed record AvailabilityAlreadyBookedError()
 
 public sealed record AvailabilityInvalidTimeFormatError(string Value)
     : AvailabilityError($"El formato de hora '{Value}' no es válido. Use HH:MM.");
+
+public sealed record AvailabilitySlotInPastError()
+    : AvailabilityError("No se pueden eliminar slots cuya hora ya ha pasado.");
+
+public sealed record AvailabilitySlotTooCloseError()
+    : AvailabilityError("No se puede eliminar un slot con menos de 5 horas de anticipación.");

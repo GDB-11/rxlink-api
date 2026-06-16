@@ -11,7 +11,7 @@ public sealed record InsertAvailabilityError(string? Details = null, Exception? 
 public sealed record GetAvailabilityError(string? Details = null, Exception? Exception = null)
     : AvailabilityRepositoryError("Error inesperado al recuperar los slots de disponibilidad.", Details, Exception);
 
-public sealed record GetIsBookedError(string? Details = null, Exception? Exception = null)
+public sealed record GetSlotForDeletionError(string? Details = null, Exception? Exception = null)
     : AvailabilityRepositoryError("Error inesperado al verificar el estado del slot.", Details, Exception);
 
 public sealed record SoftDeleteAvailabilityError(string? Details = null, Exception? Exception = null)

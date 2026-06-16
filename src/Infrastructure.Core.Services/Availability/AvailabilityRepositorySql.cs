@@ -65,14 +65,14 @@ internal static class AvailabilityRepositorySql
                                                 """;
 
     /// <summary>
-    /// Returns IsBooked for the slot, or no rows if not found / already soft-deleted.
+    /// Returns IsBooked, Date and StartTime for the slot, or no rows if not found / already soft-deleted.
     /// </summary>
-    internal const string GetIsBooked = """
-                                        SELECT da."IsBooked"
-                                        FROM "DoctorAvailability" da
-                                        WHERE da."DoctorAvailabilityCode" = @Code
-                                          AND da."DeletedAt" IS NULL
-                                        """;
+    internal const string GetSlotForDeletion = """
+                                               SELECT da."IsBooked", da."Date", da."StartTime"
+                                               FROM "DoctorAvailability" da
+                                               WHERE da."DoctorAvailabilityCode" = @Code
+                                                 AND da."DeletedAt" IS NULL
+                                               """;
 
     /// <summary>
     /// Soft-deletes a non-booked slot.

@@ -72,6 +72,7 @@ public sealed class DoctorController : FunctionalController
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> DeleteAvailability(Guid code) =>
         ExecuteAuthenticatedAsync(

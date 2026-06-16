@@ -17,8 +17,9 @@ public interface IAvailabilityRepository
     Task<Result<IEnumerable<AvailabilityRow>, AvailabilityRepositoryError>> GetByDoctorAndMonthAsync(
         Guid doctorCode, DateTime startDate, DateTime endDate);
 
-    /// <summary>Returns IsBooked for the slot, or null if not found or already soft-deleted.</summary>
-    Task<Result<bool?, AvailabilityRepositoryError>> GetIsBookedAsync(Guid availabilityCode);
+    /// <summary>Returns IsBooked, Date and StartTime for the slot, or null if not found or already soft-deleted.</summary>
+    Task<Result<AvailabilityDeleteCheckRow?, AvailabilityRepositoryError>> GetSlotForDeletionAsync(
+        Guid availabilityCode);
 
     /// <summary>Soft-deletes a non-booked slot. Returns the number of rows affected (0 = not found or already deleted/booked).</summary>
     Task<Result<int, AvailabilityRepositoryError>> SoftDeleteAsync(Guid availabilityCode, Guid deletedByUserCode);

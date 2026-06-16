@@ -11,6 +11,8 @@ public sealed class AvailabilityErrorMapper : IErrorHttpMapper<AvailabilityError
             AvailabilityDoctorNotFoundError => new NotFoundObjectResult(new { message = error.Message }),
             AvailabilityNotFoundError => new NotFoundObjectResult(new { message = error.Message }),
             AvailabilityAlreadyBookedError => new ConflictObjectResult(new { message = error.Message }),
+            AvailabilitySlotInPastError => new UnprocessableEntityObjectResult(new { message = error.Message }),
+            AvailabilitySlotTooCloseError => new UnprocessableEntityObjectResult(new { message = error.Message }),
             AvailabilityInvalidTimeFormatError => new BadRequestObjectResult(new { message = error.Message }),
 
             AvailabilityDataAccessError dataError => new ObjectResult(new

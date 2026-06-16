@@ -2,6 +2,7 @@ using Application.Core.DTOs.Availability.Errors;
 using Application.Core.DTOs.Availability.Request;
 using Application.Core.DTOs.Availability.Response;
 using Application.Core.Interfaces.Availability;
+using Application.Core.Interfaces.Shared;
 using BindSharp;
 using BindSharp.Extensions;
 using Common.Helpers;
@@ -13,10 +14,12 @@ namespace Application.Core.Services.Availability;
 public sealed class AvailabilityService : IAvailability
 {
     private readonly IAvailabilityRepository _repository;
+    private readonly ITimeProvider _timeProvider;
 
-    public AvailabilityService(IAvailabilityRepository repository)
+    public AvailabilityService(IAvailabilityRepository repository, ITimeProvider timeProvider)
     {
         _repository = repository;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -43,7 +46,8 @@ public sealed class AvailabilityService : IAvailability
 
                 foreach (var (date, startTime) in parsedSlots)
                     accumulated = accumulated.BindAsync(list =>
-                        _repository.InsertOneAsync(doctorUserId, date.ToDateTime(), startTime.ToTimeSpan(), createdByUserCode)
+                        _repository.InsertOneAsync(doctorUserId, date.ToDateTime(), startTime.ToTimeSpan(),
+                                createdByUserCode)
                             .MapErrorAsync(AvailabilityError (e) =>
                                 new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
                             .MapAsync(row =>
@@ -52,7 +56,8 @@ public sealed class AvailabilityService : IAvailability
                                 return list;
                             }));
 
-                return (await accumulated).Map(list => list.Select(MapToResponse));
+                var now = _timeProvider.UtcNow;
+                return (await accumulated).Map(list => list.Select(row => MapToResponse(row, now)));
             });
     }
 
@@ -64,22 +69,29 @@ public sealed class AvailabilityService : IAvailability
         var startDate = new DateOnly(monthDate.Year, monthDate.Month, 1);
         var endDate = startDate.AddMonths(1);
 
+        var now = _timeProvider.UtcNow;
         return _repository.GetByDoctorAndMonthAsync(doctorCode, startDate.ToDateTime(), endDate.ToDateTime())
             .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
-            .MapAsync(rows => rows.Select(MapToResponse));
+            .MapAsync(rows => rows.Select(row => MapToResponse(row, now)));
     }
 
     /// <inheritdoc/>
-    public Task<Result<Unit, AvailabilityError>> DeleteAsync(Guid availabilityCode, Guid deletedByUserCode) =>
-        _repository.GetIsBookedAsync(availabilityCode)
+    public Task<Result<Unit, AvailabilityError>> DeleteAsync(Guid availabilityCode, Guid deletedByUserCode)
+    {
+        var now = _timeProvider.UtcNow;
+        return _repository.GetSlotForDeletionAsync(availabilityCode)
             .MapErrorAsync(AvailabilityError (e) => new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
-            .EnsureAsync(b => b.HasValue, new AvailabilityNotFoundError())
-            .EnsureAsync(b => b == false, new AvailabilityAlreadyBookedError())
+            .EnsureAsync(row => row is not null, new AvailabilityNotFoundError())
+            .EnsureAsync(row => !row!.IsBooked, new AvailabilityAlreadyBookedError())
+            .EnsureAsync(row => row!.Date.ToDateTime(row.StartTime) > now, new AvailabilitySlotInPastError())
+            .EnsureAsync(row => (row!.Date.ToDateTime(row.StartTime) - now).TotalHours > 5,
+                new AvailabilitySlotTooCloseError())
             .BindAsync(_ => _repository.SoftDeleteAsync(availabilityCode, deletedByUserCode)
                 .MapErrorAsync(AvailabilityError (e) =>
                     new AvailabilityDataAccessError(e.Message, e.Details, e.Exception))
                 .EnsureAsync(rows => rows > 0, new AvailabilityNotFoundError())
                 .MapAsync(_ => Unit.Value));
+    }
 
     /// <inheritdoc/>
     public Task<Result<AvailableDatesResponse, AvailabilityError>> GetAvailableDatesAsync(Guid doctorCode) =>
@@ -103,14 +115,20 @@ public sealed class AvailabilityService : IAvailability
                 Slots = rows.Select(MapToSlotItem).ToList()
             });
 
-    private static AvailabilityResponse MapToResponse(AvailabilityRow row) =>
-        new()
+    private static AvailabilityResponse MapToResponse(AvailabilityRow row, DateTime now)
+    {
+        var slotDateTime = row.Date.ToDateTime(row.StartTime);
+        return new()
         {
             AvailabilityCode = row.DoctorAvailabilityCode,
-            Date = row.Date,
-            StartTime = row.StartTime.ToString("HH:mm"),
-            IsBooked = row.IsBooked
+            Date             = row.Date,
+            StartTime        = row.StartTime.ToString("HH:mm"),
+            IsBooked         = row.IsBooked,
+            CanDelete        = !row.IsBooked
+                               && slotDateTime > now
+                               && (slotDateTime - now).TotalHours > 5
         };
+    }
 
     private static AvailableSlotItem MapToSlotItem(AvailableSlotRow row) =>
         new()

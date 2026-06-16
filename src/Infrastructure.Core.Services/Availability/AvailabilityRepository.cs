@@ -52,13 +52,14 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
         );
 
     /// <inheritdoc/>
-    public async Task<Result<bool?, AvailabilityRepositoryError>> GetIsBookedAsync(Guid availabilityCode) =>
+    public async Task<Result<AvailabilityDeleteCheckRow?, AvailabilityRepositoryError>> GetSlotForDeletionAsync(
+        Guid availabilityCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteScalarAsync<object, bool?>(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, AvailabilityDeleteCheckRow>(
                 _connection,
-                AvailabilityRepositorySql.GetIsBooked,
+                AvailabilityRepositorySql.GetSlotForDeletion,
                 new { Code = availabilityCode }),
-            errorFactory: AvailabilityRepositoryError (ex) => new GetIsBookedError(ex.Message, ex)
+            errorFactory: AvailabilityRepositoryError (ex) => new GetSlotForDeletionError(ex.Message, ex)
         );
 
     /// <inheritdoc/>
