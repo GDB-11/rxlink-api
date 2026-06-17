@@ -49,7 +49,7 @@ internal static class PrescriptionRepositorySql
                                        FROM "Prescription" p
                                        JOIN "PrescriptionStatus" ps ON ps."PrescriptionStatusId" = p."PrescriptionStatusId"
                                        JOIN "Diagnostic" d          ON d."DiagnosticId"         = p."DiagnosticId"
-                                       JOIN "Patient" pat            ON pat."PatientId"          = d."PatientId"
+                                       JOIN "Patient" pat            ON pat."PatientId"          = p."PatientId"
                                        WHERE p."PrescriptionCode" = @Code
                                          AND p."DeletedAt" IS NULL
                                        """;
@@ -76,8 +76,9 @@ internal static class PrescriptionRepositorySql
                                        SELECT "UserId" FROM "User" WHERE "UserCode" = @CreatedByUserCode AND "IsActive" = TRUE
                                    ),
                                    resolved_diagnostic AS (
-                                       SELECT d."DiagnosticId", d."PatientId"
+                                       SELECT d."DiagnosticId", appt."PatientId"
                                        FROM "Diagnostic" d
+                                       JOIN "Appointment" appt ON appt."AppointmentId" = d."AppointmentId"
                                        WHERE d."DiagnosticCode" = @DiagnosticCode
                                          AND d."DeletedAt" IS NULL
                                    ),
