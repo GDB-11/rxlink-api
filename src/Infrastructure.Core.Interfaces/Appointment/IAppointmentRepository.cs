@@ -38,4 +38,32 @@ public interface IAppointmentRepository
     Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
         GetPatientAppointmentsAsync(
             Guid patientCode, int page, int pageSize);
+
+    /// <summary>Returns a filtered page of appointments for the given doctor, ordered by ScheduledAt ASC.</summary>
+    Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
+        GetDoctorAppointmentsAsync(
+            Guid doctorUserCode, int page, int pageSize, DateTime? date, string? statusName);
+
+    /// <summary>
+    /// Atomically creates an appointment on behalf of a patient.
+    /// If <paramref name="isPaid"/> is true, immediately transitions to Confirmado within the same transaction.
+    /// Returns null on slot race condition (→ 409).
+    /// </summary>
+    Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertByAdminAsync(
+        Guid patientCode,
+        Guid availabilityCode,
+        Guid consultationTypeCode,
+        bool isPaid);
+
+    /// <summary>Transitions PendientePago → Confirmado. No ownership check (admin path).</summary>
+    Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(Guid code);
+
+    /// <summary>Transitions Confirmado → PendientePago (admin-only, new transition).</summary>
+    Task<Result<int, AppointmentRepositoryError>> RevertPaymentAsync(Guid code);
+
+    /// <summary>Returns a filtered page of all appointments ordered by ScheduledAt DESC.</summary>
+    Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
+        GetAdminAppointmentsAsync(
+            int page, int pageSize,
+            string? patientSearch, DateTime? date, string? statusName);
 }

@@ -76,4 +76,11 @@ internal static class LookupRepositorySql
                                                  WHERE  "IsActive" = TRUE
                                                  ORDER  BY "IntervalHours"
                                                  """;
+
+    internal const string GetActiveConsultationTypes = """
+                                                       SELECT "ConsultationTypeCode" AS "Code", "Name"
+                                                       FROM   "ConsultationType"
+                                                       WHERE  "IsActive" = TRUE
+                                                       ORDER  BY "ConsultationTypeId"
+                                                       """;
 }

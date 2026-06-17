@@ -74,6 +74,15 @@ public sealed class LookupService : ILookup
                             Frequencies = [.. frequencies.Select(ToGuidItem)]
                         }))));
 
+    /// <inheritdoc/>
+    public Task<Result<AppointmentLookupsResponse, LookupError>> GetAppointmentLookupsAsync() =>
+        _repository.GetActiveConsultationTypesAsync()
+            .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
+            .MapAsync(types => new AppointmentLookupsResponse
+            {
+                ConsultationTypes = [.. types.Select(ToGuidItem)]
+            });
+
     private static LookupItemResponse ToItem(LookupRow row) =>
         new() { Id = row.Id, Name = row.Name };
 

@@ -37,4 +37,22 @@ public interface IAppointment
     /// <summary>Returns the authenticated patient's appointments, ordered by scheduledAt DESC.</summary>
     Task<Result<AppointmentPageResponse, AppointmentError>> GetPatientAppointmentsAsync(
         Guid patientCode, AppointmentPageRequest request);
+
+    /// <summary>Returns a filtered page of the doctor's appointments, ordered by scheduledAt ASC.</summary>
+    Task<Result<AppointmentPageResponse, AppointmentError>> GetDoctorAppointmentsAsync(
+        Guid doctorUserCode, DoctorAppointmentPageRequest request);
+
+    /// <summary>Creates an appointment on behalf of a patient. Admin only.</summary>
+    Task<Result<AppointmentResponse, AppointmentError>> AdminCreateAsync(
+        AdminCreateAppointmentRequest request, Guid adminUserCode);
+
+    /// <summary>Transitions PendientePago → Confirmado. Admin only.</summary>
+    Task<Result<Unit, AppointmentError>> AdminConfirmPaymentAsync(Guid code);
+
+    /// <summary>Transitions Confirmado → PendientePago. Admin only.</summary>
+    Task<Result<Unit, AppointmentError>> AdminRevertPaymentAsync(Guid code);
+
+    /// <summary>Returns a filtered page of all appointments. Admin only.</summary>
+    Task<Result<AppointmentPageResponse, AppointmentError>> GetAdminAppointmentsAsync(
+        AdminAppointmentPageRequest request);
 }

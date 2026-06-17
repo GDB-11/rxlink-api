@@ -67,6 +67,8 @@ internal static class AppointmentRepositorySql
                                       SELECT
                                           a."AppointmentCode",
                                           pat."PatientCode",
+                                          pat_per."Names"                     AS "PatientNames",
+                                          pat_per."Surnames"                  AS "PatientSurnames",
                                           u."UserCode"                        AS "DoctorCode",
                                           per."Names"                         AS "DoctorNames",
                                           per."Surnames"                      AS "DoctorSurnames",
@@ -78,12 +80,13 @@ internal static class AppointmentRepositorySql
                                           a."CreatedAt",
                                           1                                   AS "TotalCount"
                                       FROM "Appointment" a
-                                      JOIN "Patient"          pat ON pat."PatientId"          = a."PatientId"
-                                      JOIN "User"             u   ON u."UserId"               = a."DoctorId"
-                                      JOIN "Person"           per ON per."PersonId"           = u."PersonId"
-                                      JOIN "Specialty"        sp  ON sp."SpecialtyId"         = u."SpecialtyId"
-                                      JOIN "ConsultationType" ct  ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
-                                      JOIN "AppointmentStatus" ast ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                      JOIN "Patient"          pat     ON pat."PatientId"          = a."PatientId"
+                                      JOIN "Person"           pat_per ON pat_per."PersonId"       = pat."PersonId"
+                                      JOIN "User"             u       ON u."UserId"               = a."DoctorId"
+                                      JOIN "Person"           per     ON per."PersonId"           = u."PersonId"
+                                      JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
+                                      JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
+                                      JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                       WHERE a."AppointmentCode" = @Code
                                       """;
 
@@ -196,6 +199,8 @@ internal static class AppointmentRepositorySql
                                                    SELECT
                                                        a."AppointmentCode",
                                                        pat."PatientCode",
+                                                       pat_per."Names"                     AS "PatientNames",
+                                                       pat_per."Surnames"                  AS "PatientSurnames",
                                                        u."UserCode"                        AS "DoctorCode",
                                                        per."Names"                         AS "DoctorNames",
                                                        per."Surnames"                      AS "DoctorSurnames",
@@ -207,14 +212,103 @@ internal static class AppointmentRepositorySql
                                                        a."CreatedAt",
                                                        COUNT(*) OVER()                     AS "TotalCount"
                                                    FROM "Appointment" a
-                                                   JOIN "Patient"          pat ON pat."PatientId"          = a."PatientId"
-                                                   JOIN "User"             u   ON u."UserId"               = a."DoctorId"
-                                                   JOIN "Person"           per ON per."PersonId"           = u."PersonId"
-                                                   JOIN "Specialty"        sp  ON sp."SpecialtyId"         = u."SpecialtyId"
-                                                   JOIN "ConsultationType" ct  ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
-                                                   JOIN "AppointmentStatus" ast ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                   JOIN "Patient"          pat     ON pat."PatientId"          = a."PatientId"
+                                                   JOIN "Person"           pat_per ON pat_per."PersonId"       = pat."PersonId"
+                                                   JOIN "User"             u       ON u."UserId"               = a."DoctorId"
+                                                   JOIN "Person"           per     ON per."PersonId"           = u."PersonId"
+                                                   JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
+                                                   JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
+                                                   JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                                    WHERE pat."PatientCode" = @PatientCode
                                                    ORDER BY a."ScheduledAt" DESC
                                                    LIMIT @PageSize OFFSET @Offset
                                                    """;
+
+    internal const string GetDoctorAppointments = """
+                                                  SELECT
+                                                      a."AppointmentCode",
+                                                      pat."PatientCode",
+                                                      pat_per."Names"                     AS "PatientNames",
+                                                      pat_per."Surnames"                  AS "PatientSurnames",
+                                                      u."UserCode"                        AS "DoctorCode",
+                                                      per."Names"                         AS "DoctorNames",
+                                                      per."Surnames"                      AS "DoctorSurnames",
+                                                      sp."Name"                           AS "SpecialtyName",
+                                                      ct."Name"                           AS "ConsultationTypeName",
+                                                      ast."Name"                          AS "StatusName",
+                                                      ast."AppointmentStatusCode"         AS "StatusCode",
+                                                      a."ScheduledAt",
+                                                      a."CreatedAt",
+                                                      COUNT(*) OVER()                     AS "TotalCount"
+                                                  FROM "Appointment" a
+                                                  JOIN "Patient"          pat     ON pat."PatientId"           = a."PatientId"
+                                                  JOIN "Person"           pat_per ON pat_per."PersonId"        = pat."PersonId"
+                                                  JOIN "User"             u       ON u."UserId"                = a."DoctorId"
+                                                  JOIN "Person"           per     ON per."PersonId"            = u."PersonId"
+                                                  JOIN "Specialty"        sp      ON sp."SpecialtyId"          = u."SpecialtyId"
+                                                  JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
+                                                  JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                  WHERE u."UserCode" = @DoctorCode
+                                                    AND (@Date::date       IS NULL OR a."ScheduledAt"::date = @Date::date)
+                                                    AND (@StatusName::text IS NULL OR ast."Name"            = @StatusName::text)
+                                                  ORDER BY a."ScheduledAt" ASC
+                                                  LIMIT @PageSize OFFSET @Offset
+                                                  """;
+
+    internal const string ConfirmPaymentByAdmin = """
+                                                  UPDATE "Appointment"
+                                                  SET    "AppointmentStatusId" = (
+                                                             SELECT "AppointmentStatusId" FROM "AppointmentStatus" WHERE "Name" = 'Confirmado'
+                                                         ),
+                                                         "UpdatedAt" = NOW()
+                                                  WHERE  "AppointmentCode" = @Code
+                                                    AND  "AppointmentStatusId" = (
+                                                             SELECT "AppointmentStatusId" FROM "AppointmentStatus" WHERE "Name" = 'PendientePago'
+                                                         )
+                                                  """;
+
+    internal const string RevertPayment = """
+                                          UPDATE "Appointment"
+                                          SET    "AppointmentStatusId" = (
+                                                     SELECT "AppointmentStatusId" FROM "AppointmentStatus" WHERE "Name" = 'PendientePago'
+                                                 ),
+                                                 "UpdatedAt" = NOW()
+                                          WHERE  "AppointmentCode" = @Code
+                                            AND  "AppointmentStatusId" = (
+                                                     SELECT "AppointmentStatusId" FROM "AppointmentStatus" WHERE "Name" = 'Confirmado'
+                                                 )
+                                          """;
+
+    internal const string GetAdminAppointments = """
+                                                 SELECT
+                                                     a."AppointmentCode",
+                                                     pat."PatientCode",
+                                                     pat_per."Names"                     AS "PatientNames",
+                                                     pat_per."Surnames"                  AS "PatientSurnames",
+                                                     u."UserCode"                        AS "DoctorCode",
+                                                     per."Names"                         AS "DoctorNames",
+                                                     per."Surnames"                      AS "DoctorSurnames",
+                                                     sp."Name"                           AS "SpecialtyName",
+                                                     ct."Name"                           AS "ConsultationTypeName",
+                                                     ast."Name"                          AS "StatusName",
+                                                     ast."AppointmentStatusCode"         AS "StatusCode",
+                                                     a."ScheduledAt",
+                                                     a."CreatedAt",
+                                                     COUNT(*) OVER()                     AS "TotalCount"
+                                                 FROM "Appointment" a
+                                                 JOIN "Patient"           pat     ON pat."PatientId"           = a."PatientId"
+                                                 JOIN "Person"            pat_per ON pat_per."PersonId"        = pat."PersonId"
+                                                 JOIN "User"              u       ON u."UserId"                = a."DoctorId"
+                                                 JOIN "Person"            per     ON per."PersonId"            = u."PersonId"
+                                                 JOIN "Specialty"         sp      ON sp."SpecialtyId"          = u."SpecialtyId"
+                                                 JOIN "ConsultationType"  ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
+                                                 JOIN "AppointmentStatus" ast     ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                 WHERE (@PatientSearch::text IS NULL
+                                                        OR pat_per."Names"     ILIKE '%' || @PatientSearch || '%'
+                                                        OR pat_per."Surnames"  ILIKE '%' || @PatientSearch || '%')
+                                                   AND (@Date::date       IS NULL OR a."ScheduledAt"::date = @Date::date)
+                                                   AND (@StatusName::text IS NULL OR ast."Name"            = @StatusName::text)
+                                                 ORDER BY a."ScheduledAt" DESC
+                                                 LIMIT @PageSize OFFSET @Offset
+                                                 """;
 }

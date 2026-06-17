@@ -193,4 +193,83 @@ public sealed class AppointmentController : FunctionalController
             errorMapper: _errorMapper,
             operationName: nameof(GetPatientAppointments)
         );
+
+    /// <summary>Returns the authenticated doctor's appointments, ordered by scheduledAt ASC, with optional filters.</summary>
+    [HttpGet("doctor/appointments")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(AppointmentPageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetDoctorAppointments([FromQuery] DoctorAppointmentPageRequest request) =>
+        ExecuteAuthenticatedAsync(
+            operation: doctorUserCode => _appointmentService.GetDoctorAppointmentsAsync(doctorUserCode, request),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetDoctorAppointments)
+        );
+
+    /// <summary>Creates an appointment on behalf of a patient. Admin only.</summary>
+    [HttpPost("admin/appointment")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(typeof(AppointmentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> AdminCreate([FromBody] AdminCreateAppointmentRequest request) =>
+        ExecuteAuthenticatedAsync(
+            operation: adminCode => _appointmentService.AdminCreateAsync(request, adminCode),
+            errorMapper: _errorMapper,
+            operationName: nameof(AdminCreate),
+            successMapper: appt => Created($"api/appointment/{appt.AppointmentCode}", appt)
+        );
+
+    /// <summary>Transitions PendientePago → Confirmado. Admin only.</summary>
+    [HttpPatch("appointment/{code:guid}/admin-confirm-payment")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> AdminConfirmPayment(Guid code) =>
+        ExecuteAuthenticatedAsync(
+            operation: _ => _appointmentService.AdminConfirmPaymentAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(AdminConfirmPayment),
+            successMapper: _ => NoContent()
+        );
+
+    /// <summary>Transitions Confirmado → PendientePago. Admin only.</summary>
+    [HttpPatch("appointment/{code:guid}/admin-revert-payment")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> AdminRevertPayment(Guid code) =>
+        ExecuteAuthenticatedAsync(
+            operation: _ => _appointmentService.AdminRevertPaymentAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(AdminRevertPayment),
+            successMapper: _ => NoContent()
+        );
+
+    /// <summary>Returns a filtered, paginated list of all appointments. Admin only.</summary>
+    [HttpGet("admin/appointments")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(typeof(AppointmentPageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetAdminAppointments([FromQuery] AdminAppointmentPageRequest request) =>
+        ExecuteAuthenticatedAsync(
+            operation: _ => _appointmentService.GetAdminAppointmentsAsync(request),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetAdminAppointments)
+        );
 }

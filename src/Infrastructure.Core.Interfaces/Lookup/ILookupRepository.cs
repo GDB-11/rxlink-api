@@ -17,4 +17,5 @@ public interface ILookupRepository
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveMedicationsAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveAdministrationRoutesAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveFrequenciesAsync();
+    Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveConsultationTypesAsync();
 }

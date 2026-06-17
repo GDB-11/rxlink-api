@@ -4,6 +4,8 @@ public sealed class AppointmentRow
 {
     public required Guid AppointmentCode { get; init; }
     public required Guid PatientCode { get; init; }
+    public required string PatientNames { get; init; }
+    public required string PatientSurnames { get; init; }
     public required Guid DoctorCode { get; init; }
     public required string DoctorNames { get; init; }
     public required string DoctorSurnames { get; init; }

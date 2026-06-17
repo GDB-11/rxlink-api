@@ -89,4 +89,18 @@ public sealed class LookupsController : FunctionalController
             errorMapper: _errorMapper,
             operationName: nameof(GetPrescriptionLookups)
         );
+
+    /// <summary>Returns consultation types for the appointment booking form.</summary>
+    [Authorize(Roles = "Administrador")]
+    [HttpGet("appointments")]
+    [ProducesResponseType(typeof(AppointmentLookupsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetAppointmentLookups() =>
+        ExecuteAsync(
+            operation: () => _lookupService.GetAppointmentLookupsAsync(),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetAppointmentLookups)
+        );
 }

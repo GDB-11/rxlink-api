@@ -227,6 +227,181 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             },
             errorFactory: AppointmentRepositoryError (ex) => new GetPatientAppointmentsError(ex.Message, ex));
 
+    /// <inheritdoc/>
+    public async Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
+        GetDoctorAppointmentsAsync(Guid doctorUserCode, int page, int pageSize, DateTime? date, string? statusName) =>
+        await Result.TryAsync(
+            operation: async () =>
+            {
+                int offset = (page - 1) * pageSize;
+                IEnumerable<AppointmentRow> rows = await ExecuteQueryAsync<object, AppointmentRow>(
+                    _connection,
+                    AppointmentRepositorySql.GetDoctorAppointments,
+                    new
+                    {
+                        DoctorCode = doctorUserCode, Date = date, StatusName = statusName, PageSize = pageSize,
+                        Offset = offset
+                    });
+
+                AppointmentRow[] array = rows as AppointmentRow[] ?? rows.ToArray();
+                int total = array.Length > 0 ? (int)array[0].TotalCount : 0;
+                return (Items: (IEnumerable<AppointmentRow>)array, Total: total);
+            },
+            errorFactory: AppointmentRepositoryError (ex) => new GetDoctorAppointmentsError(ex.Message, ex));
+
+    /// <inheritdoc/>
+    public async Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertByAdminAsync(
+        Guid patientCode,
+        Guid availabilityCode,
+        Guid consultationTypeCode,
+        bool isPaid)
+    {
+        if (_connection.State != ConnectionState.Open)
+            _connection.Open();
+
+        using IDbTransaction transaction = _connection.BeginTransaction();
+
+        try
+        {
+            int? foundPatientId = await _connection.ExecuteScalarAsync<int?>(
+                AppointmentRepositorySql.GetPatientId,
+                new { PatientCode = patientCode },
+                transaction);
+
+            if (foundPatientId is null)
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                    new InsertPatientNotFoundError());
+            }
+
+            SlotRow? slot = await _connection.QueryFirstOrDefaultAsync<SlotRow>(
+                AppointmentRepositorySql.GetAvailabilitySlot,
+                new { AvailabilityCode = availabilityCode },
+                transaction);
+
+            if (slot is null || slot.DeletedAt is not null)
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                    new InsertSlotNotFoundError());
+            }
+
+            if (slot.IsBooked)
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                    new InsertSlotAlreadyBookedError());
+            }
+
+            if (slot.Date < DateOnly.FromDateTime(DateTime.UtcNow.Date))
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                    new InsertSlotExpiredError());
+            }
+
+            int? consultationTypeId = await _connection.ExecuteScalarAsync<int?>(
+                AppointmentRepositorySql.GetConsultationTypeId,
+                new { ConsultationTypeCode = consultationTypeCode },
+                transaction);
+
+            if (consultationTypeId is null)
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                    new InsertConsultationTypeNotFoundError());
+            }
+
+            int lockRowsAffected = await _connection.ExecuteAsync(
+                AppointmentRepositorySql.LockSlot,
+                new { slot.DoctorAvailabilityId },
+                transaction);
+
+            if (lockRowsAffected == 0)
+            {
+                transaction.Rollback();
+                return Result<AppointmentRow?, AppointmentRepositoryError>.Success(null);
+            }
+
+            DateTimeOffset scheduledAt = new DateTimeOffset(
+                slot.Date.ToDateTime(slot.StartTime, DateTimeKind.Utc));
+
+            Guid newCode = await _connection.ExecuteScalarAsync<Guid>(
+                AppointmentRepositorySql.InsertAppointment,
+                new
+                {
+                    PatientId = foundPatientId.Value,
+                    slot.DoctorId,
+                    slot.DoctorAvailabilityId,
+                    ConsultationTypeId = consultationTypeId.Value,
+                    ScheduledAt = scheduledAt
+                },
+                transaction);
+
+            if (isPaid)
+            {
+                await _connection.ExecuteAsync(
+                    AppointmentRepositorySql.ConfirmPaymentByAdmin,
+                    new { Code = newCode },
+                    transaction);
+            }
+
+            AppointmentRow? row = await _connection.QueryFirstOrDefaultAsync<AppointmentRow>(
+                AppointmentRepositorySql.GetByCode,
+                new { Code = newCode },
+                transaction);
+
+            transaction.Commit();
+            return Result<AppointmentRow?, AppointmentRepositoryError>.Success(row);
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
+                new InsertAppointmentError(ex.Message, ex));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection, AppointmentRepositorySql.ConfirmPaymentByAdmin, new { Code = code }),
+            errorFactory: AppointmentRepositoryError (ex) => new AdminConfirmPaymentError(ex.Message, ex));
+
+    /// <inheritdoc/>
+    public async Task<Result<int, AppointmentRepositoryError>> RevertPaymentAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection, AppointmentRepositorySql.RevertPayment, new { Code = code }),
+            errorFactory: AppointmentRepositoryError (ex) => new RevertPaymentError(ex.Message, ex));
+
+    /// <inheritdoc/>
+    public async Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
+        GetAdminAppointmentsAsync(int page, int pageSize, string? patientSearch, DateTime? date, string? statusName) =>
+        await Result.TryAsync(
+            operation: async () =>
+            {
+                int offset = (page - 1) * pageSize;
+                IEnumerable<AppointmentRow> rows = await ExecuteQueryAsync<object, AppointmentRow>(
+                    _connection,
+                    AppointmentRepositorySql.GetAdminAppointments,
+                    new
+                    {
+                        PatientSearch = patientSearch,
+                        Date = date,
+                        StatusName = statusName,
+                        PageSize = pageSize,
+                        Offset = offset
+                    });
+
+                AppointmentRow[] array = rows as AppointmentRow[] ?? rows.ToArray();
+                int total = array.Length > 0 ? (int)array[0].TotalCount : 0;
+                return (Items: (IEnumerable<AppointmentRow>)array, Total: total);
+            },
+            errorFactory: AppointmentRepositoryError (ex) => new GetAdminAppointmentsError(ex.Message, ex));
+
     // Internal projection for reading the availability slot during insert.
     private sealed class SlotRow
     {

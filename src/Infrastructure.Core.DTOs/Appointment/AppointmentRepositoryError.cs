@@ -30,3 +30,15 @@ public sealed record TransitionAppointmentError(string? Details = null, Exceptio
 
 public sealed record GetPatientAppointmentsError(string? Details = null, Exception? Exception = null)
     : AppointmentRepositoryError("Error inesperado al recuperar las citas del paciente.", Details, Exception);
+
+public sealed record GetDoctorAppointmentsError(string? Details = null, Exception? Exception = null)
+    : AppointmentRepositoryError("Error inesperado al recuperar las citas del médico.", Details, Exception);
+
+public sealed record AdminConfirmPaymentError(string Message, Exception? Exception = null)
+    : AppointmentRepositoryError(Message, null, Exception);
+
+public sealed record RevertPaymentError(string Message, Exception? Exception = null)
+    : AppointmentRepositoryError(Message, null, Exception);
+
+public sealed record GetAdminAppointmentsError(string Message, Exception? Exception = null)
+    : AppointmentRepositoryError(Message, null, Exception);

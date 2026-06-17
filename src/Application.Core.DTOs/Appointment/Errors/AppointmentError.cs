@@ -37,3 +37,11 @@ public sealed record AppointmentInvalidTransitionError()
 /// <summary>The caller does not have permission to perform this action on the appointment.</summary>
 public sealed record AppointmentForbiddenError()
     : AppointmentError("No tiene permiso para realizar esta acción sobre la cita.");
+
+/// <summary>The appointment is not in PendientePago status.</summary>
+public sealed record AdminConfirmPaymentConflictError()
+    : AppointmentError("La cita no está en estado PendientePago.");
+
+/// <summary>The appointment is not in Confirmado status.</summary>
+public sealed record RevertPaymentConflictError()
+    : AppointmentError("La cita no está en estado Confirmado.");

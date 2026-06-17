@@ -3,6 +3,8 @@ namespace Application.Core.DTOs.Appointment.Response;
 public sealed record AppointmentResponse(
     Guid AppointmentCode,
     Guid PatientCode,
+    string PatientNames,
+    string PatientSurnames,
     Guid DoctorCode,
     string DoctorNames,
     string DoctorSurnames,

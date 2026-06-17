@@ -33,7 +33,9 @@ public sealed class AppointmentErrorMapper : IErrorHttpMapper<AppointmentError>
             },
 
             AppointmentSlotAlreadyBookedError
-                or AppointmentInvalidTransitionError => new ConflictObjectResult(new
+                or AppointmentInvalidTransitionError
+                or AdminConfirmPaymentConflictError
+                or RevertPaymentConflictError => new ConflictObjectResult(new
                 {
                     message = error.Message
                 }),
