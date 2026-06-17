@@ -19,7 +19,6 @@ internal static class DiagnosticRepositorySql
                                                                    SELECT COUNT(*)::int
                                                                    FROM "PrescriptionDetail" pd
                                                                    WHERE pd."PrescriptionId" = p."PrescriptionId"
-                                                                     AND pd."DeletedAt" IS NULL
                                                                )
                                                            )::text
                                                            FROM "Prescription" p
@@ -138,7 +137,6 @@ internal static class DiagnosticRepositorySql
                                                    SELECT COUNT(*)::int
                                                    FROM "PrescriptionDetail" pd
                                                    WHERE pd."PrescriptionId" = p."PrescriptionId"
-                                                     AND pd."DeletedAt" IS NULL
                                                )
                                            )::text
                                            FROM "Prescription" p
