@@ -69,8 +69,8 @@ public sealed class SpecialtyService : ISpecialty
 
     /// <inheritdoc/>
     public Task<Result<IEnumerable<DoctorSummaryResponse>, SpecialtyError>> GetDoctorsBySpecialtyCodeAsync(
-        Guid specialtyCode) =>
-        _repository.GetDoctorsBySpecialtyCodeAsync(specialtyCode)
+        Guid specialtyCode, string? search = null) =>
+        _repository.GetDoctorsBySpecialtyCodeAsync(specialtyCode, search)
             .MapErrorAsync(SpecialtyError (error) =>
                 new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyNotFoundError())

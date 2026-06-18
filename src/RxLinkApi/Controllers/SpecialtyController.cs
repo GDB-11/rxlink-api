@@ -131,9 +131,9 @@ public sealed class SpecialtyController : FunctionalController
     [ProducesResponseType(typeof(IEnumerable<DoctorSummaryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> GetDoctorsBySpecialty(Guid code) =>
+    public Task<IActionResult> GetDoctorsBySpecialty(Guid code, [FromQuery] string? search = null) =>
         ExecuteAsync(
-            operation: () => _specialtyService.GetDoctorsBySpecialtyCodeAsync(code),
+            operation: () => _specialtyService.GetDoctorsBySpecialtyCodeAsync(code, search),
             errorMapper: _errorMapper,
             operationName: nameof(GetDoctorsBySpecialty)
         );

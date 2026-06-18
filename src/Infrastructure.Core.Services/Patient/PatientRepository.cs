@@ -111,6 +111,36 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
         );
 
     /// <inheritdoc/>
+    public async Task<Result<PatientRow?, PatientRepositoryError>> GetByCodeAsync(Guid patientCode) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
+                _connection,
+                PatientRepositorySql.GetByCode,
+                new { PatientCode = patientCode }),
+            errorFactory: PatientRepositoryError (ex) => new GetPatientByCodeError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<int, PatientRepositoryError>> UpdatePersonContactAsync(
+        Guid patientCode, string phone, string? alternativePhone,
+        string? address, string? emergencyContactName, string? emergencyContactPhone) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                PatientRepositorySql.UpdatePersonContact,
+                new
+                {
+                    PatientCode = patientCode,
+                    Phone = phone,
+                    AlternativePhone = alternativePhone,
+                    Address = address,
+                    EmergencyContactName = emergencyContactName,
+                    EmergencyContactPhone = emergencyContactPhone
+                }),
+            errorFactory: PatientRepositoryError (ex) => new UpdatePersonContactError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<int, PatientRepositoryError>> DeleteAllergyAsync(
         Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode) =>
         await Result.TryAsync(

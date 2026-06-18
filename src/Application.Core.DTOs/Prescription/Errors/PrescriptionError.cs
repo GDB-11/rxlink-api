@@ -25,3 +25,7 @@ public sealed record PrescriptionInvalidStatusError()
 /// <summary>The requested state transition is not valid for the current status.</summary>
 public sealed record PrescriptionInvalidTransitionError()
     : PrescriptionError("La transición de estado solicitada no es válida para el estado actual de la receta.");
+
+/// <summary>The prescription does not belong to the authenticated patient.</summary>
+public sealed record PrescriptionPatientForbiddenError()
+    : PrescriptionError("No tiene permiso para acceder a esta receta.");

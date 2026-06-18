@@ -121,6 +121,11 @@ internal static class SpecialtyRepositorySql
                                                       LEFT JOIN "Person" p ON p."PersonId" = u."PersonId"
                                                       WHERE s."SpecialtyCode" = @SpecialtyCode
                                                         AND s."IsActive"      = TRUE
+                                                        AND (
+                                                            @Search IS NULL
+                                                            OR p."Names"    ILIKE '%' || @Search || '%'
+                                                            OR p."Surnames" ILIKE '%' || @Search || '%'
+                                                        )
                                                       ORDER BY p."Surnames", p."Names"
                                                       """;
 }

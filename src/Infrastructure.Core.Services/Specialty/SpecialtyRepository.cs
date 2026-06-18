@@ -89,14 +89,14 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<DoctorSummaryRow>?, SpecialtyRepositoryError>> GetDoctorsBySpecialtyCodeAsync(
-        Guid specialtyCode) =>
+        Guid specialtyCode, string? search = null) =>
         await Result.TryAsync(
             operation: async () =>
             {
                 IEnumerable<DoctorSummaryRow> rows = await ExecuteQueryAsync<object, DoctorSummaryRow>(
                     _connection,
                     SpecialtyRepositorySql.GetDoctorsBySpecialtyCode,
-                    new { SpecialtyCode = specialtyCode });
+                    new { SpecialtyCode = specialtyCode, Search = search });
 
                 List<DoctorSummaryRow> list = rows.ToList();
 

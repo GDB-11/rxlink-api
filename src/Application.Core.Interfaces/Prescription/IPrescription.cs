@@ -14,6 +14,9 @@ public interface IPrescription
     /// <summary>Returns the full prescription with its detail lines.</summary>
     Task<Result<PrescriptionResponse, PrescriptionError>> GetAsync(Guid code);
 
+    /// <summary>Returns the prescription only if it belongs to the given patient. Returns Forbidden otherwise.</summary>
+    Task<Result<PrescriptionResponse, PrescriptionError>> GetForPatientAsync(Guid code, Guid patientCode);
+
     /// <summary>Updates notes, validUntil and lines. Only allowed when status is Borrador.</summary>
     Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode);

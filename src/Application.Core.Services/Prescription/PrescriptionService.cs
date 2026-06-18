@@ -46,6 +46,15 @@ public sealed class PrescriptionService : IPrescription
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
+    public Task<Result<PrescriptionResponse, PrescriptionError>> GetForPatientAsync(Guid code, Guid patientCode) =>
+        _repository.GetByCodeAsync(code)
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new PrescriptionNotFoundError())
+            .MapAsync(MapToResponse)
+            .EnsureAsync(r => r.PatientCode == patientCode, new PrescriptionPatientForbiddenError());
+
+    /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
         _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(), JsonSerializer.Serialize(request.Details),

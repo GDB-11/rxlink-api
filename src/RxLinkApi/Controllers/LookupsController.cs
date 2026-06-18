@@ -91,7 +91,7 @@ public sealed class LookupsController : FunctionalController
         );
 
     /// <summary>Returns consultation types for the appointment booking form.</summary>
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Patient")]
     [HttpGet("appointments")]
     [ProducesResponseType(typeof(AppointmentLookupsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -32,5 +32,5 @@ public interface ISpecialtyRepository
     /// Returns an empty enumerable when the specialty exists but has no active doctors.
     /// </summary>
     Task<Result<IEnumerable<DoctorSummaryRow>?, SpecialtyRepositoryError>> GetDoctorsBySpecialtyCodeAsync(
-        Guid specialtyCode);
+        Guid specialtyCode, string? search = null);
 }

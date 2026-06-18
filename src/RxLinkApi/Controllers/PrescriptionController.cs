@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Application.Core.DTOs.Prescription.Errors;
 using Application.Core.DTOs.Prescription.Request;
 using Application.Core.DTOs.Prescription.Response;
@@ -9,7 +10,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Doctor,Enfermero")]
+[Authorize]
 [ApiController]
 [Route("api")]
 public sealed class PrescriptionController : FunctionalController
@@ -51,6 +52,7 @@ public sealed class PrescriptionController : FunctionalController
     /// Returns the full prescription with its detail lines.
     /// </summary>
     [HttpGet("prescription/{code:guid}")]
+    [Authorize(Roles = "Doctor,Enfermero")]
     [ProducesResponseType(typeof(PrescriptionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -59,6 +61,23 @@ public sealed class PrescriptionController : FunctionalController
     public Task<IActionResult> GetByCode(Guid code) =>
         ExecuteAsync(
             operation: () => _prescriptionService.GetAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetByCode)
+        );
+    
+    /// <summary>
+    /// Returns the full prescription of a patient with its detail lines.
+    /// </summary>
+    [HttpGet("prescription/patient/{code:guid}")]
+    [Authorize(Roles = "Patient")]
+    [ProducesResponseType(typeof(PrescriptionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetByCodeFromPatient(Guid code) =>
+        ExecuteAuthenticatedPatientAsync(
+            operation: patientCode => _prescriptionService.GetForPatientAsync(code, patientCode),
             errorMapper: _errorMapper,
             operationName: nameof(GetByCode)
         );

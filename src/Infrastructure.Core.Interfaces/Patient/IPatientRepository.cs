@@ -43,4 +43,12 @@ public interface IPatientRepository
 
     /// <summary>Reactivates a previously deactivated patient. Returns the number of affected rows.</summary>
     Task<Result<int, PatientRepositoryError>> ActivateAsync(Guid code);
+
+    /// <summary>Returns the full patient row for the given patient code, or null if not found.</summary>
+    Task<Result<PatientRow?, PatientRepositoryError>> GetByCodeAsync(Guid patientCode);
+
+    /// <summary>Updates the person contact fields linked to the given patient. Returns affected row count.</summary>
+    Task<Result<int, PatientRepositoryError>> UpdatePersonContactAsync(
+        Guid patientCode, string phone, string? alternativePhone,
+        string? address, string? emergencyContactName, string? emergencyContactPhone);
 }

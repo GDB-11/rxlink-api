@@ -19,6 +19,11 @@ public sealed class PrescriptionErrorMapper : IErrorHttpMapper<PrescriptionError
                     message = error.Message
                 }),
 
+            PrescriptionPatientForbiddenError => new ObjectResult(new { message = error.Message })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            },
+
             PrescriptionDataAccessError dataError => new ObjectResult(new
             {
                 message = dataError.Message,

@@ -267,6 +267,51 @@ internal static class PatientRepositorySql
                                           """;
 
     /// <summary>
+    /// Returns the full patient row for a single patient identified by PatientCode.
+    /// Returns no rows when not found or inactive.
+    /// </summary>
+    internal const string GetByCode = $"""
+                                       SELECT
+                                           pat."PatientCode",
+                                           pe."PersonCode",
+                                           pat."MedicalRecordNumber",
+                                           pat."IsActive",
+                                           pe."Names",
+                                           pe."Surnames",
+                                           pe."BirthDate",
+                                           pe."Phone",
+                                           pe."AlternativePhone",
+                                           pe."Email",
+                                           pe."Address",
+                                           pe."EmergencyContactName",
+                                           pe."EmergencyContactPhone",
+                                           {AllergyAgg} AS "AllergiesJson",
+                                           0 AS "TotalCount"
+                                       FROM "Patient" pat
+                                       INNER JOIN "Person" pe ON pe."PersonId" = pat."PersonId"
+                                       WHERE pat."PatientCode" = @PatientCode
+                                         AND pat."IsActive" = TRUE
+                                       """;
+
+    /// <summary>
+    /// Updates the contact fields on the Person linked to the active Patient identified by @PatientCode.
+    /// Returns the number of updated rows (0 = patient not found or inactive).
+    /// </summary>
+    internal const string UpdatePersonContact = """
+                                                UPDATE "Person"
+                                                SET
+                                                    "Phone"                 = @Phone,
+                                                    "AlternativePhone"      = @AlternativePhone,
+                                                    "Address"               = @Address,
+                                                    "EmergencyContactName"  = @EmergencyContactName,
+                                                    "EmergencyContactPhone" = @EmergencyContactPhone
+                                                FROM "Patient" pat
+                                                WHERE "Person"."PersonId" = pat."PersonId"
+                                                  AND pat."PatientCode"   = @PatientCode
+                                                  AND pat."IsActive"      = TRUE
+                                                """;
+
+    /// <summary>
     /// Soft-deletes a patient allergy record.
     /// </summary>
     internal const string DeleteAllergy = """
