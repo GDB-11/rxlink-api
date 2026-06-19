@@ -140,6 +140,21 @@ internal static class PersonRepositorySql
                                        FROM ins i
                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                        RETURNING "PersonId", "DocumentTypeId", "Number"
+                                   ),
+                                   mrn AS (
+                                       SELECT 'PAC-' || TO_CHAR(NOW(), 'YYYYMM') || '-' ||
+                                              LPAD(
+                                                  (COALESCE(MAX(SPLIT_PART("MedicalRecordNumber", '-', 3)::INTEGER), 0) + 1)::TEXT,
+                                                  5, '0'
+                                              ) AS value
+                                       FROM "Patient"
+                                       WHERE "MedicalRecordNumber" LIKE 'PAC-' || TO_CHAR(NOW(), 'YYYYMM') || '-%'
+                                   ),
+                                   ins_patient AS (
+                                       INSERT INTO "Patient" ("PersonId", "MedicalRecordNumber", "PasswordHash")
+                                       SELECT ins."PersonId", mrn.value, @PasswordHash
+                                       FROM ins, mrn
+                                       RETURNING *
                                    )
                                    SELECT
                                        ins."PersonCode",
@@ -162,6 +177,7 @@ internal static class PersonRepositorySql
                                    JOIN "Sex" s ON s."SexId" = ins."SexId"
                                    JOIN doc_ins ON doc_ins."PersonId" = ins."PersonId"
                                    JOIN "DocumentType" dt ON dt."DocumentTypeId" = doc_ins."DocumentTypeId"
+                                   JOIN ins_patient ON ins_patient."PersonId" = ins."PersonId"
                                    """;
 
     internal const string Update = """

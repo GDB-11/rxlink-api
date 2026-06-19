@@ -1,6 +1,7 @@
 using Application.Core.DTOs.Person.Errors;
 using Application.Core.DTOs.Person.Request;
 using Application.Core.DTOs.Person.Response;
+using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Person;
 using BindSharp;
 using BindSharp.Extensions;
@@ -13,10 +14,12 @@ namespace Application.Core.Services.Person;
 public sealed class PersonService : IPerson
 {
     private readonly IPersonRepository _repository;
+    private readonly IPassword _passwordService;
 
-    public PersonService(IPersonRepository repository)
+    public PersonService(IPersonRepository repository, IPassword passwordService)
     {
         _repository = repository;
+        _passwordService = passwordService;
     }
 
     /// <inheritdoc/>
@@ -45,13 +48,17 @@ public sealed class PersonService : IPerson
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>
-        _repository.InsertAsync(
-                request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
-                request.Phone, request.AlternativePhone, request.Email,
-                request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-                request.DocumentTypeCode, request.DocumentNumber)
-            .MapErrorAsync(PersonError (error) =>
-                new PersonDataAccessError(error.Message, error.Details, error.Exception))
+        _passwordService
+            .HashPassword(request.DocumentNumber)
+            .MapError(PersonError (e) => new PersonDataAccessError(e.Message, null, e.Exception))
+            .AsTask()
+            .BindAsync(passwordHash => _repository.InsertAsync(
+                    request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
+                    request.Phone, request.AlternativePhone, request.Email,
+                    request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
+                    request.DocumentTypeCode, request.DocumentNumber, passwordHash)
+                .MapErrorAsync(PersonError (error) =>
+                    new PersonDataAccessError(error.Message, error.Details, error.Exception)))
             .EnsureNotNullAsync(new PersonDataAccessError("No se pudo registrar la persona."))
             .MapAsync(MapToResponse);
 
