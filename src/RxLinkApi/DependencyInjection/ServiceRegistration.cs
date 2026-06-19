@@ -3,6 +3,7 @@ using Application.Core.Interfaces.Appointment;
 using Application.Core.Interfaces.Availability;
 using Application.Core.Interfaces.Diagnostic;
 using Application.Core.Interfaces.Auth;
+using Application.Core.Interfaces.ConsultationType;
 using Application.Core.Interfaces.DocumentType;
 using Application.Core.Interfaces.Lookup;
 using Application.Core.Interfaces.Medication;
@@ -21,6 +22,7 @@ using Application.Core.Services.Appointment;
 using Application.Core.Services.Availability;
 using Application.Core.Services.Diagnostic;
 using Application.Core.Services.Auth;
+using Application.Core.Services.ConsultationType;
 using Application.Core.Services.DocumentType;
 using Application.Core.Services.Lookup;
 using Application.Core.Services.Medication;
@@ -66,6 +68,7 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<IPatientAuthentication, PatientAuthenticationService>();
             builder.Services.AddScoped<ISex, SexService>();
             builder.Services.AddScoped<IDocumentType, DocumentTypeService>();
+            builder.Services.AddScoped<IConsultationType, ConsultationTypeService>();
         }
     }
 }
