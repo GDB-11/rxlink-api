@@ -69,7 +69,7 @@ public sealed class LookupService : ILookup
                         .MapAsync(frequencies => new PrescriptionLookupsResponse
                         {
                             PrescriptionStatuses = [.. statuses.Select(ToGuidItem)],
-                            Medications = [.. medications.Select(ToGuidItem)],
+                            Medications = [.. medications.Select(ToMedicationItem)],
                             AdministrationRoutes = [.. routes.Select(ToGuidItem)],
                             Frequencies = [.. frequencies.Select(ToGuidItem)]
                         }))));
@@ -88,4 +88,11 @@ public sealed class LookupService : ILookup
 
     private static GuidLookupItemResponse ToGuidItem(GuidLookupRow row) =>
         new() { Code = row.Code, Name = row.Name };
+
+    private static MedicationLookupItemResponse ToMedicationItem(MedicationLookupRow row) =>
+        new()
+        {
+            Code = row.Code, Name = row.Name, DefaultDose = row.DefaultDose,
+            DefaultAdministrationRouteCode = row.DefaultAdministrationRouteCode
+        };
 }

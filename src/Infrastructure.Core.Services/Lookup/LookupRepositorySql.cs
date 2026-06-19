@@ -56,11 +56,21 @@ internal static class LookupRepositorySql
                                                           """;
 
     internal const string GetActiveMedications = """
-                                                 SELECT "MedicationCode" AS "Code", "GenericName" AS "Name"
-                                                 FROM   "Medication"
-                                                 WHERE  "IsActive" = TRUE
-                                                   AND  "DeletedAt" IS NULL
-                                                 ORDER  BY "GenericName"
+                                                 SELECT
+                                                     m."MedicationCode" AS "Code",
+                                                     CASE
+                                                         WHEN m."CommercialName" IS NOT NULL
+                                                             THEN m."CommercialName" || ' - ' || m."GenericName"
+                                                         ELSE m."GenericName"
+                                                     END AS "Name",
+                                                     m."Concentration"           AS "DefaultDose",
+                                                     ar."AdministrationRouteCode" AS "DefaultAdministrationRouteCode"
+                                                 FROM  "Medication" m
+                                                 JOIN  "AdministrationRoute" ar
+                                                       ON m."AdministrationRouteId" = ar."AdministrationRouteId"
+                                                 WHERE m."IsActive"   = TRUE
+                                                   AND m."DeletedAt" IS NULL
+                                                 ORDER BY m."GenericName"
                                                  """;
 
     internal const string GetActiveAdministrationRoutes = """

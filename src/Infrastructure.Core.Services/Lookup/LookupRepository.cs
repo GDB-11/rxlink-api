@@ -79,10 +79,10 @@ public sealed class LookupRepository : BaseDatabaseService, ILookupRepository
         );
 
     /// <inheritdoc/>
-    public async Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveMedicationsAsync() =>
+    public async Task<Result<IEnumerable<MedicationLookupRow>, LookupRepositoryError>> GetActiveMedicationsAsync() =>
         await Result.TryAsync(
             operation: async () =>
-                await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetActiveMedications),
+                await ExecuteQueryAsync<MedicationLookupRow>(_connection, LookupRepositorySql.GetActiveMedications),
             errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
         );
 
