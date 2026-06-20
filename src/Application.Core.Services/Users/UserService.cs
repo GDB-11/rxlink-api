@@ -89,6 +89,31 @@ public sealed class UserService : IUser
             .EnsureAsync(affected => affected > 0, new UserNotFoundError())
             .MapAsync(_ => Unit.Value);
 
+    /// <inheritdoc/>
+    public Task<Result<UserResponse, UserError>> GetMyProfileAsync(Guid userCode) =>
+        _repository.GetByCodeAsync(userCode)
+            .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new UserNotFoundError())
+            .MapAsync(MapToResponse);
+
+    /// <inheritdoc/>
+    public Task<Result<Unit, UserError>> ChangePasswordAsync(Guid userCode, ChangePasswordRequest request) =>
+        _repository.GetPasswordHashAsync(userCode)
+            .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new UserNotFoundError())
+            .BindAsync(currentHash =>
+                _password.VerifyPassword(request.CurrentPassword, currentHash)
+                    .MapError(UserError (_) => new UserPasswordError())
+                    .Ensure(isValid => isValid, new UserInvalidCurrentPasswordError())
+                    .Bind(_ => _password.HashPassword(request.NewPassword)
+                        .MapError(UserError (_) => new UserPasswordError()))
+                    .BindAsync(newHash =>
+                        _repository.UpdatePasswordAsync(userCode, newHash)
+                            .MapErrorAsync(UserError (error) =>
+                                new UserDataAccessError(error.Message, error.Details, error.Exception))
+                            .EnsureAsync(affected => affected > 0, new UserNotFoundError())
+                            .MapAsync(_ => Unit.Value)));
+
     private static UserPageResponse BuildPageResponse(IEnumerable<UserRow> rows, int page, int pageSize)
     {
         List<UserRow> list = rows.ToList();

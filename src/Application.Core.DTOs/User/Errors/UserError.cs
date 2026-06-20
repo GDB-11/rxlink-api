@@ -21,3 +21,7 @@ public sealed record UserRoleNotFoundError()
 /// <summary>An error occurred while hashing the user's password.</summary>
 public sealed record UserPasswordError()
     : UserError("Error al procesar la contraseña del usuario.");
+
+/// <summary>The provided current password does not match the stored hash.</summary>
+public sealed record UserInvalidCurrentPasswordError()
+    : UserError("La contraseña actual es incorrecta.");

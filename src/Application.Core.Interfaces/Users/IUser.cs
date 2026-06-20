@@ -14,4 +14,6 @@ public interface IUser
     Task<Result<UserResponse, UserError>> UpdateRoleAsync(Guid code, UpdateUserRoleRequest request);
     Task<Result<Unit, UserError>> DeactivateAsync(Guid code, Guid performedByUserCode);
     Task<Result<Unit, UserError>> ActivateAsync(Guid code, Guid performedByUserCode);
+    Task<Result<UserResponse, UserError>> GetMyProfileAsync(Guid userCode);
+    Task<Result<Unit, UserError>> ChangePasswordAsync(Guid userCode, ChangePasswordRequest request);
 }

@@ -45,4 +45,10 @@ public interface IUserRepository
 
     /// <summary>Reactivates a previously deactivated user. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, UserRepositoryError>> ActivateAsync(Guid code);
+
+    /// <summary>Returns the PasswordHash of an active user by their public code, or null when not found or soft-deleted.</summary>
+    Task<Result<string?, UserRepositoryError>> GetPasswordHashAsync(Guid code);
+
+    /// <summary>Updates the PasswordHash of an active user. Returns the number of affected rows (0 = not found or inactive).</summary>
+    Task<Result<int, UserRepositoryError>> UpdatePasswordAsync(Guid code, string passwordHash);
 }

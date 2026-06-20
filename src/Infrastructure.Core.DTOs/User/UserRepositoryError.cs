@@ -16,3 +16,9 @@ public sealed record DeactivateUserError(string? Details = null, Exception? Exce
 
 public sealed record ActivateUserError(string? Details = null, Exception? Exception = null)
     : UserRepositoryError("Error inesperado al activar el usuario.", Details, Exception);
+
+public sealed record GetPasswordHashError(string? Details = null, Exception? Exception = null)
+    : UserRepositoryError("Error inesperado al obtener la contraseña del usuario.", Details, Exception);
+
+public sealed record UpdatePasswordError(string? Details = null, Exception? Exception = null)
+    : UserRepositoryError("Error inesperado al actualizar la contraseña del usuario.", Details, Exception);

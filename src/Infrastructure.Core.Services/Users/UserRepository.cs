@@ -112,4 +112,24 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
                 new { Code = code }),
             errorFactory: UserRepositoryError (ex) => new ActivateUserError(ex.Message, ex)
         );
+
+    /// <inheritdoc/>
+    public async Task<Result<string?, UserRepositoryError>> GetPasswordHashAsync(Guid code) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteScalarAsync<object, string>(
+                _connection,
+                UserRepositorySql.GetPasswordHash,
+                new { Code = code }),
+            errorFactory: UserRepositoryError (ex) => new GetPasswordHashError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<int, UserRepositoryError>> UpdatePasswordAsync(Guid code, string passwordHash) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                UserRepositorySql.UpdatePassword,
+                new { Code = code, PasswordHash = passwordHash }),
+            errorFactory: UserRepositoryError (ex) => new UpdatePasswordError(ex.Message, ex)
+        );
 }

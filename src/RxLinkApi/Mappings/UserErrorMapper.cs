@@ -13,6 +13,11 @@ public sealed class UserErrorMapper : IErrorHttpMapper<UserError>
                 message = error.Message
             }),
 
+            UserInvalidCurrentPasswordError => new UnprocessableEntityObjectResult(new
+            {
+                message = error.Message
+            }),
+
             UserPersonNotFoundError => new BadRequestObjectResult(new
             {
                 message = error.Message

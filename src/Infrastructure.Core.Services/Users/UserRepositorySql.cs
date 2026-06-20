@@ -381,4 +381,28 @@ internal static class UserRepositorySql
                                        AND "IsActive"  = FALSE
                                        AND "DeletedAt" IS NOT NULL
                                      """;
+
+    /// <summary>
+    /// Returns the PasswordHash of an active user by their public code.
+    /// Returns no rows when the user is not found or soft-deleted.
+    /// </summary>
+    internal const string GetPasswordHash = """
+                                            SELECT "PasswordHash"
+                                            FROM "User"
+                                            WHERE "UserCode"  = @Code
+                                              AND "IsActive"  = TRUE
+                                              AND "DeletedAt" IS NULL
+                                            """;
+
+    /// <summary>
+    /// Updates the PasswordHash of an active user.
+    /// Affects 0 rows when the user is not found, inactive, or soft-deleted.
+    /// </summary>
+    internal const string UpdatePassword = """
+                                           UPDATE "User"
+                                           SET "PasswordHash" = @PasswordHash
+                                           WHERE "UserCode"  = @Code
+                                             AND "IsActive"  = TRUE
+                                             AND "DeletedAt" IS NULL
+                                           """;
 }
