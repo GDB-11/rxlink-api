@@ -61,7 +61,7 @@ public sealed class LookupsController : FunctionalController
     /// <summary>
     /// Returns allergy severities used by the patient form.
     /// </summary>
-    [Authorize(Roles = "Administrador,Doctor")]
+    [Authorize(Roles = "Administrador,Doctor,Enfermero")]
     [HttpGet("patients")]
     [ProducesResponseType(typeof(PatientLookupsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

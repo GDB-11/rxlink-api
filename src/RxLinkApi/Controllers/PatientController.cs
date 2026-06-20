@@ -43,6 +43,22 @@ public sealed class PatientController : FunctionalController
         );
 
     /// <summary>
+    /// Returns a single patient by code, including allergies.
+    /// </summary>
+    [HttpGet("{code:guid}")]
+    [ProducesResponseType(typeof(PatientResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetByCode(Guid code) =>
+        ExecuteAsync(
+            operation: () => _patientService.GetSelfAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetByCode)
+        );
+
+    /// <summary>
     /// Registers a new patient.
     /// </summary>
     [HttpPost]
