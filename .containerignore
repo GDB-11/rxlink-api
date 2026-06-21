@@ -1,0 +1,8 @@
+**/bin
+**/obj
+.git
+.vscode
+.cursor
+.claude
+**/*.user
+*.md
