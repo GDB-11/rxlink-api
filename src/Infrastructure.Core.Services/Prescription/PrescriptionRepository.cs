@@ -140,6 +140,32 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
         );
 
     /// <inheritdoc/>
+    public async Task<Result<IReadOnlyList<DoctorDraftPrescriptionRow>, PrescriptionRepositoryError>>
+        GetDoctorDraftPrescriptionsAsync(
+            Guid doctorUserCode) =>
+        await Result.TryAsync(
+            operation: async () => (IReadOnlyList<DoctorDraftPrescriptionRow>)(await _connection
+                    .QueryAsync<DoctorDraftPrescriptionRow>(
+                        PrescriptionRepositorySql.GetDoctorDraftPrescriptions,
+                        new { DoctorUserCode = doctorUserCode }))
+                .AsList(),
+            errorFactory: PrescriptionRepositoryError (ex) => new GetDoctorDraftPrescriptionsError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IReadOnlyList<NurseDispensationRow>, PrescriptionRepositoryError>>
+        GetNurseDispensationsByDateAsync(
+            Guid nurseUserCode, DateTime date) =>
+        await Result.TryAsync(
+            operation: async () => (IReadOnlyList<NurseDispensationRow>)(await _connection
+                    .QueryAsync<NurseDispensationRow>(
+                        PrescriptionRepositorySql.GetNurseDispensationsByDate,
+                        new { NurseUserCode = nurseUserCode, Date = date }))
+                .AsList(),
+            errorFactory: PrescriptionRepositoryError (ex) => new GetNurseDispensationsError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<int, PrescriptionRepositoryError>> DispenseAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(

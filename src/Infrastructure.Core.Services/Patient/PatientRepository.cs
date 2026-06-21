@@ -121,6 +121,16 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
         );
 
     /// <inheritdoc/>
+    public async Task<Result<PatientRow?, PatientRepositoryError>> GetByPersonCodeAsync(Guid personCode) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
+                _connection,
+                PatientRepositorySql.GetByPersonCode,
+                new { PersonCode = personCode }),
+            errorFactory: PatientRepositoryError (ex) => new GetPatientByPersonCodeError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
     public async Task<Result<int, PatientRepositoryError>> UpdatePersonContactAsync(
         Guid patientCode, string phone, string? alternativePhone,
         string? address, string? emergencyContactName, string? emergencyContactPhone) =>

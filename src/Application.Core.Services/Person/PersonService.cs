@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Application.Core.DTOs.Person.Errors;
 using Application.Core.DTOs.Person.Request;
 using Application.Core.DTOs.Person.Response;
@@ -47,8 +48,13 @@ public sealed class PersonService : IPerson
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
 
     /// <inheritdoc/>
-    public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request) =>
-        _passwordService
+    public Task<Result<PersonResponse, PersonError>> CreateAsync(CreatePersonRequest request)
+    {
+        string allergiesJson = JsonSerializer.Serialize(
+            request.Allergies.Select(a => new
+                { AllergyCode = a.AllergyCode, SeverityCode = a.SeverityCode, Notes = a.Notes }));
+
+        return _passwordService
             .HashPassword(request.DocumentNumber)
             .MapError(PersonError (e) => new PersonDataAccessError(e.Message, null, e.Exception))
             .AsTask()
@@ -56,11 +62,12 @@ public sealed class PersonService : IPerson
                     request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
                     request.Phone, request.AlternativePhone, request.Email,
                     request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
-                    request.DocumentTypeCode, request.DocumentNumber, passwordHash)
+                    request.DocumentTypeCode, request.DocumentNumber, passwordHash, allergiesJson)
                 .MapErrorAsync(PersonError (error) =>
                     new PersonDataAccessError(error.Message, error.Details, error.Exception)))
             .EnsureNotNullAsync(new PersonDataAccessError("No se pudo registrar la persona."))
             .MapAsync(MapToResponse);
+    }
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> UpdateAsync(Guid code, UpdatePersonRequest request) =>

@@ -43,6 +43,22 @@ public sealed class PatientController : FunctionalController
         );
 
     /// <summary>
+    /// Returns the patient linked to a given person code, including allergies.
+    /// </summary>
+    [HttpGet("by-person/{personCode:guid}")]
+    [ProducesResponseType(typeof(PatientResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetByPersonCode(Guid personCode) =>
+        ExecuteAsync(
+            operation: () => _patientService.GetByPersonCodeAsync(personCode),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetByPersonCode)
+        );
+
+    /// <summary>
     /// Returns a single patient by code, including allergies.
     /// </summary>
     [HttpGet("{code:guid}")]
@@ -128,7 +144,7 @@ public sealed class PatientController : FunctionalController
     /// Adds an allergy to an existing patient.
     /// </summary>
     [HttpPost("{code:guid}/allergies")]
-    [Authorize(Roles = "Doctor")]
+    [Authorize(Roles = "Administrador,Doctor")]
     [ProducesResponseType(typeof(PatientAllergyResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -147,7 +163,7 @@ public sealed class PatientController : FunctionalController
     /// Updates the severity and notes of an existing patient allergy.
     /// </summary>
     [HttpPut("{code:guid}/allergies/{allergyCode:guid}")]
-    [Authorize(Roles = "Doctor")]
+    [Authorize(Roles = "Administrador,Doctor")]
     [ProducesResponseType(typeof(PatientAllergyResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -164,7 +180,7 @@ public sealed class PatientController : FunctionalController
     /// Removes an allergy from a patient (soft-delete).
     /// </summary>
     [HttpDelete("{code:guid}/allergies/{allergyCode:guid}")]
-    [Authorize(Roles = "Doctor")]
+    [Authorize(Roles = "Administrador,Doctor")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -26,5 +26,8 @@ public sealed record DeletePatientAllergyError(string? Details = null, Exception
 public sealed record GetPatientByCodeError(string? Details = null, Exception? Exception = null)
     : PatientRepositoryError("Error inesperado al recuperar el paciente.", Details, Exception);
 
+public sealed record GetPatientByPersonCodeError(string? Details = null, Exception? Exception = null)
+    : PatientRepositoryError("Error inesperado al recuperar el paciente por persona.", Details, Exception);
+
 public sealed record UpdatePersonContactError(string? Details = null, Exception? Exception = null)
     : PatientRepositoryError("Error inesperado al actualizar los datos de contacto.", Details, Exception);

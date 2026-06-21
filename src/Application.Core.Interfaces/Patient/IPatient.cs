@@ -38,6 +38,9 @@ public interface IPatient
     /// <summary>Returns the patient's own profile (including allergies) derived from the JWT patient_code.</summary>
     Task<Result<PatientResponse, PatientError>> GetSelfAsync(Guid patientCode);
 
+    /// <summary>Returns the patient profile linked to the given person code.</summary>
+    Task<Result<PatientResponse, PatientError>> GetByPersonCodeAsync(Guid personCode);
+
     /// <summary>Updates the patient's own contact fields (phone, alternativePhone, address, emergency contact).</summary>
     Task<Result<Unit, PatientError>> UpdateSelfAsync(Guid patientCode, UpdatePatientSelfRequest request);
 }

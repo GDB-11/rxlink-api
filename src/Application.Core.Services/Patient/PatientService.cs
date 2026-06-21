@@ -76,6 +76,14 @@ public sealed class PatientService : IPatient
             .MapAsync(MapToResponse);
 
     /// <inheritdoc/>
+    public Task<Result<PatientResponse, PatientError>> GetByPersonCodeAsync(Guid personCode) =>
+        _repository.GetByPersonCodeAsync(personCode)
+            .MapErrorAsync(PatientError (error) =>
+                new PatientDataAccessError(error.Message, error.Details, error.Exception))
+            .EnsureNotNullAsync(new PatientNotFoundError())
+            .MapAsync(MapToResponse);
+
+    /// <inheritdoc/>
     public Task<Result<Unit, PatientError>> UpdateSelfAsync(Guid patientCode, UpdatePatientSelfRequest request) =>
         _repository.UpdatePersonContactAsync(
                 patientCode,

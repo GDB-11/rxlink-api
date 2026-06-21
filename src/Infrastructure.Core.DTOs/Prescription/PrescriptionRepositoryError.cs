@@ -20,3 +20,11 @@ public sealed record UpdatePrescriptionInvalidStatusError(string? Details = null
 
 public sealed record ChangeStatusPrescriptionError(string? Details = null, Exception? Exception = null)
     : PrescriptionRepositoryError("Error inesperado al cambiar el estado de la receta.", Details, Exception);
+
+public sealed record GetDoctorDraftPrescriptionsError(string? Details = null, Exception? Exception = null)
+    : PrescriptionRepositoryError("Error inesperado al recuperar las recetas en borrador del doctor.", Details,
+        Exception);
+
+public sealed record GetNurseDispensationsError(string? Details = null, Exception? Exception = null)
+    : PrescriptionRepositoryError("Error inesperado al recuperar las dispensaciones del enfermero.", Details,
+        Exception);

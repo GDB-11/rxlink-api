@@ -47,6 +47,9 @@ public interface IPatientRepository
     /// <summary>Returns the full patient row for the given patient code, or null if not found.</summary>
     Task<Result<PatientRow?, PatientRepositoryError>> GetByCodeAsync(Guid patientCode);
 
+    /// <summary>Returns the full patient row for the patient linked to the given person code, or null if not found.</summary>
+    Task<Result<PatientRow?, PatientRepositoryError>> GetByPersonCodeAsync(Guid personCode);
+
     /// <summary>Updates the person contact fields linked to the given patient. Returns affected row count.</summary>
     Task<Result<int, PatientRepositoryError>> UpdatePersonContactAsync(
         Guid patientCode, string phone, string? alternativePhone,

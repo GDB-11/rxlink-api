@@ -25,7 +25,7 @@ public interface IPersonRepository
         string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
         string? address, string? emergencyContactName, string? emergencyContactPhone,
-        Guid documentTypeCode, string documentNumber, string passwordHash);
+        Guid documentTypeCode, string documentNumber, string passwordHash, string allergiesJson);
 
     /// <summary>Updates a person by code, replacing its documents. Returns <c>null</c> when no matching row exists.</summary>
     Task<Result<PersonRow?, PersonRepositoryError>> UpdateAsync(

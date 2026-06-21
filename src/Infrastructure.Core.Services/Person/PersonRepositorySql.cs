@@ -155,6 +155,16 @@ internal static class PersonRepositorySql
                                        SELECT ins."PersonId", mrn.value, @PasswordHash
                                        FROM ins, mrn
                                        RETURNING *
+                                   ),
+                                   ins_allergies AS (
+                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "SeverityId", "Notes")
+                                       SELECT ins_patient."PatientId", a."AllergyId", sv."SeverityId", elem->>'Notes'
+                                       FROM ins_patient
+                                       CROSS JOIN json_array_elements(COALESCE(@AllergiesJson::json, '[]'::json)) AS elem
+                                       JOIN "Allergy" a ON a."AllergyCode" = (elem->>'AllergyCode')::uuid
+                                                        AND a."IsActive" = TRUE
+                                       LEFT JOIN "AllergySeverity" sv ON sv."SeverityCode" = (elem->>'SeverityCode')::uuid
+                                                                     AND sv."IsActive" = TRUE
                                    )
                                    SELECT
                                        ins."PersonCode",

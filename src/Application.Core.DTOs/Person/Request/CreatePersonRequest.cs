@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Application.Core.DTOs.Patient.Request;
 
 namespace Application.Core.DTOs.Person.Request;
 
@@ -44,4 +45,6 @@ public sealed record CreatePersonRequest
     [Required(ErrorMessage = "DocumentNumber is required.")]
     [MaxLength(50, ErrorMessage = "DocumentNumber must not exceed 50 characters.")]
     public required string DocumentNumber { get; init; }
+
+    public IReadOnlyList<PatientAllergyItem> Allergies { get; init; } = [];
 }

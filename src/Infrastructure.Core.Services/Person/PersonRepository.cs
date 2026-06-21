@@ -60,7 +60,7 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
         string names, string surnames, DateTime birthDate, Guid sexCode,
         string phone, string? alternativePhone, string email,
         string? address, string? emergencyContactName, string? emergencyContactPhone,
-        Guid documentTypeCode, string documentNumber, string passwordHash) =>
+        Guid documentTypeCode, string documentNumber, string passwordHash, string allergiesJson) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
                 _connection,
@@ -79,7 +79,8 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
                     EmergencyContactPhone = emergencyContactPhone,
                     DocumentTypeCode = documentTypeCode,
                     DocumentNumber = documentNumber,
-                    PasswordHash = passwordHash
+                    PasswordHash = passwordHash,
+                    AllergiesJson = allergiesJson
                 }),
             errorFactory: PersonRepositoryError (ex) => new InsertPersonError(ex.Message, ex)
         );

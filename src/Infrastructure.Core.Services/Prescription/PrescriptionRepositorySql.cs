@@ -275,6 +275,65 @@ internal static class PrescriptionRepositorySql
                                      AND "DeletedAt" IS NULL
                                    """;
 
+    /// <summary>
+    /// Returns all non-deleted prescriptions in Borrador status owned by the given doctor,
+    /// with patient info and a count of detail lines. Ordered by CreatedAt DESC.
+    /// </summary>
+    internal const string GetDoctorDraftPrescriptions = """
+                                                        SELECT
+                                                            p."PrescriptionCode",
+                                                            pat."PatientCode",
+                                                            pat_per."Names"        AS "PatientNames",
+                                                            pat_per."Surnames"     AS "PatientSurnames",
+                                                            d."Description"        AS "DiagnosticDescription",
+                                                            p."CreatedAt",
+                                                            COUNT(pd."PrescriptionDetailId") AS "DetailCount"
+                                                        FROM "Prescription" p
+                                                        JOIN "PrescriptionStatus" ps  ON ps."PrescriptionStatusId" = p."PrescriptionStatusId"
+                                                        JOIN "Diagnostic" d           ON d."DiagnosticId"          = p."DiagnosticId"
+                                                        JOIN "Patient" pat             ON pat."PatientId"           = p."PatientId"
+                                                        JOIN "Person" pat_per          ON pat_per."PersonId"        = pat."PersonId"
+                                                        JOIN "User" u                  ON u."UserId"                = p."UserId"
+                                                        LEFT JOIN "PrescriptionDetail" pd ON pd."PrescriptionId"   = p."PrescriptionId"
+                                                        WHERE u."UserCode"  = @DoctorUserCode
+                                                          AND ps."Name"     = 'Borrador'
+                                                          AND p."DeletedAt" IS NULL
+                                                        GROUP BY p."PrescriptionCode", pat."PatientCode", pat_per."Names",
+                                                                 pat_per."Surnames", d."Description", p."CreatedAt"
+                                                        ORDER BY p."CreatedAt" DESC
+                                                        """;
+
+    /// <summary>
+    /// Returns all prescriptions dispensed by the given nurse on the specified date,
+    /// with patient info, medication names and detail count. Ordered by DispensedAt DESC.
+    /// </summary>
+    internal const string GetNurseDispensationsByDate = """
+                                                        SELECT
+                                                            p."PrescriptionCode",
+                                                            pat."PatientCode",
+                                                            pat_per."Names"        AS "PatientNames",
+                                                            pat_per."Surnames"     AS "PatientSurnames",
+                                                            d."Description"        AS "DiagnosticDescription",
+                                                            p."DispensedAt",
+                                                            COUNT(pd."PrescriptionDetailId")                                AS "DetailCount",
+                                                            STRING_AGG(m."GenericName", ', ' ORDER BY pd."PrescriptionDetailId") AS "MedicationNames"
+                                                        FROM "Prescription" p
+                                                        JOIN "PrescriptionStatus" ps  ON ps."PrescriptionStatusId" = p."PrescriptionStatusId"
+                                                        JOIN "Diagnostic" d           ON d."DiagnosticId"          = p."DiagnosticId"
+                                                        JOIN "Patient" pat             ON pat."PatientId"           = p."PatientId"
+                                                        JOIN "Person" pat_per          ON pat_per."PersonId"        = pat."PersonId"
+                                                        JOIN "User" u                  ON u."UserId"                = p."DispensedBy"
+                                                        LEFT JOIN "PrescriptionDetail" pd ON pd."PrescriptionId"   = p."PrescriptionId"
+                                                        LEFT JOIN "Medication" m       ON m."MedicationId"         = pd."MedicationId"
+                                                        WHERE u."UserCode"             = @NurseUserCode
+                                                          AND ps."Name"               = 'Dispensado'
+                                                          AND p."DispensedAt"::date   = @Date::date
+                                                          AND p."DeletedAt"           IS NULL
+                                                        GROUP BY p."PrescriptionCode", pat."PatientCode", pat_per."Names",
+                                                                 pat_per."Surnames", d."Description", p."DispensedAt"
+                                                        ORDER BY p."DispensedAt" DESC
+                                                        """;
+
     /// <summary>Transitions Activo → Dispensado, setting DispensedAt and DispensedBy.</summary>
     internal const string Dispense = """
                                      UPDATE "Prescription"

@@ -267,6 +267,33 @@ internal static class PatientRepositorySql
                                           """;
 
     /// <summary>
+    /// Returns the full patient row for the patient linked to the given PersonCode.
+    /// Returns no rows when not found or inactive.
+    /// </summary>
+    internal const string GetByPersonCode = $"""
+                                             SELECT
+                                                 pat."PatientCode",
+                                                 pe."PersonCode",
+                                                 pat."MedicalRecordNumber",
+                                                 pat."IsActive",
+                                                 pe."Names",
+                                                 pe."Surnames",
+                                                 pe."BirthDate",
+                                                 pe."Phone",
+                                                 pe."AlternativePhone",
+                                                 pe."Email",
+                                                 pe."Address",
+                                                 pe."EmergencyContactName",
+                                                 pe."EmergencyContactPhone",
+                                                 {AllergyAgg} AS "AllergiesJson",
+                                                 0 AS "TotalCount"
+                                             FROM "Patient" pat
+                                             INNER JOIN "Person" pe ON pe."PersonId" = pat."PersonId"
+                                             WHERE pe."PersonCode" = @PersonCode
+                                               AND pat."IsActive" = TRUE
+                                             """;
+
+    /// <summary>
     /// Returns the full patient row for a single patient identified by PatientCode.
     /// Returns no rows when not found or inactive.
     /// </summary>

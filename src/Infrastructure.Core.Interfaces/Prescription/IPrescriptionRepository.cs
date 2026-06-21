@@ -7,6 +7,20 @@ namespace Infrastructure.Core.Interfaces.Prescription;
 public interface IPrescriptionRepository
 {
     /// <summary>
+    /// Returns all non-deleted prescriptions in Borrador status created by the given doctor.
+    /// Ordered by CreatedAt DESC.
+    /// </summary>
+    Task<Result<IReadOnlyList<DoctorDraftPrescriptionRow>, PrescriptionRepositoryError>>
+        GetDoctorDraftPrescriptionsAsync(Guid doctorUserCode);
+
+    /// <summary>
+    /// Returns all prescriptions dispensed by the given nurse on the specified date.
+    /// Ordered by DispensedAt DESC.
+    /// </summary>
+    Task<Result<IReadOnlyList<NurseDispensationRow>, PrescriptionRepositoryError>> GetNurseDispensationsByDateAsync(
+        Guid nurseUserCode, DateTime date);
+
+    /// <summary>
     /// Inserts a new prescription (status: Borrador) with its detail lines.
     /// Returns null when the diagnostic is not found or inactive.
     /// Returns <see cref="InsertPrescriptionDuplicateError"/> when a non-deleted prescription already exists for the diagnostic.

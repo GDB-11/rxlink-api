@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Application.Core.DTOs.Availability.Errors;
 using Application.Core.DTOs.Availability.Request;
 using Application.Core.DTOs.Availability.Response;
@@ -9,7 +10,7 @@ using RxLinkApi.Mappings;
 
 namespace RxLinkApi.Controllers;
 
-[Authorize(Roles = "Administrador")]
+[Authorize]
 [ApiController]
 [Route("api/doctor")]
 public sealed class DoctorController : FunctionalController
@@ -29,8 +30,10 @@ public sealed class DoctorController : FunctionalController
 
     /// <summary>
     /// Creates one or more availability slots for a doctor. Duplicate slots are silently ignored.
+    /// Admin only.
     /// </summary>
     [HttpPost("{code:guid}/availability")]
+    [Authorize(Roles = "Administrador")]
     [ProducesResponseType(typeof(IEnumerable<AvailabilityResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -47,26 +50,40 @@ public sealed class DoctorController : FunctionalController
 
     /// <summary>
     /// Returns all slots (free and booked) for a doctor in the specified month.
+    /// Admin can query any doctor. A doctor can only query their own slots (read-only view).
     /// </summary>
     [HttpGet("{code:guid}/availability")]
+    [Authorize(Roles = "Administrador,Doctor")]
     [ProducesResponseType(typeof(IEnumerable<AvailabilityResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> GetAvailability(Guid code, [FromQuery] GetAvailabilityRequest request) =>
-        ExecuteAsync(
+    public Task<IActionResult> GetAvailability(Guid code, [FromQuery] GetAvailabilityRequest request)
+    {
+        string? role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role == "Doctor")
+        {
+            if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out Guid callerCode)
+                || callerCode != code)
+                return Task.FromResult<IActionResult>(Forbid());
+        }
+
+        return ExecuteAsync(
             operation: () => _availabilityService.GetByDoctorAndMonthAsync(code, request),
             errorMapper: _errorMapper,
             operationName: nameof(GetAvailability)
         );
+    }
 
     /// <summary>
     /// Soft-deletes a non-booked availability slot.
     /// Returns 404 when the slot does not exist or was already deleted.
     /// Returns 409 when the slot is already booked.
+    /// Admin only.
     /// </summary>
     [HttpDelete("/api/availability/{code:guid}")]
+    [Authorize(Roles = "Administrador")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

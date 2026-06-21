@@ -25,6 +25,46 @@ public sealed class PrescriptionService : IPrescription
     }
 
     /// <inheritdoc/>
+    public Task<Result<IReadOnlyList<DoctorDraftPrescriptionResponse>, PrescriptionError>>
+        GetDoctorDraftPrescriptionsAsync(
+            Guid doctorUserCode) =>
+        _repository.GetDoctorDraftPrescriptionsAsync(doctorUserCode)
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapAsync(rows => (IReadOnlyList<DoctorDraftPrescriptionResponse>)rows
+                .Select(r => new DoctorDraftPrescriptionResponse
+                {
+                    PrescriptionCode = r.PrescriptionCode,
+                    PatientCode = r.PatientCode,
+                    PatientNames = r.PatientNames,
+                    PatientSurnames = r.PatientSurnames,
+                    DiagnosticDescription = r.DiagnosticDescription,
+                    CreatedAt = r.CreatedAt,
+                    DetailCount = r.DetailCount
+                })
+                .ToList());
+
+    /// <inheritdoc/>
+    public Task<Result<IReadOnlyList<NurseDispensationResponse>, PrescriptionError>> GetNurseDispensationsByDateAsync(
+        Guid nurseUserCode, DateOnly date) =>
+        _repository.GetNurseDispensationsByDateAsync(nurseUserCode, date.ToDateTime())
+            .MapErrorAsync(PrescriptionError (error) =>
+                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+            .MapAsync(rows => (IReadOnlyList<NurseDispensationResponse>)rows
+                .Select(r => new NurseDispensationResponse
+                {
+                    PrescriptionCode = r.PrescriptionCode,
+                    PatientCode = r.PatientCode,
+                    PatientNames = r.PatientNames,
+                    PatientSurnames = r.PatientSurnames,
+                    DiagnosticDescription = r.DiagnosticDescription,
+                    DispensedAt = r.DispensedAt,
+                    DetailCount = r.DetailCount,
+                    MedicationNames = r.MedicationNames
+                })
+                .ToList());
+
+    /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
         CreatePrescriptionRequest request, Guid createdByUserCode) =>
         _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil.ToDateTime(),
@@ -57,7 +97,8 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
-        _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(), JsonSerializer.Serialize(request.Details),
+        _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(),
+                JsonSerializer.Serialize(request.Details),
                 modifiedByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {

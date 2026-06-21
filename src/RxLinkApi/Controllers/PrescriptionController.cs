@@ -29,6 +29,41 @@ public sealed class PrescriptionController : FunctionalController
     }
 
     /// <summary>
+    /// Returns all Borrador prescriptions created by the authenticated doctor.
+    /// </summary>
+    [HttpGet("doctor/prescriptions/drafts")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(IReadOnlyList<DoctorDraftPrescriptionResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetDoctorDraftPrescriptions() =>
+        ExecuteAuthenticatedAsync(
+            operation: userCode => _prescriptionService.GetDoctorDraftPrescriptionsAsync(userCode),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetDoctorDraftPrescriptions)
+        );
+
+    /// <summary>
+    /// Returns all prescriptions dispensed by the authenticated nurse on the given date (defaults to today).
+    /// </summary>
+    [HttpGet("nurse/dispensations")]
+    [Authorize(Roles = "Enfermero")]
+    [ProducesResponseType(typeof(IReadOnlyList<NurseDispensationResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> GetNurseDispensations([FromQuery] DateOnly? date = null)
+    {
+        DateOnly effectiveDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        return ExecuteAuthenticatedAsync(
+            operation: userCode => _prescriptionService.GetNurseDispensationsByDateAsync(userCode, effectiveDate),
+            errorMapper: _errorMapper,
+            operationName: nameof(GetNurseDispensations)
+        );
+    }
+
+    /// <summary>
     /// Creates a new prescription (initial status: Borrador).
     /// </summary>
     [HttpPost("prescription")]
@@ -64,7 +99,7 @@ public sealed class PrescriptionController : FunctionalController
             errorMapper: _errorMapper,
             operationName: nameof(GetByCode)
         );
-    
+
     /// <summary>
     /// Returns the full prescription of a patient with its detail lines.
     /// </summary>

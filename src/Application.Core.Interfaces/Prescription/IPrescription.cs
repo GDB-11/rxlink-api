@@ -7,6 +7,14 @@ namespace Application.Core.Interfaces.Prescription;
 
 public interface IPrescription
 {
+    /// <summary>Returns all Borrador prescriptions created by the given doctor.</summary>
+    Task<Result<IReadOnlyList<DoctorDraftPrescriptionResponse>, PrescriptionError>> GetDoctorDraftPrescriptionsAsync(
+        Guid doctorUserCode);
+
+    /// <summary>Returns all prescriptions dispensed by the given nurse on the specified date.</summary>
+    Task<Result<IReadOnlyList<NurseDispensationResponse>, PrescriptionError>> GetNurseDispensationsByDateAsync(
+        Guid nurseUserCode, DateOnly date);
+
     /// <summary>Creates a new prescription (initial status: Borrador).</summary>
     Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
         CreatePrescriptionRequest request, Guid createdByUserCode);
