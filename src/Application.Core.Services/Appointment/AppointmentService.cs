@@ -80,12 +80,22 @@ public sealed class AppointmentService : IAppointment
                 .MapAsync(_ => Unit.Value));
 
     /// <inheritdoc/>
-    public Task<Result<Unit, AppointmentError>> NoShowAsync(Guid code, Guid adminUserCode) =>
-        _repository.NoShowAsync(code, adminUserCode)
-            .MapErrorAsync(AppointmentError (error) =>
-                new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
-            .EnsureAsync(affected => affected > 0, new AppointmentInvalidTransitionError())
-            .MapAsync(_ => Unit.Value);
+    public Task<Result<Unit, AppointmentError>> NoShowAsync(Guid code, Guid callerUserCode, string callerRole) =>
+        Result<Unit, AppointmentError>.Success(Unit.Value)
+            .AsTask()
+            .BindIfAsync(
+                _ => callerRole == "Doctor",
+                _ => _repository.GetByCodeAsync(code)
+                    .MapErrorAsync(AppointmentError (error) =>
+                        new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+                    .EnsureNotNullAsync(new AppointmentNotFoundError())
+                    .EnsureAsync(row => row.DoctorCode == callerUserCode, new AppointmentForbiddenError())
+                    .MapAsync(_ => Unit.Value))
+            .BindAsync(_ => _repository.NoShowAsync(code, callerUserCode)
+                .MapErrorAsync(AppointmentError (error) =>
+                    new AppointmentDataAccessError(error.Message, error.Details, error.Exception))
+                .EnsureAsync(affected => affected > 0, new AppointmentInvalidTransitionError())
+                .MapAsync(_ => Unit.Value));
 
     /// <inheritdoc/>
     public Task<Result<AppointmentResponse, AppointmentError>> GetAsync(

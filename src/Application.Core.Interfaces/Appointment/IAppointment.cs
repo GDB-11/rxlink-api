@@ -24,8 +24,11 @@ public interface IAppointment
     /// <summary>Transitions Confirmado → Completado. The caller must be the assigned doctor or admin.</summary>
     Task<Result<Unit, AppointmentError>> CompleteAsync(Guid code, Guid callerUserCode, string callerRole);
 
-    /// <summary>Transitions Confirmado → NoAsistio. Admin only.</summary>
-    Task<Result<Unit, AppointmentError>> NoShowAsync(Guid code, Guid adminUserCode);
+    /// <summary>
+    /// Transitions Confirmado → NoAsistio.
+    /// Doctor must be the assigned doctor; Admin can mark any.
+    /// </summary>
+    Task<Result<Unit, AppointmentError>> NoShowAsync(Guid code, Guid callerUserCode, string callerRole);
 
     /// <summary>
     /// Returns the appointment detail.

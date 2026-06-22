@@ -128,21 +128,31 @@ public sealed class AppointmentController : FunctionalController
         );
     }
 
-    /// <summary>Transitions Confirmado → NoAsistio. Admin only.</summary>
+    /// <summary>Transitions Confirmado → NoAsistio. Doctor must be the assigned doctor; Admin can mark any.</summary>
     [HttpPatch("appointment/{code:guid}/no-show")]
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Doctor,Administrador")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> NoShow(Guid code) =>
-        ExecuteAuthenticatedAsync(
-            operation: userCode => _appointmentService.NoShowAsync(code, userCode),
+    public Task<IActionResult> NoShow(Guid code)
+    {
+        string? role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (string.IsNullOrEmpty(role))
+            return Task.FromResult<IActionResult>(Unauthorized());
+
+        if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out Guid userCode))
+            return Task.FromResult<IActionResult>(Unauthorized());
+
+        return ExecuteAsync(
+            operation: () => _appointmentService.NoShowAsync(code, userCode, role),
             errorMapper: _errorMapper,
             operationName: nameof(NoShow),
             successMapper: _ => NoContent()
         );
+    }
 
     /// <summary>
     /// Returns appointment details.

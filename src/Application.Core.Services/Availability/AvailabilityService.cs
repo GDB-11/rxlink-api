@@ -67,7 +67,7 @@ public sealed class AvailabilityService : IAvailability
     {
         var monthDate = DateOnly.Parse($"{request.Month}-01");
         var startDate = new DateOnly(monthDate.Year, monthDate.Month, 1);
-        var endDate = startDate.AddMonths(1);
+        var endDate = startDate.AddMonths(3);
 
         var now = _timeProvider.UtcNow;
         return _repository.GetByDoctorAndMonthAsync(doctorCode, startDate.ToDateTime(), endDate.ToDateTime())

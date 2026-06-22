@@ -17,4 +17,7 @@
   <Folder Name="/4. Common/">
     <Project Path="Common.Helpers/Common.Helpers.csproj" />
   </Folder>
+  <Folder Name="/5. Tests/">
+    <Project Path="Application.Core.Services.Tests/Application.Core.Services.Tests.csproj" />
+  </Folder>
 </Solution>
