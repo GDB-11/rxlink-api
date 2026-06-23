@@ -6,4 +6,5 @@ public sealed record UserPageRequest
     public int PageSize { get; init; } = 20;
     public string? Search { get; init; }
     public string? Role { get; init; }
+    public Guid? SpecialtyCode { get; init; }
 }

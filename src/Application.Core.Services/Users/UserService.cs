@@ -26,7 +26,7 @@ public sealed class UserService : IUser
     {
         int offset = (request.Page - 1) * request.PageSize;
 
-        return _repository.GetPageAsync(offset, request.PageSize, request.Search, request.Role)
+        return _repository.GetPageAsync(offset, request.PageSize, request.Search, request.Role, request.SpecialtyCode)
             .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
             .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
     }

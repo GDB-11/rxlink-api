@@ -63,6 +63,7 @@ internal static class UserRepositorySql
                                            u."Username" ILIKE '%' || @Search || '%' OR
                                            u."Email"    ILIKE '%' || @Search || '%')
                                       AND (@Role IS NULL OR r."Name" = @Role)
+                                      AND (@SpecialtyCode IS NULL OR sp."SpecialtyCode" = @SpecialtyCode)
                                     ORDER BY p."Surnames", p."Names"
                                     LIMIT @Limit OFFSET @Offset
                                     """;

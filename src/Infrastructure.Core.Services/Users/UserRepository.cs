@@ -20,12 +20,12 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<UserRow>, UserRepositoryError>> GetPageAsync(
-        int offset, int limit, string? search, string? role = null) =>
+        int offset, int limit, string? search, string? role = null, Guid? specialtyCode = null) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, UserRow>(
                 _connection,
                 UserRepositorySql.GetPage,
-                new { Offset = offset, Limit = limit, Search = search, Role = role }),
+                new { Offset = offset, Limit = limit, Search = search, Role = role, SpecialtyCode = specialtyCode }),
             errorFactory: UserRepositoryError (ex) => new GetUsersPageError(ex.Message, ex)
         );
 
