@@ -46,17 +46,18 @@ public sealed class AppointmentController : FunctionalController
             successMapper: appointment => Created($"api/appointment/{appointment.AppointmentCode}", appointment)
         );
 
-    /// <summary>Transitions PendientePago → Confirmado.</summary>
+    /// <summary>Transitions PendientePago → Confirmado, resolving payment (insurance or particular).</summary>
     [HttpPatch("appointment/{code:guid}/confirm-payment")]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> ConfirmPayment(Guid code) =>
+    public Task<IActionResult> ConfirmPayment(Guid code, [FromBody] ConfirmPaymentRequest? request = null) =>
         ExecuteAuthenticatedPatientAsync(
-            operation: patientCode => _appointmentService.ConfirmPaymentAsync(code, patientCode),
+            operation: patientCode => _appointmentService.ConfirmPaymentAsync(code, patientCode, request?.InsuranceCode),
             errorMapper: _errorMapper,
             operationName: nameof(ConfirmPayment),
             successMapper: _ => NoContent()
@@ -237,17 +238,18 @@ public sealed class AppointmentController : FunctionalController
             successMapper: appt => Created($"api/appointment/{appt.AppointmentCode}", appt)
         );
 
-    /// <summary>Transitions PendientePago → Confirmado. Admin only.</summary>
+    /// <summary>Transitions PendientePago → Confirmado, resolving payment. Admin only.</summary>
     [HttpPatch("appointment/{code:guid}/admin-confirm-payment")]
     [Authorize(Roles = "Administrador")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> AdminConfirmPayment(Guid code) =>
+    public Task<IActionResult> AdminConfirmPayment(Guid code, [FromBody] ConfirmPaymentRequest? request = null) =>
         ExecuteAuthenticatedAsync(
-            operation: _ => _appointmentService.AdminConfirmPaymentAsync(code),
+            operation: adminCode => _appointmentService.AdminConfirmPaymentAsync(code, adminCode, request?.InsuranceCode),
             errorMapper: _errorMapper,
             operationName: nameof(AdminConfirmPayment),
             successMapper: _ => NoContent()

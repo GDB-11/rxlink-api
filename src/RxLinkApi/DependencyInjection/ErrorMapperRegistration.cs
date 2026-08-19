@@ -11,6 +11,7 @@ using Application.Core.DTOs.Patient.Errors;
 using Application.Core.DTOs.PatientAuth.Errors;
 using Application.Core.DTOs.Person.Errors;
 using Application.Core.DTOs.Prescription.Errors;
+using Application.Core.DTOs.Insurance.Errors;
 using Application.Core.DTOs.Role.Errors;
 using Application.Core.DTOs.Specialty.Errors;
 using Application.Core.DTOs.User.Errors;
@@ -37,6 +38,7 @@ internal static class ErrorMapperRegistration
             builder.Services.AddScoped<IErrorHttpMapper<RoleError>, RoleErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<UserError>, UserErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<SpecialtyError>, SpecialtyErrorMapper>();
+            builder.Services.AddScoped<IErrorHttpMapper<InsuranceError>, InsuranceErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<DiagnosticError>, DiagnosticErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<PrescriptionError>, PrescriptionErrorMapper>();
             builder.Services.AddScoped<IErrorHttpMapper<PatientAuthError>, PatientAuthErrorMapper>();

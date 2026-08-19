@@ -28,7 +28,7 @@ public sealed class SpecialtyService : ISpecialty
 
     /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> CreateAsync(CreateSpecialtyRequest request) =>
-        _repository.InsertAsync(request.Name)
+        _repository.InsertAsync(request.Name, request.PriceInPerson, request.PriceVirtual)
             .MapErrorAsync(SpecialtyError (error) =>
                 new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyDataAccessError("No se pudo registrar la especialidad."))
@@ -36,7 +36,7 @@ public sealed class SpecialtyService : ISpecialty
 
     /// <inheritdoc/>
     public Task<Result<SpecialtyResponse, SpecialtyError>> UpdateAsync(Guid code, UpdateSpecialtyRequest request) =>
-        _repository.UpdateAsync(code, request.Name)
+        _repository.UpdateAsync(code, request.Name, request.PriceInPerson, request.PriceVirtual)
             .MapErrorAsync(SpecialtyError (error) =>
                 new SpecialtyDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new SpecialtyNotFoundError())
@@ -97,6 +97,8 @@ public sealed class SpecialtyService : ISpecialty
         {
             SpecialtyCode = row.SpecialtyCode,
             Name = row.Name,
+            PriceInPerson = row.PriceInPerson,
+            PriceVirtual = row.PriceVirtual,
             IsActive = row.IsActive,
         };
 

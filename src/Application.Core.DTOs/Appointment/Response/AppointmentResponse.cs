@@ -15,4 +15,8 @@ public sealed record AppointmentResponse(
     DateTimeOffset ScheduledAt,
     string Date,
     string Time,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? InsuranceName,
+    decimal? CoveragePercentage,
+    decimal? BaseAmount,
+    decimal? PatientAmount);

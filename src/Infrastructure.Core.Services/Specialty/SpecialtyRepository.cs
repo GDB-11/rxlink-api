@@ -28,7 +28,7 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
 
     /// <inheritdoc/>
     public async Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> InsertAsync(
-        string name) =>
+        string name, decimal priceInPerson, decimal priceVirtual) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, SpecialtyRow>(
                 _connection,
@@ -36,13 +36,15 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
                 new
                 {
                     Name = name,
+                    PriceInPerson = priceInPerson,
+                    PriceVirtual = priceVirtual,
                 }),
             errorFactory: SpecialtyRepositoryError (ex) => new InsertSpecialtyError(ex.Message, ex)
         );
 
     /// <inheritdoc/>
     public async Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> UpdateAsync(
-        Guid code, string name) =>
+        Guid code, string name, decimal priceInPerson, decimal priceVirtual) =>
         await Result.TryAsync(
             operation: async () => await ExecuteFirstOrDefaultAsync<object, SpecialtyRow>(
                 _connection,
@@ -51,6 +53,8 @@ public sealed class SpecialtyRepository : BaseDatabaseService, ISpecialtyReposit
                 {
                     Code = code,
                     Name = name,
+                    PriceInPerson = priceInPerson,
+                    PriceVirtual = priceVirtual,
                 }),
             errorFactory: SpecialtyRepositoryError (ex) => new UpdateSpecialtyError(ex.Message, ex)
         );

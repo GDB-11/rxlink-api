@@ -109,4 +109,22 @@ public sealed class LookupRepository : BaseDatabaseService, ILookupRepository
                 await ExecuteQueryAsync<GuidLookupRow>(_connection, LookupRepositorySql.GetActiveConsultationTypes),
             errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
         );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<InsuranceLookupRow>, LookupRepositoryError>> GetActiveInsurancesAsync() =>
+        await Result.TryAsync(
+            operation: async () =>
+                await ExecuteQueryAsync<InsuranceLookupRow>(_connection, LookupRepositorySql.GetActiveInsurances),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<IEnumerable<SpecialtyPricingLookupRow>, LookupRepositoryError>>
+        GetActiveSpecialtiesWithPricingAsync() =>
+        await Result.TryAsync(
+            operation: async () =>
+                await ExecuteQueryAsync<SpecialtyPricingLookupRow>(
+                    _connection, LookupRepositorySql.GetActiveSpecialtiesWithPricing),
+            errorFactory: LookupRepositoryError (ex) => new GetLookupError(ex.Message, ex)
+        );
 }

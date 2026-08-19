@@ -11,7 +11,8 @@ public sealed class AppointmentErrorMapper : IErrorHttpMapper<AppointmentError>
             AppointmentNotFoundError
                 or AppointmentPatientNotFoundError
                 or AppointmentSlotNotFoundError
-                or AppointmentConsultationTypeNotFoundError => new NotFoundObjectResult(new
+                or AppointmentConsultationTypeNotFoundError
+                or AppointmentInsuranceNotFoundError => new NotFoundObjectResult(new
                 {
                     message = error.Message
                 }),

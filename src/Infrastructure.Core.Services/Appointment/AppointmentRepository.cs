@@ -20,7 +20,9 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     public async Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertAsync(
         Guid patientCode,
         Guid availabilityCode,
-        Guid consultationTypeCode)
+        Guid consultationTypeCode,
+        bool payNow,
+        Guid? insuranceCode)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();
@@ -94,7 +96,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             DateTimeOffset scheduledAt = new DateTimeOffset(
                 slot.Date.ToDateTime(slot.StartTime, DateTimeKind.Utc));
 
-            Guid newCode = await _connection.ExecuteScalarAsync<Guid>(
+            NewAppointmentIdentity identity = await _connection.QueryFirstAsync<NewAppointmentIdentity>(
                 AppointmentRepositorySql.InsertAppointment,
                 new
                 {
@@ -106,9 +108,27 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 },
                 transaction);
 
+            if (payNow)
+            {
+                Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
+                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insuranceCode,
+                    recordedByUserCode: null, transaction);
+
+                if (!paymentResult.IsSuccess)
+                {
+                    transaction.Rollback();
+                    return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(paymentResult.Error!);
+                }
+
+                await _connection.ExecuteAsync(
+                    AppointmentRepositorySql.ConfirmPaymentByAdmin,
+                    new { Code = identity.AppointmentCode },
+                    transaction);
+            }
+
             AppointmentRow? row = await _connection.QueryFirstOrDefaultAsync<AppointmentRow>(
                 AppointmentRepositorySql.GetByCode,
-                new { Code = newCode },
+                new { Code = identity.AppointmentCode },
                 transaction);
 
             transaction.Commit();
@@ -133,13 +153,56 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
     /// <inheritdoc/>
     public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentAsync(
-        Guid code, Guid patientCode) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+        Guid code, Guid patientCode, Guid? insuranceCode)
+    {
+        if (_connection.State != ConnectionState.Open)
+            _connection.Open();
+
+        using IDbTransaction transaction = _connection.BeginTransaction();
+
+        try
+        {
+            PricingContextRow? pricing = await _connection.QueryFirstOrDefaultAsync<PricingContextRow>(
+                AppointmentRepositorySql.GetAppointmentPricingContext,
+                new { Code = code },
+                transaction);
+
+            if (pricing is null)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Success(0);
+            }
+
+            Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
+                pricing.AppointmentId, pricing.BaseAmount, insuranceCode, recordedByUserCode: null, transaction);
+
+            if (!paymentResult.IsSuccess)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Failure(paymentResult.Error!);
+            }
+
+            int rows = await _connection.ExecuteAsync(
                 AppointmentRepositorySql.ConfirmPayment,
-                new { Code = code, PatientCode = patientCode }),
-            errorFactory: AppointmentRepositoryError (ex) => new TransitionAppointmentError(ex.Message, ex));
+                new { Code = code, PatientCode = patientCode },
+                transaction);
+
+            if (rows == 0)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Success(0);
+            }
+
+            transaction.Commit();
+            return Result<int, AppointmentRepositoryError>.Success(rows);
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            return Result<int, AppointmentRepositoryError>.Failure(
+                new TransitionAppointmentError(ex.Message, ex));
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<Result<int, AppointmentRepositoryError>> CancelAsync(
@@ -254,7 +317,9 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
         Guid patientCode,
         Guid availabilityCode,
         Guid consultationTypeCode,
-        bool isPaid)
+        bool payNow,
+        Guid? insuranceCode,
+        Guid? recordedByUserCode)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();
@@ -327,7 +392,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             DateTimeOffset scheduledAt = new DateTimeOffset(
                 slot.Date.ToDateTime(slot.StartTime, DateTimeKind.Utc));
 
-            Guid newCode = await _connection.ExecuteScalarAsync<Guid>(
+            NewAppointmentIdentity identity = await _connection.QueryFirstAsync<NewAppointmentIdentity>(
                 AppointmentRepositorySql.InsertAppointment,
                 new
                 {
@@ -339,17 +404,27 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 },
                 transaction);
 
-            if (isPaid)
+            if (payNow)
             {
+                Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
+                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insuranceCode,
+                    recordedByUserCode, transaction);
+
+                if (!paymentResult.IsSuccess)
+                {
+                    transaction.Rollback();
+                    return Result<AppointmentRow?, AppointmentRepositoryError>.Failure(paymentResult.Error!);
+                }
+
                 await _connection.ExecuteAsync(
                     AppointmentRepositorySql.ConfirmPaymentByAdmin,
-                    new { Code = newCode },
+                    new { Code = identity.AppointmentCode },
                     transaction);
             }
 
             AppointmentRow? row = await _connection.QueryFirstOrDefaultAsync<AppointmentRow>(
                 AppointmentRepositorySql.GetByCode,
-                new { Code = newCode },
+                new { Code = identity.AppointmentCode },
                 transaction);
 
             transaction.Commit();
@@ -364,18 +439,94 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     }
 
     /// <inheritdoc/>
-    public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(Guid code) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection, AppointmentRepositorySql.ConfirmPaymentByAdmin, new { Code = code }),
-            errorFactory: AppointmentRepositoryError (ex) => new AdminConfirmPaymentError(ex.Message, ex));
+    public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(
+        Guid code, Guid? insuranceCode, Guid recordedByUserCode)
+    {
+        if (_connection.State != ConnectionState.Open)
+            _connection.Open();
+
+        using IDbTransaction transaction = _connection.BeginTransaction();
+
+        try
+        {
+            PricingContextRow? pricing = await _connection.QueryFirstOrDefaultAsync<PricingContextRow>(
+                AppointmentRepositorySql.GetAppointmentPricingContext,
+                new { Code = code },
+                transaction);
+
+            if (pricing is null)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Success(0);
+            }
+
+            Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
+                pricing.AppointmentId, pricing.BaseAmount, insuranceCode, recordedByUserCode, transaction);
+
+            if (!paymentResult.IsSuccess)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Failure(paymentResult.Error!);
+            }
+
+            int rows = await _connection.ExecuteAsync(
+                AppointmentRepositorySql.ConfirmPaymentByAdmin,
+                new { Code = code },
+                transaction);
+
+            if (rows == 0)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Success(0);
+            }
+
+            transaction.Commit();
+            return Result<int, AppointmentRepositoryError>.Success(rows);
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            return Result<int, AppointmentRepositoryError>.Failure(
+                new AdminConfirmPaymentError(ex.Message, ex));
+        }
+    }
 
     /// <inheritdoc/>
-    public async Task<Result<int, AppointmentRepositoryError>> RevertPaymentAsync(Guid code) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection, AppointmentRepositorySql.RevertPayment, new { Code = code }),
-            errorFactory: AppointmentRepositoryError (ex) => new RevertPaymentError(ex.Message, ex));
+    public async Task<Result<int, AppointmentRepositoryError>> RevertPaymentAsync(Guid code)
+    {
+        if (_connection.State != ConnectionState.Open)
+            _connection.Open();
+
+        using IDbTransaction transaction = _connection.BeginTransaction();
+
+        try
+        {
+            int rows = await _connection.ExecuteAsync(
+                AppointmentRepositorySql.RevertPayment,
+                new { Code = code },
+                transaction);
+
+            if (rows == 0)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Success(0);
+            }
+
+            await _connection.ExecuteAsync(
+                AppointmentRepositorySql.DeleteAppointmentPaymentByCode,
+                new { Code = code },
+                transaction);
+
+            transaction.Commit();
+            return Result<int, AppointmentRepositoryError>.Success(rows);
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            return Result<int, AppointmentRepositoryError>.Failure(
+                new RevertPaymentError(ex.Message, ex));
+        }
+    }
 
     /// <inheritdoc/>
     public async Task<Result<(IEnumerable<AppointmentRow> Items, int Total), AppointmentRepositoryError>>
@@ -402,6 +553,71 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             },
             errorFactory: AppointmentRepositoryError (ex) => new GetAdminAppointmentsError(ex.Message, ex));
 
+    /// <summary>
+    /// Resolves the base price for a doctor/consultation-type pair, resolves the insurance (if
+    /// any), and inserts the AppointmentPayment snapshot. Returns a typed failure when
+    /// <paramref name="insuranceCode"/> does not match an active insurance — nothing is written
+    /// in that case.
+    /// </summary>
+    private async Task<Result<Unit, AppointmentRepositoryError>> ResolveAndRecordPaymentAsync(
+        int appointmentId, int doctorId, int consultationTypeId, Guid? insuranceCode,
+        Guid? recordedByUserCode, IDbTransaction transaction)
+    {
+        decimal baseAmount = await _connection.ExecuteScalarAsync<decimal>(
+            AppointmentRepositorySql.GetBasePriceForBooking,
+            new { DoctorId = doctorId, ConsultationTypeId = consultationTypeId },
+            transaction);
+
+        return await ResolveAndRecordPaymentAsync(
+            appointmentId, baseAmount, insuranceCode, recordedByUserCode, transaction);
+    }
+
+    /// <summary>
+    /// Resolves the insurance (if any) for an already-known base price and inserts the
+    /// AppointmentPayment snapshot. Returns a typed failure when <paramref name="insuranceCode"/>
+    /// does not match an active insurance — nothing is written in that case.
+    /// </summary>
+    private async Task<Result<Unit, AppointmentRepositoryError>> ResolveAndRecordPaymentAsync(
+        int appointmentId, decimal baseAmount, Guid? insuranceCode,
+        Guid? recordedByUserCode, IDbTransaction transaction)
+    {
+        int? insuranceId = null;
+        decimal coveragePercentage = 0m;
+
+        if (insuranceCode.HasValue)
+        {
+            InsuranceForPaymentRow? insurance = await _connection.QueryFirstOrDefaultAsync<InsuranceForPaymentRow>(
+                AppointmentRepositorySql.GetInsuranceForPayment,
+                new { InsuranceCode = insuranceCode.Value },
+                transaction);
+
+            if (insurance is null)
+                return Result<Unit, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError());
+
+            insuranceId = insurance.InsuranceId;
+            coveragePercentage = insurance.CoveragePercentage;
+        }
+
+        decimal coveredAmount = Math.Round(baseAmount * coveragePercentage / 100m, 2);
+        decimal patientAmount = baseAmount - coveredAmount;
+
+        await _connection.ExecuteAsync(
+            AppointmentRepositorySql.InsertAppointmentPayment,
+            new
+            {
+                AppointmentId = appointmentId,
+                InsuranceId = insuranceId,
+                BaseAmount = baseAmount,
+                CoveragePercentage = coveragePercentage,
+                CoveredAmount = coveredAmount,
+                PatientAmount = patientAmount,
+                RecordedByUserCode = recordedByUserCode
+            },
+            transaction);
+
+        return Result<Unit, AppointmentRepositoryError>.Success(Unit.Value);
+    }
+
     // Internal projection for reading the availability slot during insert.
     private sealed class SlotRow
     {
@@ -418,5 +634,26 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     {
         public required int AppointmentId { get; init; }
         public required int DoctorAvailabilityId { get; init; }
+    }
+
+    // Internal projection for the newly-inserted appointment's identity.
+    private sealed class NewAppointmentIdentity
+    {
+        public required int AppointmentId { get; init; }
+        public required Guid AppointmentCode { get; init; }
+    }
+
+    // Internal projection for resolving price/AppointmentId when a payment is resolved post-booking.
+    private sealed class PricingContextRow
+    {
+        public required int AppointmentId { get; init; }
+        public required decimal BaseAmount { get; init; }
+    }
+
+    // Internal projection for an active insurance's coverage.
+    private sealed class InsuranceForPaymentRow
+    {
+        public required int InsuranceId { get; init; }
+        public required decimal CoveragePercentage { get; init; }
     }
 }

@@ -78,16 +78,28 @@ public sealed class LookupService : ILookup
     public Task<Result<AppointmentLookupsResponse, LookupError>> GetAppointmentLookupsAsync() =>
         _repository.GetActiveConsultationTypesAsync()
             .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
-            .MapAsync(types => new AppointmentLookupsResponse
-            {
-                ConsultationTypes = [.. types.Select(ToGuidItem)]
-            });
+            .BindAsync(types => _repository.GetActiveInsurancesAsync()
+                .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
+                .BindAsync(insurances => _repository.GetActiveSpecialtiesWithPricingAsync()
+                    .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
+                    .MapAsync(specialties => new AppointmentLookupsResponse
+                    {
+                        ConsultationTypes = [.. types.Select(ToGuidItem)],
+                        Insurances = [.. insurances.Select(ToInsuranceItem)],
+                        Specialties = [.. specialties.Select(ToSpecialtyPricingItem)]
+                    })));
 
     private static LookupItemResponse ToItem(LookupRow row) =>
         new() { Id = row.Id, Name = row.Name };
 
     private static GuidLookupItemResponse ToGuidItem(GuidLookupRow row) =>
         new() { Code = row.Code, Name = row.Name };
+
+    private static InsuranceLookupItemResponse ToInsuranceItem(InsuranceLookupRow row) =>
+        new() { Code = row.Code, Name = row.Name, CoveragePercentage = row.CoveragePercentage };
+
+    private static SpecialtyPricingLookupItemResponse ToSpecialtyPricingItem(SpecialtyPricingLookupRow row) =>
+        new() { Code = row.Code, PriceInPerson = row.PriceInPerson, PriceVirtual = row.PriceVirtual };
 
     private static MedicationLookupItemResponse ToMedicationItem(MedicationLookupRow row) =>
         new()

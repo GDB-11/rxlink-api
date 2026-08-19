@@ -18,4 +18,6 @@ public interface ILookupRepository
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveAdministrationRoutesAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveFrequenciesAsync();
     Task<Result<IEnumerable<GuidLookupRow>, LookupRepositoryError>> GetActiveConsultationTypesAsync();
+    Task<Result<IEnumerable<InsuranceLookupRow>, LookupRepositoryError>> GetActiveInsurancesAsync();
+    Task<Result<IEnumerable<SpecialtyPricingLookupRow>, LookupRepositoryError>> GetActiveSpecialtiesWithPricingAsync();
 }

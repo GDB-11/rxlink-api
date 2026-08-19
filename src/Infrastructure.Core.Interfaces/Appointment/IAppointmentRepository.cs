@@ -8,19 +8,29 @@ public interface IAppointmentRepository
 {
     /// <summary>
     /// Atomically locks the availability slot and inserts the appointment.
+    /// When <paramref name="payNow"/> is true, resolves the price (Specialty x ConsultationType),
+    /// resolves <paramref name="insuranceCode"/> if given, records the payment snapshot, and
+    /// transitions straight to Confirmado — all within the same transaction.
     /// Returns null when the slot is already booked (race condition → 409).
     /// Returns a typed error for data-access failures or validation mismatches.
     /// </summary>
     Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertAsync(
         Guid patientCode,
         Guid availabilityCode,
-        Guid consultationTypeCode);
+        Guid consultationTypeCode,
+        bool payNow,
+        Guid? insuranceCode);
 
     /// <summary>Returns the appointment row, or null if not found.</summary>
     Task<Result<AppointmentRow?, AppointmentRepositoryError>> GetByCodeAsync(Guid code);
 
-    /// <summary>Transitions PendientePago → Confirmado for the owning patient. Returns rows affected.</summary>
-    Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentAsync(Guid code, Guid patientCode);
+    /// <summary>
+    /// Transitions PendientePago → Confirmado for the owning patient, recording the payment
+    /// snapshot (price + insurance coverage, if any) within the same transaction.
+    /// Returns rows affected.
+    /// </summary>
+    Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentAsync(
+        Guid code, Guid patientCode, Guid? insuranceCode);
 
     /// <summary>
     /// Transitions PendientePago/Confirmado → Cancelado and releases the slot atomically.
@@ -46,19 +56,30 @@ public interface IAppointmentRepository
 
     /// <summary>
     /// Atomically creates an appointment on behalf of a patient.
-    /// If <paramref name="isPaid"/> is true, immediately transitions to Confirmado within the same transaction.
+    /// If <paramref name="payNow"/> is true, resolves price/insurance, records the payment
+    /// snapshot (RecordedBy = the admin behind <paramref name="recordedByUserCode"/>), and
+    /// immediately transitions to Confirmado within the same transaction.
     /// Returns null on slot race condition (→ 409).
     /// </summary>
     Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertByAdminAsync(
         Guid patientCode,
         Guid availabilityCode,
         Guid consultationTypeCode,
-        bool isPaid);
+        bool payNow,
+        Guid? insuranceCode,
+        Guid? recordedByUserCode);
 
-    /// <summary>Transitions PendientePago → Confirmado. No ownership check (admin path).</summary>
-    Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(Guid code);
+    /// <summary>
+    /// Transitions PendientePago → Confirmado, recording the payment snapshot within the same
+    /// transaction. No ownership check (admin path).
+    /// </summary>
+    Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(
+        Guid code, Guid? insuranceCode, Guid recordedByUserCode);
 
-    /// <summary>Transitions Confirmado → PendientePago (admin-only, new transition).</summary>
+    /// <summary>
+    /// Transitions Confirmado → PendientePago (admin-only, new transition), deleting the
+    /// payment snapshot within the same transaction — reverting undoes the payment resolution.
+    /// </summary>
     Task<Result<int, AppointmentRepositoryError>> RevertPaymentAsync(Guid code);
 
     /// <summary>Returns a filtered page of all appointments ordered by ScheduledAt DESC.</summary>

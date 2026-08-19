@@ -93,4 +93,18 @@ internal static class LookupRepositorySql
                                                        WHERE  "IsActive" = TRUE
                                                        ORDER  BY "ConsultationTypeId"
                                                        """;
+
+    internal const string GetActiveInsurances = """
+                                                SELECT "InsuranceCode" AS "Code", "Name", "CoveragePercentage"
+                                                FROM   "Insurance"
+                                                WHERE  "IsActive" = TRUE
+                                                ORDER  BY "Name"
+                                                """;
+
+    internal const string GetActiveSpecialtiesWithPricing = """
+                                                             SELECT "SpecialtyCode" AS "Code", "PriceInPerson", "PriceVirtual"
+                                                             FROM   "Specialty"
+                                                             WHERE  "IsActive" = TRUE
+                                                             ORDER  BY "Name"
+                                                             """;
 }

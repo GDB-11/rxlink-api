@@ -11,11 +11,12 @@ public interface ISpecialtyRepository
         string? search);
 
     /// <summary>Inserts a new specialty and returns the created row, or <c>null</c> on unexpected failure.</summary>
-    Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> InsertAsync(string name);
+    Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> InsertAsync(
+        string name, decimal priceInPerson, decimal priceVirtual);
 
     /// <summary>Updates an active specialty by code. Returns <c>null</c> when no matching active row exists.</summary>
     Task<Result<SpecialtyRow?, SpecialtyRepositoryError>> UpdateAsync(
-        Guid code, string name);
+        Guid code, string name, decimal priceInPerson, decimal priceVirtual);
 
     /// <summary>Soft-deletes an active specialty. Returns the number of affected rows (0 = not found or already inactive).</summary>
     Task<Result<int, SpecialtyRepositoryError>> DeactivateAsync(Guid code, Guid performedByUserCode);

@@ -15,5 +15,9 @@ public sealed class AppointmentRow
     public required Guid StatusCode { get; init; }
     public required DateTimeOffset ScheduledAt { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
+    public string? InsuranceName { get; init; }
+    public decimal? CoveragePercentage { get; init; }
+    public decimal? BaseAmount { get; init; }
+    public decimal? PatientAmount { get; init; }
     public required long TotalCount { get; init; }
 }

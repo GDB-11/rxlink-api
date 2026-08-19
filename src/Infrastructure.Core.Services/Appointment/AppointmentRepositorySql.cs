@@ -41,7 +41,7 @@ internal static class AppointmentRepositorySql
                                        AND "DeletedAt" IS NULL
                                      """;
 
-    /// <summary>Inserts the appointment and returns its generated AppointmentCode.</summary>
+    /// <summary>Inserts the appointment and returns its generated AppointmentId/AppointmentCode.</summary>
     internal const string InsertAppointment = """
                                               INSERT INTO "Appointment" (
                                                   "PatientId",
@@ -60,8 +60,77 @@ internal static class AppointmentRepositorySql
                                                   @ScheduledAt
                                               FROM "AppointmentStatus" ast
                                               WHERE ast."Name" = 'PendientePago'
-                                              RETURNING "AppointmentCode"
+                                              RETURNING "AppointmentId", "AppointmentCode"
                                               """;
+
+    /// <summary>
+    /// Resolves the base price (before insurance coverage) for a doctor/consultation-type pair,
+    /// picking Specialty.PriceInPerson for 'Presencial' or Specialty.PriceVirtual otherwise.
+    /// </summary>
+    internal const string GetBasePriceForBooking = """
+                                                    SELECT
+                                                        CASE WHEN ct."Name" = 'Presencial' THEN sp."PriceInPerson" ELSE sp."PriceVirtual" END
+                                                    FROM "User" u
+                                                    JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
+                                                    JOIN "ConsultationType" ct ON ct."ConsultationTypeId" = @ConsultationTypeId
+                                                    WHERE u."UserId" = @DoctorId
+                                                    """;
+
+    /// <summary>
+    /// Resolves AppointmentId + base price for an existing appointment, used when a payment is
+    /// resolved after booking (confirm-payment / admin-confirm-payment).
+    /// </summary>
+    internal const string GetAppointmentPricingContext = """
+                                                          SELECT
+                                                              a."AppointmentId",
+                                                              CASE WHEN ct."Name" = 'Presencial' THEN sp."PriceInPerson" ELSE sp."PriceVirtual" END AS "BaseAmount"
+                                                          FROM "Appointment" a
+                                                          JOIN "User" u ON u."UserId" = a."DoctorId"
+                                                          JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
+                                                          JOIN "ConsultationType" ct ON ct."ConsultationTypeId" = a."ConsultationTypeId"
+                                                          WHERE a."AppointmentCode" = @Code
+                                                          """;
+
+    /// <summary>Resolves an active insurance's Id/CoveragePercentage by its code.</summary>
+    internal const string GetInsuranceForPayment = """
+                                                    SELECT "InsuranceId", "CoveragePercentage"
+                                                    FROM "Insurance"
+                                                    WHERE "InsuranceCode" = @InsuranceCode
+                                                      AND "IsActive"      = TRUE
+                                                    """;
+
+    /// <summary>
+    /// Inserts the payment snapshot for an appointment. RecordedBy resolves to NULL when
+    /// @RecordedByUserCode is NULL (patient self-service) or does not match an active user.
+    /// </summary>
+    internal const string InsertAppointmentPayment = """
+                                                      INSERT INTO "AppointmentPayment" (
+                                                          "AppointmentId",
+                                                          "InsuranceId",
+                                                          "BaseAmount",
+                                                          "CoveragePercentage",
+                                                          "CoveredAmount",
+                                                          "PatientAmount",
+                                                          "RecordedBy"
+                                                      )
+                                                      VALUES (
+                                                          @AppointmentId,
+                                                          @InsuranceId,
+                                                          @BaseAmount,
+                                                          @CoveragePercentage,
+                                                          @CoveredAmount,
+                                                          @PatientAmount,
+                                                          (SELECT "UserId" FROM "User" WHERE "UserCode" = @RecordedByUserCode AND "IsActive" = TRUE)
+                                                      )
+                                                      """;
+
+    /// <summary>Deletes the payment snapshot for an appointment identified by its code (used on payment revert).</summary>
+    internal const string DeleteAppointmentPaymentByCode = """
+                                                            DELETE FROM "AppointmentPayment"
+                                                            WHERE "AppointmentId" = (
+                                                                SELECT "AppointmentId" FROM "Appointment" WHERE "AppointmentCode" = @Code
+                                                            )
+                                                            """;
 
     internal const string GetByCode = """
                                       SELECT
@@ -78,6 +147,10 @@ internal static class AppointmentRepositorySql
                                           ast."AppointmentStatusCode"         AS "StatusCode",
                                           a."ScheduledAt",
                                           a."CreatedAt",
+                                          ins."Name"                          AS "InsuranceName",
+                                          ap."CoveragePercentage",
+                                          ap."BaseAmount",
+                                          ap."PatientAmount",
                                           1                                   AS "TotalCount"
                                       FROM "Appointment" a
                                       JOIN "Patient"          pat     ON pat."PatientId"          = a."PatientId"
@@ -87,6 +160,8 @@ internal static class AppointmentRepositorySql
                                       JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
                                       JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
                                       JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                      LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
+                                      LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                       WHERE a."AppointmentCode" = @Code
                                       """;
 
@@ -210,6 +285,10 @@ internal static class AppointmentRepositorySql
                                                        ast."AppointmentStatusCode"         AS "StatusCode",
                                                        a."ScheduledAt",
                                                        a."CreatedAt",
+                                                       ins."Name"                          AS "InsuranceName",
+                                                       ap."CoveragePercentage",
+                                                       ap."BaseAmount",
+                                                       ap."PatientAmount",
                                                        COUNT(*) OVER()                     AS "TotalCount"
                                                    FROM "Appointment" a
                                                    JOIN "Patient"          pat     ON pat."PatientId"          = a."PatientId"
@@ -219,6 +298,8 @@ internal static class AppointmentRepositorySql
                                                    JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
                                                    JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
                                                    JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                   LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
+                                                   LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                    WHERE pat."PatientCode" = @PatientCode
                                                    ORDER BY a."ScheduledAt" DESC
                                                    LIMIT @PageSize OFFSET @Offset
@@ -239,6 +320,10 @@ internal static class AppointmentRepositorySql
                                                       ast."AppointmentStatusCode"         AS "StatusCode",
                                                       a."ScheduledAt",
                                                       a."CreatedAt",
+                                                      ins."Name"                          AS "InsuranceName",
+                                                      ap."CoveragePercentage",
+                                                      ap."BaseAmount",
+                                                      ap."PatientAmount",
                                                       COUNT(*) OVER()                     AS "TotalCount"
                                                   FROM "Appointment" a
                                                   JOIN "Patient"          pat     ON pat."PatientId"           = a."PatientId"
@@ -248,6 +333,8 @@ internal static class AppointmentRepositorySql
                                                   JOIN "Specialty"        sp      ON sp."SpecialtyId"          = u."SpecialtyId"
                                                   JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
                                                   JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                  LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
+                                                  LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                   WHERE u."UserCode" = @DoctorCode
                                                     AND (@Date::date       IS NULL OR a."ScheduledAt"::date = @Date::date)
                                                     AND (@StatusName::text IS NULL OR ast."Name"            = @StatusName::text)
@@ -294,6 +381,10 @@ internal static class AppointmentRepositorySql
                                                      ast."AppointmentStatusCode"         AS "StatusCode",
                                                      a."ScheduledAt",
                                                      a."CreatedAt",
+                                                     ins."Name"                          AS "InsuranceName",
+                                                     ap."CoveragePercentage",
+                                                     ap."BaseAmount",
+                                                     ap."PatientAmount",
                                                      COUNT(*) OVER()                     AS "TotalCount"
                                                  FROM "Appointment" a
                                                  JOIN "Patient"           pat     ON pat."PatientId"           = a."PatientId"
@@ -303,6 +394,8 @@ internal static class AppointmentRepositorySql
                                                  JOIN "Specialty"         sp      ON sp."SpecialtyId"          = u."SpecialtyId"
                                                  JOIN "ConsultationType"  ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
                                                  JOIN "AppointmentStatus" ast     ON ast."AppointmentStatusId" = a."AppointmentStatusId"
+                                                 LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
+                                                 LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                  WHERE (@PatientSearch::text IS NULL
                                                         OR pat_per."Names"     ILIKE '%' || @PatientSearch || '%'
                                                         OR pat_per."Surnames"  ILIKE '%' || @PatientSearch || '%')

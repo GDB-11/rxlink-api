@@ -18,6 +18,9 @@ public sealed record InsertSlotExpiredError()
 public sealed record InsertConsultationTypeNotFoundError()
     : AppointmentRepositoryError("El tipo de consulta no fue encontrado.");
 
+public sealed record InsertInsuranceNotFoundError()
+    : AppointmentRepositoryError("El seguro indicado no fue encontrado o no está activo.");
+
 // DB-level errors
 public sealed record InsertAppointmentError(string? Details = null, Exception? Exception = null)
     : AppointmentRepositoryError("Error inesperado al registrar la cita.", Details, Exception);

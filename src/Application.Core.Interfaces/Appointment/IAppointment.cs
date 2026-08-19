@@ -11,8 +11,11 @@ public interface IAppointment
     Task<Result<AppointmentResponse, AppointmentError>> CreateAsync(
         CreateAppointmentRequest request, Guid patientCode);
 
-    /// <summary>Transitions PendientePago → Confirmado. Patient must own the appointment.</summary>
-    Task<Result<Unit, AppointmentError>> ConfirmPaymentAsync(Guid code, Guid patientCode);
+    /// <summary>
+    /// Transitions PendientePago → Confirmado, resolving payment (insurance or particular).
+    /// Patient must own the appointment.
+    /// </summary>
+    Task<Result<Unit, AppointmentError>> ConfirmPaymentAsync(Guid code, Guid patientCode, Guid? insuranceCode);
 
     /// <summary>
     /// Transitions PendientePago/Confirmado → Cancelado and releases the slot.
@@ -49,8 +52,8 @@ public interface IAppointment
     Task<Result<AppointmentResponse, AppointmentError>> AdminCreateAsync(
         AdminCreateAppointmentRequest request, Guid adminUserCode);
 
-    /// <summary>Transitions PendientePago → Confirmado. Admin only.</summary>
-    Task<Result<Unit, AppointmentError>> AdminConfirmPaymentAsync(Guid code);
+    /// <summary>Transitions PendientePago → Confirmado, resolving payment. Admin only.</summary>
+    Task<Result<Unit, AppointmentError>> AdminConfirmPaymentAsync(Guid code, Guid adminUserCode, Guid? insuranceCode);
 
     /// <summary>Transitions Confirmado → PendientePago. Admin only.</summary>
     Task<Result<Unit, AppointmentError>> AdminRevertPaymentAsync(Guid code);

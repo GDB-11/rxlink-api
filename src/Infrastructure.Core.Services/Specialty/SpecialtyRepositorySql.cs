@@ -16,6 +16,8 @@ internal static class SpecialtyRepositorySql
                                     SELECT
                                         s."SpecialtyCode",
                                         s."Name",
+                                        s."PriceInPerson",
+                                        s."PriceVirtual",
                                         s."IsActive",
                                         COUNT(*) OVER () AS "TotalCount"
                                     FROM "Specialty" s
@@ -29,13 +31,15 @@ internal static class SpecialtyRepositorySql
     /// </summary>
     internal const string Insert = """
                                    WITH ins AS (
-                                       INSERT INTO "Specialty" ("Name")
-                                       VALUES (@Name)
+                                       INSERT INTO "Specialty" ("Name", "PriceInPerson", "PriceVirtual")
+                                       VALUES (@Name, @PriceInPerson, @PriceVirtual)
                                        RETURNING *
                                    )
                                    SELECT
                                        ins."SpecialtyCode",
                                        ins."Name",
+                                       ins."PriceInPerson",
+                                       ins."PriceVirtual",
                                        ins."IsActive",
                                        0 AS "TotalCount"
                                    FROM ins
@@ -48,7 +52,7 @@ internal static class SpecialtyRepositorySql
     internal const string Update = """
                                    WITH upd AS (
                                        UPDATE "Specialty"
-                                       SET "Name" = @Name
+                                       SET "Name" = @Name, "PriceInPerson" = @PriceInPerson, "PriceVirtual" = @PriceVirtual
                                        WHERE "SpecialtyCode" = @Code
                                          AND "IsActive" = TRUE
                                        RETURNING *
@@ -56,6 +60,8 @@ internal static class SpecialtyRepositorySql
                                    SELECT
                                        upd."SpecialtyCode",
                                        upd."Name",
+                                       upd."PriceInPerson",
+                                       upd."PriceVirtual",
                                        upd."IsActive",
                                        0 AS "TotalCount"
                                    FROM upd

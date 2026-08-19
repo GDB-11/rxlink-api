@@ -45,3 +45,7 @@ public sealed record AdminConfirmPaymentConflictError()
 /// <summary>The appointment is not in Confirmado status.</summary>
 public sealed record RevertPaymentConflictError()
     : AppointmentError("La cita no está en estado Confirmado.");
+
+/// <summary>The given insurance code does not match an active insurance.</summary>
+public sealed record AppointmentInsuranceNotFoundError()
+    : AppointmentError("El seguro indicado no fue encontrado o no está activo.");
