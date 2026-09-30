@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Dapper;
+using Infrastructure.Core.Interfaces.Audit;
 
 namespace Infrastructure.Core.Services;
 
@@ -14,12 +15,13 @@ public abstract class BaseDatabaseService
             ? Result<Unit, TError>.Success(Unit.Value)
             : Result<Unit, TError>.Failure(errorFactory(errorMessage));
 
-    protected static async Task<int> ExecuteNonQueryAsync<TIn>(IDbConnection connection, string sql, TIn entity) =>
-        await connection.ExecuteAsync(sql, entity);
+    protected static async Task<int> ExecuteNonQueryAsync<TIn>(IDbConnection connection, string sql, TIn entity,
+        IDbTransaction? transaction = null) =>
+        await connection.ExecuteAsync(sql, entity, transaction);
 
     protected static async Task<TOut?> ExecuteFirstOrDefaultAsync<TIn, TOut>(IDbConnection connection, string sql,
-        TIn entity) =>
-        await connection.QueryFirstOrDefaultAsync<TOut?>(sql, entity);
+        TIn entity, IDbTransaction? transaction = null) =>
+        await connection.QueryFirstOrDefaultAsync<TOut?>(sql, entity, transaction);
 
     protected static async Task<TOut?> ExecuteSingleOrDefaultAsync<TIn, TOut>(IDbConnection connection, string sql,
         TIn entity) =>
@@ -56,4 +58,35 @@ public abstract class BaseDatabaseService
             throw;
         }
     }
+
+    /// <summary>
+    /// Runs <paramref name="operation"/> inside a transaction whose first statement stamps the caller's
+    /// identity into transaction-local settings (<c>app.user_code</c>, <c>app.ip</c>, <c>app.request_id</c>).
+    /// Row-level audit triggers read these with <c>current_setting(..., true)</c>. The settings are
+    /// transaction-local (<c>set_config(..., true)</c>) so a pooled connection cannot leak them between requests.
+    /// Every write to an audited table must go through this helper.
+    /// </summary>
+    protected static Task<TOut> ExecuteAuditedWriteAsync<TOut>(
+        IDbConnection connection,
+        IUserContext userContext,
+        Func<IDbTransaction, Task<TOut>> operation,
+        Guid? actorOverride = null) =>
+        ExecuteWithTransactionAsync(connection, async transaction =>
+        {
+            await connection.ExecuteAsync(
+                """
+                SELECT set_config('app.user_code', @UserCode, true),
+                       set_config('app.ip',         @Ip,       true),
+                       set_config('app.request_id', @RequestId, true)
+                """,
+                new
+                {
+                    UserCode = (actorOverride ?? userContext.UserCode)?.ToString() ?? string.Empty,
+                    Ip = userContext.IpAddress ?? string.Empty,
+                    RequestId = userContext.RequestId ?? string.Empty
+                },
+                transaction);
+
+            return await operation(transaction);
+        });
 }

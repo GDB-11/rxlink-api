@@ -2,6 +2,7 @@ using System.Data;
 using BindSharp;
 using Dapper;
 using Infrastructure.Core.DTOs.Prescription;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Prescription;
 using Infrastructure.Core.Models.Prescription;
 
@@ -10,11 +11,28 @@ namespace Infrastructure.Core.Services.Prescription;
 public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public PrescriptionRepository(IDbConnection connection)
+    public PrescriptionRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
+
+    private Task<Result<int, PrescriptionRepositoryError>> ChangeStatusAsync(
+        string sql, Guid code, Guid performedByUserCode) =>
+        Result.TryAsync(
+            operation: () => ExecuteAuditedWriteAsync(
+                _connection,
+                _userContext,
+                transaction => ExecuteNonQueryAsync(
+                    _connection,
+                    sql,
+                    new { Code = code, PerformedByUserCode = performedByUserCode },
+                    transaction),
+                performedByUserCode),
+            errorFactory: PrescriptionRepositoryError (ex) => new ChangeStatusPrescriptionError(ex.Message, ex)
+        );
 
     /// <inheritdoc/>
     public async Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> InsertAsync(
@@ -96,48 +114,24 @@ public sealed class PrescriptionRepository : BaseDatabaseService, IPrescriptionR
     }
 
     /// <inheritdoc/>
-    public async Task<Result<int, PrescriptionRepositoryError>> SignAsync(
+    public Task<Result<int, PrescriptionRepositoryError>> SignAsync(
         Guid code, Guid performedByUserCode) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
-                PrescriptionRepositorySql.Sign,
-                new { Code = code, PerformedByUserCode = performedByUserCode }),
-            errorFactory: PrescriptionRepositoryError (ex) => new ChangeStatusPrescriptionError(ex.Message, ex)
-        );
+        ChangeStatusAsync(PrescriptionRepositorySql.Sign, code, performedByUserCode);
 
     /// <inheritdoc/>
-    public async Task<Result<int, PrescriptionRepositoryError>> SuspendAsync(
+    public Task<Result<int, PrescriptionRepositoryError>> SuspendAsync(
         Guid code, Guid performedByUserCode) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
-                PrescriptionRepositorySql.Suspend,
-                new { Code = code, PerformedByUserCode = performedByUserCode }),
-            errorFactory: PrescriptionRepositoryError (ex) => new ChangeStatusPrescriptionError(ex.Message, ex)
-        );
+        ChangeStatusAsync(PrescriptionRepositorySql.Suspend, code, performedByUserCode);
 
     /// <inheritdoc/>
-    public async Task<Result<int, PrescriptionRepositoryError>> ReactivateAsync(
+    public Task<Result<int, PrescriptionRepositoryError>> ReactivateAsync(
         Guid code, Guid performedByUserCode) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
-                PrescriptionRepositorySql.Reactivate,
-                new { Code = code, PerformedByUserCode = performedByUserCode }),
-            errorFactory: PrescriptionRepositoryError (ex) => new ChangeStatusPrescriptionError(ex.Message, ex)
-        );
+        ChangeStatusAsync(PrescriptionRepositorySql.Reactivate, code, performedByUserCode);
 
     /// <inheritdoc/>
-    public async Task<Result<int, PrescriptionRepositoryError>> CancelAsync(
+    public Task<Result<int, PrescriptionRepositoryError>> CancelAsync(
         Guid code, Guid performedByUserCode) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
-                PrescriptionRepositorySql.Cancel,
-                new { Code = code, PerformedByUserCode = performedByUserCode }),
-            errorFactory: PrescriptionRepositoryError (ex) => new ChangeStatusPrescriptionError(ex.Message, ex)
-        );
+        ChangeStatusAsync(PrescriptionRepositorySql.Cancel, code, performedByUserCode);
 
     /// <inheritdoc/>
     public async Task<Result<IReadOnlyList<DoctorDraftPrescriptionRow>, PrescriptionRepositoryError>>

@@ -1,3 +1,5 @@
+using Infrastructure.Core.Interfaces.Audit;
+using RxLinkApi.Http;
 using Infrastructure.Core.Interfaces.Account;
 using Infrastructure.Core.Interfaces.Allergy;
 using Infrastructure.Core.Interfaces.Appointment;
@@ -39,6 +41,7 @@ internal static class RepositoryRegistration
     {
         internal void RegisterRepositories()
         {
+            builder.Services.AddScoped<IUserContext, HttpUserContext>();
             builder.Services.AddScoped<ICredentialRepository, CredentialRepository>();
             builder.Services.AddScoped<IAllergyRepository, AllergyRepository>();
             builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
