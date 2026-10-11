@@ -25,3 +25,12 @@ public sealed record UserPasswordError()
 /// <summary>The provided current password does not match the stored hash.</summary>
 public sealed record UserInvalidCurrentPasswordError()
     : UserError("La contraseña actual es incorrecta.");
+
+/// <summary>The new password does not satisfy the password policy; <see cref="UserError.Message"/> says why.</summary>
+public sealed record UserPasswordPolicyError(string Reason)
+    : UserError(Reason);
+
+
+/// <summary>A catalog code in the request was rejected (missing, deactivated, not enabled) or the catalog is unavailable.</summary>
+public sealed record UserCatalogValidationError(Application.Core.DTOs.Catalog.Errors.CatalogValidationError Inner)
+    : UserError(Inner.Message, Inner.Details, Inner.Exception);

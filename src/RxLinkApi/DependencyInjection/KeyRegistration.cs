@@ -45,8 +45,34 @@ internal static class KeyRegistration
             builder.Services.AddSingleton(jwtConfig);
         }
 
+        private void AddSessionSecurity()
+        {
+            SessionSecurityConfig defaults = new();
+            IConfigurationSection section = builder.Configuration.GetSection("SessionSecurity");
+            builder.Services.AddSingleton(new SessionSecurityConfig
+            {
+                MaxFailedAttempts = section.GetValue("MaxFailedAttempts", defaults.MaxFailedAttempts),
+                LockoutMinutes = section.GetValue("LockoutMinutes", defaults.LockoutMinutes),
+                AbsoluteSessionMinutes = section.GetValue("AbsoluteSessionMinutes", defaults.AbsoluteSessionMinutes)
+            });
+        }
+
+        private void AddPasswordPolicy()
+        {
+            PasswordPolicyConfig defaults = new();
+            IConfigurationSection section = builder.Configuration.GetSection("PasswordPolicy");
+            builder.Services.AddSingleton(new PasswordPolicyConfig
+            {
+                MinLength = section.GetValue("MinLength", defaults.MinLength),
+                MaxLength = section.GetValue("MaxLength", defaults.MaxLength),
+                BreachCheckEnabled = section.GetValue("BreachCheckEnabled", defaults.BreachCheckEnabled)
+            });
+        }
+
         internal void RegisterKeys()
         {
+            builder.AddPasswordPolicy();
+            builder.AddSessionSecurity();
             builder.AddEncryptionMasterKey();
             builder.AddDeterministicEncryptionKeys();
             builder.AddJwtKeys();

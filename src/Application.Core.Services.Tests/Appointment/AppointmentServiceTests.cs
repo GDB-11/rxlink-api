@@ -1,10 +1,16 @@
 using Application.Core.DTOs.Appointment.Errors;
 using Application.Core.DTOs.Appointment.Request;
+using Application.Core.DTOs.Catalog.Errors;
+using Application.Core.Interfaces.Catalog;
+using Application.Core.DTOs.PatientAccess;
+using Application.Core.DTOs.PatientAccess.Errors;
+using Application.Core.Interfaces.PatientAccess;
 using Application.Core.Services.Appointment;
 using BindSharp;
 using Infrastructure.Core.DTOs.Appointment;
 using Infrastructure.Core.Interfaces.Appointment;
 using Infrastructure.Core.Models.Appointment;
+using Infrastructure.Core.Interfaces.Activity;
 using NSubstitute;
 
 namespace Application.Core.Services.Tests.Appointment;
@@ -12,9 +18,20 @@ namespace Application.Core.Services.Tests.Appointment;
 public sealed class AppointmentServiceTests
 {
     private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
+    private readonly IRecordAccessLogger _accessLogger = Substitute.For<IRecordAccessLogger>();
+    private readonly IPatientAccessPolicy _accessPolicy = Substitute.For<IPatientAccessPolicy>();
+    private readonly ICatalogWriteValidator _catalog = Substitute.For<ICatalogWriteValidator>();
     private readonly AppointmentService _sut;
 
-    public AppointmentServiceTests() => _sut = new AppointmentService(_repository);
+    public AppointmentServiceTests()
+    {
+        _accessPolicy.EvaluateAsync(Arg.Any<Guid>(), Arg.Any<PatientDataScope>())
+            .Returns(Task.FromResult(
+                Result<PatientAccessDecision, PatientAccessError>.Success(PatientAccessDecision.Allowed)));
+        _catalog.ValidateInsuranceAsync(Arg.Any<Guid?>())
+            .Returns(Task.FromResult(Result<Unit, CatalogValidationError>.Success(Unit.Value)));
+        _sut = new AppointmentService(_repository, _accessLogger, _accessPolicy, _catalog);
+    }
 
     private static AppointmentRow MakeRow(Guid? appointmentCode = null, Guid? patientCode = null,
         Guid? doctorCode = null) => new()
@@ -36,6 +53,24 @@ public sealed class AppointmentServiceTests
     };
 
     // ── CreateAsync ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_InsuranceNotEnabled_RejectsWithoutWriting()
+    {
+        var insuranceCode = Guid.NewGuid();
+        _catalog.ValidateInsuranceAsync(insuranceCode)
+            .Returns(Task.FromResult(Result<Unit, CatalogValidationError>.Failure(
+                new CatalogItemNotEnabledError(CatalogItemKind.Insurance))));
+
+        var result = await _sut.CreateAsync(
+            new CreateAppointmentRequest(Guid.NewGuid(), Guid.NewGuid()) { InsuranceCode = insuranceCode },
+            Guid.NewGuid());
+
+        Assert.True(result.IsFailure);
+        Assert.IsType<AppointmentCatalogValidationError>(result.Error);
+        await _repository.DidNotReceiveWithAnyArgs()
+            .InsertAsync(default, default, default, default, default);
+    }
 
     [Fact]
     public async Task CreateAsync_RepositoryReturnsRow_MapsToAppointmentResponse()
@@ -562,6 +597,7 @@ public sealed class AppointmentServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(code, result.Value.AppointmentCode);
+        await _accessLogger.Received(1).LogAsync(AccessResourceTypes.Appointment, patientCode, code);
     }
 
     [Fact]
@@ -577,6 +613,7 @@ public sealed class AppointmentServiceTests
 
         Assert.True(result.IsFailure);
         Assert.IsType<AppointmentForbiddenError>(result.Error);
+        await _accessLogger.DidNotReceiveWithAnyArgs().LogAsync(default!, default, default);
     }
 
     [Fact]

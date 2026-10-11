@@ -24,3 +24,7 @@ public sealed record DiagnosticDuplicateError()
 /// <summary>The requested state transition is not valid for the current status.</summary>
 public sealed record DiagnosticInvalidTransitionError()
     : DiagnosticError("La transición de estado solicitada no es válida para el estado actual del diagnóstico.");
+
+/// <summary>The caller may not read this patient's clinical data (outside the care team without break-glass, or no clinical permission).</summary>
+public sealed record DiagnosticAccessDeniedError()
+    : DiagnosticError("No tiene permiso para acceder a los datos clínicos de este paciente.");

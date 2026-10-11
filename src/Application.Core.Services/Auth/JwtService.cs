@@ -15,6 +15,9 @@ namespace Application.Core.Services.Auth;
 
 public sealed class JwtService : IJwt
 {
+    private const string MfaAudience = "rxlink-mfa-challenge";
+    private const int MfaTokenMinutes = 5;
+
     private readonly JwtConfig _jwtConfig;
     private readonly ITimeProvider _timeProvider;
 
@@ -95,6 +98,58 @@ public sealed class JwtService : IJwt
 
         return (accessToken, expiresAt);
     }
+
+    /// <inheritdoc/>
+    public Result<(string Token, DateTime ExpiresAt), AuthenticationError> GenerateMfaToken(User user) =>
+        Result.Try(
+            operation: () =>
+            {
+                DateTime issuedAt = _timeProvider.UtcNow;
+                DateTime expiresAt = issuedAt.AddMinutes(MfaTokenMinutes);
+
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Subject = new ClaimsIdentity([
+                        new Claim(JwtRegisteredClaimNames.Sub, user.UserCode.ToString()),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    ]),
+                    Expires = expiresAt,
+                    IssuedAt = issuedAt,
+                    Issuer = _jwtConfig.Issuer,
+                    Audience = MfaAudience,
+                    SigningCredentials = new SigningCredentials(SigningKey(), SecurityAlgorithms.HmacSha256)
+                };
+
+                return (new JsonWebTokenHandler().CreateToken(tokenDescriptor), expiresAt);
+            },
+            errorFactory: AuthenticationError (ex) => new JwtGenerationError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<Guid, AuthenticationError>> ValidateMfaTokenAsync(string token)
+    {
+        TokenValidationResult validation = await new JsonWebTokenHandler().ValidateTokenAsync(token,
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = _jwtConfig.Issuer,
+                ValidateAudience = true,
+                ValidAudience = MfaAudience,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = SigningKey(),
+                ClockSkew = TimeSpan.Zero,
+                ValidAlgorithms = [SecurityAlgorithms.HmacSha256]
+            });
+
+        return validation.IsValid
+               && validation.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out object? sub)
+               && Guid.TryParse(sub.ToString(), out Guid userCode)
+            ? Result<Guid, AuthenticationError>.Success(userCode)
+            : Result<Guid, AuthenticationError>.Failure(new InvalidMfaTokenError());
+    }
+
+    private SymmetricSecurityKey SigningKey() => new(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
 
     /// <inheritdoc/>
     public string GenerateRefreshToken()

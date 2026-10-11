@@ -1,4 +1,5 @@
 using Application.Core.Config;
+using Application.Core.DTOs.Auth.Errors;
 using Application.Core.Interfaces.Shared;
 using Application.Core.Services.Auth;
 using Infrastructure.Core.Models.Account;
@@ -44,6 +45,58 @@ public sealed class JwtServiceTests
         Surnames = "García",
         LicenseNumber = licenseNumber
     };
+
+    // ── MFA challenge token ─────────────────────────────────────────────────
+    // Validation checks the real clock (lifetime), so these tests issue tokens "now".
+
+    private JwtService NowService()
+    {
+        var time = Substitute.For<ITimeProvider>();
+        time.UtcNow.Returns(DateTime.UtcNow);
+        return new JwtService(_jwtConfig, time);
+    }
+
+    [Fact]
+    public async Task MfaToken_RoundTrip_ReturnsUserCode()
+    {
+        var sut = NowService();
+        var user = MakeUser();
+
+        var token = sut.GenerateMfaToken(user).Value.Token;
+        var result = await sut.ValidateMfaTokenAsync(token);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(user.UserCode, result.Value);
+    }
+
+    [Fact]
+    public async Task ValidateMfaTokenAsync_AccessToken_IsRejected()
+    {
+        var sut = NowService();
+        var accessToken = sut.GenerateAccessToken(MakeUser()).Value.AccessToken;
+
+        var result = await sut.ValidateMfaTokenAsync(accessToken);
+
+        Assert.IsType<InvalidMfaTokenError>(result.Error);
+    }
+
+    [Fact]
+    public async Task ValidateMfaTokenAsync_ExpiredToken_IsRejected()
+    {
+        var token = _sut.GenerateMfaToken(MakeUser()).Value.Token; // issued at fixed past time
+
+        var result = await NowService().ValidateMfaTokenAsync(token);
+
+        Assert.IsType<InvalidMfaTokenError>(result.Error);
+    }
+
+    [Fact]
+    public async Task ValidateMfaTokenAsync_Garbage_IsRejected()
+    {
+        var result = await NowService().ValidateMfaTokenAsync("not-a-jwt");
+
+        Assert.IsType<InvalidMfaTokenError>(result.Error);
+    }
 
     // ── GenerateAccessToken ─────────────────────────────────────────────────
 

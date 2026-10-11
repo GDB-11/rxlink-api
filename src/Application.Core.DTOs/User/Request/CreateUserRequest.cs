@@ -22,7 +22,7 @@ public sealed record CreateUserRequest
     public required string Email { get; init; }
 
     [Required(ErrorMessage = "Password is required.")]
-    [MinLength(8, ErrorMessage = "Password must be at least 12 characters long.")]
+    [MinLength(12, ErrorMessage = "Password must be at least 12 characters long.")]
     public required string Password { get; init; }
 
     [MaxLength(100, ErrorMessage = "LicenseNumber must not exceed 100 characters.")]

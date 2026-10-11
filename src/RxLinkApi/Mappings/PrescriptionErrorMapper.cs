@@ -26,12 +26,13 @@ public sealed class PrescriptionErrorMapper : IErrorHttpMapper<PrescriptionError
 
             PrescriptionDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            PrescriptionCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new
             {

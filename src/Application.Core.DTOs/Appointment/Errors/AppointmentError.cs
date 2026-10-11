@@ -49,3 +49,7 @@ public sealed record RevertPaymentConflictError()
 /// <summary>The given insurance code does not match an active insurance.</summary>
 public sealed record AppointmentInsuranceNotFoundError()
     : AppointmentError("El seguro indicado no fue encontrado o no está activo.");
+
+/// <summary>A catalog code in the request was rejected (missing, deactivated, not enabled) or the catalog is unavailable.</summary>
+public sealed record AppointmentCatalogValidationError(Application.Core.DTOs.Catalog.Errors.CatalogValidationError Inner)
+    : AppointmentError(Inner.Message, Inner.Details, Inner.Exception);

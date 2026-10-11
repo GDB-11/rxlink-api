@@ -23,11 +23,31 @@ public interface ICredentialRepository
     /// revokes every currently-active token and inserts a new one.
     /// <paramref name="tokenHash"/> must already be hashed by the caller.
     /// </summary>
-    Task<Result<Unit, CredentialError>> UpdateRefreshTokenAsync(Guid userCode, string tokenHash, DateTime expiresAt);
+    /// <paramref name="sessionStartedAt"/> is the login time of the session: a new login passes "now", a refresh
+    /// carries over the value of the token it replaces.
+    Task<Result<Unit, CredentialError>> UpdateRefreshTokenAsync(
+        Guid userCode, string tokenHash, DateTime expiresAt, DateTime sessionStartedAt);
 
     /// <summary>
     /// Revokes all active refresh tokens for the user identified by <paramref name="userCode"/>
     /// (used on explicit logout).
     /// </summary>
     Task<Result<Unit, CredentialError>> ClearRefreshTokenAsync(Guid userCode);
+
+    /// <summary>
+    /// Returns the <c>UserCode</c> that owns a refresh token that has already been revoked (rotated or
+    /// logged out), or <c>null</c> if no revoked token matches <paramref name="tokenHash"/>. Presenting such
+    /// a token again is treated as token reuse.
+    /// </summary>
+    Task<Result<Guid?, CredentialError>> GetRevokedRefreshTokenOwnerAsync(string tokenHash);
+
+    /// <summary>
+    /// Registers a failed credential attempt (wrong password or wrong MFA code). Returns the lock expiry when this
+    /// attempt reached <paramref name="maxAttempts"/> (or the account was already locked), otherwise <c>null</c>.
+    /// </summary>
+    Task<Result<DateTime?, CredentialError>> RecordFailedLoginAsync(
+        Guid userCode, int maxAttempts, DateTime now, DateTime lockedUntil);
+
+    /// <summary>Clears the failed-attempt counter after a completed login.</summary>
+    Task<Result<Unit, CredentialError>> ResetFailedLoginsAsync(Guid userCode);
 }

@@ -15,12 +15,13 @@ public sealed class PersonErrorMapper : IErrorHttpMapper<PersonError>
 
             PersonDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            PersonCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new
             {

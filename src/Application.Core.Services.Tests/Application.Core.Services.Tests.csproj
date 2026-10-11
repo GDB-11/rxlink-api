@@ -29,6 +29,7 @@
         <ProjectReference Include="..\Infrastructure.Core.DTOs\Infrastructure.Core.DTOs.csproj" />
         <ProjectReference Include="..\Infrastructure.Core.Interfaces\Infrastructure.Core.Interfaces.csproj" />
         <ProjectReference Include="..\Infrastructure.Core.Models\Infrastructure.Core.Models.csproj" />
+        <ProjectReference Include="..\RxLinkApi\RxLinkApi.csproj" />
     </ItemGroup>
 
 </Project>

@@ -62,7 +62,8 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
     public async Task<Result<Unit, CredentialError>> UpdateRefreshTokenAsync(
         Guid userCode,
         string tokenHash,
-        DateTime expiresAt) =>
+        DateTime expiresAt,
+        DateTime sessionStartedAt) =>
         await Result.TryAsync(
             operation: async () => await ExecuteNonQueryAsync(
                 _connection,
@@ -72,6 +73,7 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
                     UserCode = userCode,
                     TokenHash = tokenHash,
                     ExpiresAt = expiresAt,
+                    SessionStartedAt = sessionStartedAt,
                     RevokedAt = DateTime.UtcNow
                 }),
             errorFactory: CredentialError (ex) => new UpdateRefreshTokenAsyncError(ex.Message, ex)
@@ -97,5 +99,36 @@ public sealed class CredentialRepository : BaseDatabaseService, ICredentialRepos
                     RevokedAt = DateTime.UtcNow
                 }),
             errorFactory: CredentialError (ex) => new ClearRefreshTokenAsyncError(ex.Message, ex)
+        ).MapAsync(_ => Unit.Value);
+
+    /// <inheritdoc/>
+    public async Task<Result<Guid?, CredentialError>> GetRevokedRefreshTokenOwnerAsync(string tokenHash) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteScalarAsync<object, Guid?>(
+                _connection,
+                CredentialRepositorySql.GetRevokedRefreshTokenOwner,
+                new { TokenHash = tokenHash }),
+            errorFactory: CredentialError (ex) => new GetByRefreshTokenAsyncError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<DateTime?, CredentialError>> RecordFailedLoginAsync(
+        Guid userCode, int maxAttempts, DateTime now, DateTime lockedUntil) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteScalarAsync<object, DateTime?>(
+                _connection,
+                CredentialRepositorySql.RecordFailedLogin,
+                new { UserCode = userCode, MaxAttempts = maxAttempts, Now = now, LockedUntil = lockedUntil }),
+            errorFactory: CredentialError (ex) => new RecordFailedLoginAsyncError(ex.Message, ex)
+        );
+
+    /// <inheritdoc/>
+    public async Task<Result<Unit, CredentialError>> ResetFailedLoginsAsync(Guid userCode) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteNonQueryAsync(
+                _connection,
+                CredentialRepositorySql.ResetFailedLogins,
+                new { UserCode = userCode }),
+            errorFactory: CredentialError (ex) => new ResetFailedLoginsAsyncError(ex.Message, ex)
         ).MapAsync(_ => Unit.Value);
 }

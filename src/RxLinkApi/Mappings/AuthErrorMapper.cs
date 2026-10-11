@@ -8,6 +8,29 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
     public IActionResult MapToHttp(AuthenticationError error) =>
         error switch
         {
+            // 202: the password was accepted but login is not complete until the MFA code is verified.
+            MfaRequiredError mfa => new ObjectResult(new
+            {
+                mfaRequired = true,
+                mfaToken = mfa.MfaToken,
+                expiresAt = mfa.ExpiresAt
+            })
+            {
+                StatusCode = StatusCodes.Status202Accepted
+            },
+
+            AccountLockedError locked => LockedResult(locked),
+
+            SessionExpiredError => new UnauthorizedObjectResult(new
+            {
+                message = error.Message
+            }),
+
+            InvalidMfaTokenError or InvalidMfaCodeError => new UnauthorizedObjectResult(new
+            {
+                message = error.Message
+            }),
+
             UserNotFoundError => new UnauthorizedObjectResult(new
             {
                 message = error.Message
@@ -35,8 +58,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             JwtGenerationError jwt => new ObjectResult(new
             {
-                message = jwt.Message,
-                details = jwt.Details
+                message = jwt.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -44,8 +66,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             JwtStorageError storage => new ObjectResult(new
             {
-                message = storage.Message,
-                details = storage.Details
+                message = storage.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -53,8 +74,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             StoreRefreshTokenError store => new ObjectResult(new
             {
-                message = store.Message,
-                details = store.Details
+                message = store.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -62,8 +82,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             GetByUsernameAsyncDomainError email => new ObjectResult(new
             {
-                message = email.Message,
-                details = email.Details
+                message = email.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -71,8 +90,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             GetByRefreshTokenAsyncDomainError refresh => new ObjectResult(new
             {
-                message = refresh.Message,
-                details = refresh.Details
+                message = refresh.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -80,8 +98,7 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
 
             ChaChaDecryptError decrypt => new ObjectResult(new
             {
-                message = decrypt.Message,
-                details = decrypt.Details
+                message = decrypt.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
@@ -94,5 +111,11 @@ public sealed class AuthErrorMapper : IErrorHttpMapper<AuthenticationError>
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             }
+        };
+
+    private static ObjectResult LockedResult(AccountLockedError locked) =>
+        new(new { message = locked.Message, retryAfterSeconds = locked.RetryAfterSeconds })
+        {
+            StatusCode = StatusCodes.Status429TooManyRequests
         };
 }

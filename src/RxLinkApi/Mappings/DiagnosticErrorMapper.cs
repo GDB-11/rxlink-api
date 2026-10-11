@@ -13,6 +13,14 @@ public sealed class DiagnosticErrorMapper : IErrorHttpMapper<DiagnosticError>
                 message = error.Message
             }),
 
+            DiagnosticAccessDeniedError => new ObjectResult(new
+            {
+                message = error.Message
+            })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            },
+
             DiagnosticInvalidAppointmentError => new ObjectResult(new
             {
                 message = error.Message
@@ -29,8 +37,7 @@ public sealed class DiagnosticErrorMapper : IErrorHttpMapper<DiagnosticError>
 
             DiagnosticDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

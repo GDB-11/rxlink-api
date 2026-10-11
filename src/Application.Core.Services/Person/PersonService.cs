@@ -1,4 +1,6 @@
+using Application.Core.Interfaces.Catalog;
 using System.Text.Json;
+using Application.Core.DTOs.Patient.Request;
 using Application.Core.DTOs.Person.Errors;
 using Application.Core.DTOs.Person.Request;
 using Application.Core.DTOs.Person.Response;
@@ -17,10 +19,13 @@ public sealed class PersonService : IPerson
     private readonly IPersonRepository _repository;
     private readonly IPassword _passwordService;
 
-    public PersonService(IPersonRepository repository, IPassword passwordService)
+    private readonly ICatalogWriteValidator _catalog;
+
+    public PersonService(IPersonRepository repository, IPassword passwordService, ICatalogWriteValidator catalog)
     {
         _repository = repository;
         _passwordService = passwordService;
+        _catalog = catalog;
     }
 
     /// <inheritdoc/>
@@ -54,7 +59,8 @@ public sealed class PersonService : IPerson
             request.Allergies.Select(a => new
                 { AllergyCode = a.AllergyCode, SeverityCode = a.SeverityCode, Notes = a.Notes }));
 
-        return _passwordService
+        return ValidateCatalogAsync(request.SexCode, request.DocumentTypeCode, request.Allergies)
+            .BindAsync(_ => _passwordService
             .HashPassword(request.DocumentNumber)
             .MapError(PersonError (e) => new PersonDataAccessError(e.Message, null, e.Exception))
             .AsTask()
@@ -66,12 +72,24 @@ public sealed class PersonService : IPerson
                 .MapErrorAsync(PersonError (error) =>
                     new PersonDataAccessError(error.Message, error.Details, error.Exception)))
             .EnsureNotNullAsync(new PersonDataAccessError("No se pudo registrar la persona."))
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
+    }
+
+    private async Task<Result<Unit, PersonError>> ValidateCatalogAsync(
+        Guid sexCode, Guid documentTypeCode, IEnumerable<PatientAllergyItem>? allergies)
+    {
+        Result<Unit, PersonError> result = await _catalog.ValidatePersonAsync(sexCode, documentTypeCode)
+            .MapErrorAsync(PersonError (error) => new PersonCatalogValidationError(error));
+        if (!result.IsSuccess || allergies is null) return result;
+
+        return await _catalog.ValidateAllergiesAsync(allergies.Select(a => (a.AllergyCode, a.SeverityCode)).ToList())
+            .MapErrorAsync(PersonError (error) => new PersonCatalogValidationError(error));
     }
 
     /// <inheritdoc/>
     public Task<Result<PersonResponse, PersonError>> UpdateAsync(Guid code, UpdatePersonRequest request) =>
-        _repository.UpdateAsync(
+        ValidateCatalogAsync(request.SexCode, request.DocumentTypeCode, null)
+            .BindAsync(_ => _repository.UpdateAsync(
                 code, request.Names, request.Surnames, request.BirthDate.ToDateTime(), request.SexCode,
                 request.Phone, request.AlternativePhone, request.Email,
                 request.Address, request.EmergencyContactName, request.EmergencyContactPhone,
@@ -79,7 +97,7 @@ public sealed class PersonService : IPerson
             .MapErrorAsync(PersonError (error) =>
                 new PersonDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PersonNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
 
     private static PersonPageResponse BuildPageResponse(IEnumerable<PersonRow> rows, int page, int pageSize)
     {

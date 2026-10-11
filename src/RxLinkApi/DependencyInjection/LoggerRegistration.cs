@@ -8,7 +8,7 @@ internal static class LoggerRegistration
     {
         internal void RegisterLogger()
         {
-            builder.Services.AddSingleton<IResultLogger, ConsoleResultLogger>();
+            builder.Services.AddSingleton<IResultLogger, StructuredResultLogger>();
         }
     }
 }

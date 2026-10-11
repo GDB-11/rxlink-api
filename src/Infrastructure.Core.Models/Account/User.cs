@@ -17,6 +17,15 @@ public sealed class User
     public required bool IsActive { get; init; }
     public required DateTime CreatedAt { get; init; }
     public DateTime? LastAccess { get; init; }
+
+    /// <summary>True when the user has a confirmed TOTP second factor (login must be challenged).</summary>
+    public bool MfaEnabled { get; init; }
+
+    /// <summary>When set and in the future, credential checks are refused (consecutive-failure lockout).</summary>
+    public DateTime? LockedUntil { get; init; }
+
+    /// <summary>Only populated when the user was loaded through a refresh token: when that session's login happened.</summary>
+    public DateTime? SessionStartedAt { get; init; }
     public required string Names { get; init; }
     public required string Surnames { get; init; }
 }

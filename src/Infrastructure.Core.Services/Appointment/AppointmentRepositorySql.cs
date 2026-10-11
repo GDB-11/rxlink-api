@@ -93,7 +93,7 @@ internal static class AppointmentRepositorySql
 
     /// <summary>Resolves an active insurance's Id/CoveragePercentage by its code.</summary>
     internal const string GetInsuranceForPayment = """
-                                                    SELECT "InsuranceId", "CoveragePercentage"
+                                                    SELECT "InsuranceId", "InsuranceCode", "Name" AS "InsuranceName", "CoveragePercentage"
                                                     FROM "Insurance"
                                                     WHERE "InsuranceCode" = @InsuranceCode
                                                       AND "IsActive"      = TRUE
@@ -107,6 +107,8 @@ internal static class AppointmentRepositorySql
                                                       INSERT INTO "AppointmentPayment" (
                                                           "AppointmentId",
                                                           "InsuranceId",
+                                                          "InsuranceCode",
+                                                          "InsuranceName",
                                                           "BaseAmount",
                                                           "CoveragePercentage",
                                                           "CoveredAmount",
@@ -116,6 +118,8 @@ internal static class AppointmentRepositorySql
                                                       VALUES (
                                                           @AppointmentId,
                                                           @InsuranceId,
+                                                          @InsuranceCode,
+                                                          @InsuranceName,
                                                           @BaseAmount,
                                                           @CoveragePercentage,
                                                           @CoveredAmount,

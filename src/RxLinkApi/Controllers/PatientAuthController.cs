@@ -4,6 +4,8 @@ using Application.Core.DTOs.PatientAuth.Response;
 using Application.Core.Interfaces.PatientAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using RxLinkApi.DependencyInjection;
 using RxLinkApi.Logging;
 using RxLinkApi.Mappings;
 
@@ -27,6 +29,7 @@ public sealed class PatientAuthController : FunctionalController
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingRegistration.SensitiveAnonymousPolicy)]
     [HttpGet("lookup")]
     [ProducesResponseType(typeof(PatientLookupResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -41,6 +44,7 @@ public sealed class PatientAuthController : FunctionalController
         );
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingRegistration.SensitiveAnonymousPolicy)]
     [HttpPost("register")]
     [ProducesResponseType(typeof(PatientAuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -55,6 +59,7 @@ public sealed class PatientAuthController : FunctionalController
         );
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingRegistration.AuthPolicy)]
     [HttpPost("login")]
     [ProducesResponseType(typeof(PatientAuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -67,6 +72,7 @@ public sealed class PatientAuthController : FunctionalController
         );
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitingRegistration.AuthPolicy)]
     [HttpPost("refresh")]
     [ProducesResponseType(typeof(PatientAuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

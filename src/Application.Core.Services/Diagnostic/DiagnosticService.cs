@@ -2,7 +2,11 @@ using System.Text.Json;
 using Application.Core.DTOs.Diagnostic.Errors;
 using Application.Core.DTOs.Diagnostic.Request;
 using Application.Core.DTOs.Diagnostic.Response;
+using Application.Core.DTOs.PatientAccess;
 using Application.Core.Interfaces.Diagnostic;
+using Application.Core.Interfaces.PatientAccess;
+using Application.Core.Services.PatientAccess;
+using Infrastructure.Core.Interfaces.Activity;
 using BindSharp;
 using BindSharp.Extensions;
 using Common.Helpers;
@@ -15,13 +19,18 @@ namespace Application.Core.Services.Diagnostic;
 public sealed class DiagnosticService : IDiagnostic
 {
     private readonly IDiagnosticRepository _repository;
+    private readonly IRecordAccessLogger _accessLogger;
+    private readonly IPatientAccessPolicy _accessPolicy;
 
     private static readonly JsonSerializerOptions JsonOptions =
         new() { PropertyNameCaseInsensitive = true };
 
-    public DiagnosticService(IDiagnosticRepository repository)
+    public DiagnosticService(IDiagnosticRepository repository, IRecordAccessLogger accessLogger,
+        IPatientAccessPolicy accessPolicy)
     {
         _repository = repository;
+        _accessLogger = accessLogger;
+        _accessPolicy = accessPolicy;
     }
 
     /// <inheritdoc/>
@@ -30,10 +39,16 @@ public sealed class DiagnosticService : IDiagnostic
     {
         int offset = (request.Page - 1) * request.PageSize;
 
-        return _repository.GetPageAsync(patientCode, offset, request.PageSize)
-            .MapErrorAsync(DiagnosticError (error) =>
-                new DiagnosticDataAccessError(error.Message, error.Details, error.Exception))
-            .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
+        return _accessPolicy
+            .RequireAsync<DiagnosticError>(patientCode, PatientDataScope.Clinical,
+                error => new DiagnosticDataAccessError(error.Message, error.Details, error.Exception),
+                new DiagnosticAccessDeniedError())
+            .BindAsync(decision => _repository.GetPageAsync(patientCode, offset, request.PageSize)
+                .MapErrorAsync(DiagnosticError (error) =>
+                    new DiagnosticDataAccessError(error.Message, error.Details, error.Exception))
+                .TapAsync(_ => _accessLogger.LogAsync(AccessResourceTypes.Diagnostics, patientCode,
+                    viaBreakGlass: decision == PatientAccessDecision.AllowedViaBreakGlass))
+                .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize)));
     }
 
     /// <inheritdoc/>

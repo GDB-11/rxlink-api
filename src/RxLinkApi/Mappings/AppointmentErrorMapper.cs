@@ -43,12 +43,13 @@ public sealed class AppointmentErrorMapper : IErrorHttpMapper<AppointmentError>
 
             AppointmentDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            AppointmentCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new
             {

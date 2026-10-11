@@ -8,6 +8,9 @@ public interface IUserContext
     /// <summary>The <c>sub</c> claim of the JWT, or <c>null</c> for anonymous/system callers.</summary>
     Guid? UserCode { get; }
 
+    /// <summary>The role claim of the JWT (<c>Administrador</c>, <c>Doctor</c>, <c>Enfermero</c>, <c>Patient</c>), if any.</summary>
+    string? Role { get; }
+
     /// <summary>Remote IP address of the request, if available.</summary>
     string? IpAddress { get; }
 

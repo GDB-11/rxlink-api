@@ -21,3 +21,9 @@ public sealed record UpdateRefreshTokenAsyncError(string? Details = null, Except
 
 public sealed record ClearRefreshTokenAsyncError(string? Details = null, Exception? Exception = null)
     : CredentialError("An unexpected error occurred while revoking the refresh token.", Details, Exception);
+
+public sealed record RecordFailedLoginAsyncError(string? Details = null, Exception? Exception = null)
+    : CredentialError("An unexpected error occurred while recording a failed login.", Details, Exception);
+
+public sealed record ResetFailedLoginsAsyncError(string? Details = null, Exception? Exception = null)
+    : CredentialError("An unexpected error occurred while resetting failed logins.", Details, Exception);

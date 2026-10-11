@@ -20,8 +20,7 @@ public sealed class RoleErrorMapper : IErrorHttpMapper<RoleError>
 
             RoleDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

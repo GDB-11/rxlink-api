@@ -2,26 +2,24 @@ using Application.Core.DTOs.Lookup.Errors;
 using Application.Core.DTOs.Lookup.Response;
 using Application.Core.Interfaces.Sex;
 using BindSharp;
-using Infrastructure.Core.Interfaces.Lookup;
-using Infrastructure.Core.Models.Lookup;
+using Infrastructure.Core.Interfaces.Catalog;
 
 namespace Application.Core.Services.Sex;
 
 public sealed class SexService : ISex
 {
-    private readonly ILookupRepository _repository;
+    private readonly ICatalogSnapshotStore _store;
 
-    public SexService(ILookupRepository repository)
+    public SexService(ICatalogSnapshotStore store)
     {
-        _repository = repository;
+        _store = store;
     }
 
     /// <inheritdoc/>
     public Task<Result<IEnumerable<GuidLookupItemResponse>, LookupError>> GetAllAsync() =>
-        _repository.GetSexesAsync()
-            .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
-            .MapAsync(rows => rows.Select(ToResponse));
-
-    private static GuidLookupItemResponse ToResponse(GuidLookupRow row) =>
-        new() { Code = row.Code, Name = row.Name };
+        Task.FromResult(_store.Current is not { } catalog
+            ? Result<IEnumerable<GuidLookupItemResponse>, LookupError>.Failure(new LookupCatalogUnavailableError())
+            : Result<IEnumerable<GuidLookupItemResponse>, LookupError>.Success(
+                catalog.Sexes.Values.Where(s => s.IsActive).OrderBy(s => s.Name)
+                    .Select(s => new GuidLookupItemResponse { Code = s.Code, Name = s.Name }).ToList()));
 }

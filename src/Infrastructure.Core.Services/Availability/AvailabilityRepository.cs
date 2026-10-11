@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Infrastructure.Core.DTOs.Availability;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Availability;
 using Infrastructure.Core.Models.Availability;
 
@@ -9,10 +10,12 @@ namespace Infrastructure.Core.Services.Availability;
 public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public AvailabilityRepository(IDbConnection connection)
+    public AvailabilityRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
 
     /// <inheritdoc/>
@@ -29,8 +32,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
     public async Task<Result<AvailabilityRow?, AvailabilityRepositoryError>> InsertOneAsync(
         int doctorUserId, DateTime date, TimeSpan startTime, Guid createdByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, AvailabilityRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, AvailabilityRow>(_connection, _userContext,
                 AvailabilityRepositorySql.InsertOne,
                 new
                 {
@@ -66,8 +68,7 @@ public sealed class AvailabilityRepository : BaseDatabaseService, IAvailabilityR
     public async Task<Result<int, AvailabilityRepositoryError>> SoftDeleteAsync(
         Guid availabilityCode, Guid deletedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 AvailabilityRepositorySql.SoftDelete,
                 new { Code = availabilityCode, DeletedByUserCode = deletedByUserCode }),
             errorFactory: AvailabilityRepositoryError (ex) => new SoftDeleteAvailabilityError(ex.Message, ex)

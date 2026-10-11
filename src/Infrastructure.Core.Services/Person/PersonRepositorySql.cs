@@ -122,12 +122,12 @@ internal static class PersonRepositorySql
     internal const string Insert = """
                                    WITH ins AS (
                                        INSERT INTO "Person" (
-                                           "Names", "Surnames", "BirthDate", "SexId",
+                                           "Names", "Surnames", "BirthDate", "SexId", "SexCode",
                                            "Phone", "AlternativePhone", "Email",
                                            "Address", "EmergencyContactName", "EmergencyContactPhone"
                                        )
                                        SELECT
-                                           @Names, @Surnames, @BirthDate, s."SexId",
+                                           @Names, @Surnames, @BirthDate, s."SexId", s."SexCode",
                                            @Phone, @AlternativePhone, @Email,
                                            @Address, @EmergencyContactName, @EmergencyContactPhone
                                        FROM "Sex" s
@@ -135,8 +135,8 @@ internal static class PersonRepositorySql
                                        RETURNING *
                                    ),
                                    doc_ins AS (
-                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "Number")
-                                       SELECT i."PersonId", dt."DocumentTypeId", @DocumentNumber
+                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "DocumentTypeCode", "Number")
+                                       SELECT i."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
                                        FROM ins i
                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                        RETURNING "PersonId", "DocumentTypeId", "Number"
@@ -157,8 +157,8 @@ internal static class PersonRepositorySql
                                        RETURNING *
                                    ),
                                    ins_allergies AS (
-                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "SeverityId", "Notes")
-                                       SELECT ins_patient."PatientId", a."AllergyId", sv."SeverityId", elem->>'Notes'
+                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "AllergyCode", "SeverityId", "SeverityCode", "Notes")
+                                       SELECT ins_patient."PatientId", a."AllergyId", a."AllergyCode", sv."SeverityId", sv."SeverityCode", elem->>'Notes'
                                        FROM ins_patient
                                        CROSS JOIN json_array_elements(COALESCE(@AllergiesJson::json, '[]'::json)) AS elem
                                        JOIN "Allergy" a ON a."AllergyCode" = (elem->>'AllergyCode')::uuid
@@ -198,6 +198,7 @@ internal static class PersonRepositorySql
                                            "Surnames"              = @Surnames,
                                            "BirthDate"             = @BirthDate,
                                            "SexId"                 = (SELECT "SexId" FROM "Sex" WHERE "SexCode" = @SexCode),
+                                           "SexCode"               = (SELECT "SexCode" FROM "Sex" WHERE "SexCode" = @SexCode),
                                            "Phone"                 = @Phone,
                                            "AlternativePhone"      = @AlternativePhone,
                                            "Email"                 = @Email,
@@ -212,8 +213,8 @@ internal static class PersonRepositorySql
                                        WHERE "PersonId" = (SELECT "PersonId" FROM upd)
                                    ),
                                    doc_ins AS (
-                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "Number")
-                                       SELECT u."PersonId", dt."DocumentTypeId", @DocumentNumber
+                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "DocumentTypeCode", "Number")
+                                       SELECT u."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
                                        FROM upd u
                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                        RETURNING "PersonId", "DocumentTypeId", "Number"

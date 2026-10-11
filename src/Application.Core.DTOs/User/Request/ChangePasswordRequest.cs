@@ -8,6 +8,6 @@ public sealed record ChangePasswordRequest
     public required string CurrentPassword { get; init; }
 
     [Required(ErrorMessage = "NewPassword is required.")]
-    [MinLength(8, ErrorMessage = "NewPassword must be at least 8 characters long.")]
+    [MinLength(12, ErrorMessage = "NewPassword must be at least 12 characters long.")]
     public required string NewPassword { get; init; }
 }

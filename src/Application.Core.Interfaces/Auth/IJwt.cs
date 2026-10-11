@@ -16,6 +16,15 @@ public interface IJwt
         PatientCredential patient);
 
     /// <summary>
+    /// Generates the short-lived token handed out after a correct password for an MFA-enabled user. It carries a
+    /// different audience from access tokens, so it is rejected by the API's bearer authentication.
+    /// </summary>
+    Result<(string Token, DateTime ExpiresAt), AuthenticationError> GenerateMfaToken(User user);
+
+    /// <summary>Validates an MFA challenge token and returns the <c>UserCode</c> it was issued for.</summary>
+    Task<Result<Guid, AuthenticationError>> ValidateMfaTokenAsync(string token);
+
+    /// <summary>
     /// Generates a cryptographically secure, opaque refresh token.
     /// The returned value is the raw token to be sent to the client.
     /// Storing it is the caller's responsibility — pass it through

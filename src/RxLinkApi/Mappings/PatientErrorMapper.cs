@@ -13,6 +13,14 @@ public sealed class PatientErrorMapper : IErrorHttpMapper<PatientError>
                 message = error.Message
             }),
 
+            PatientAccessDeniedError => new ObjectResult(new
+            {
+                message = error.Message
+            })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            },
+
             PatientPersonNotFoundError => new BadRequestObjectResult(new
             {
                 message = error.Message
@@ -25,12 +33,13 @@ public sealed class PatientErrorMapper : IErrorHttpMapper<PatientError>
 
             PatientDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            PatientCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new
             {

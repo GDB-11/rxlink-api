@@ -1,3 +1,4 @@
+using Application.Core.Interfaces.Catalog;
 using Application.Core.Config;
 using Application.Core.DTOs.PatientAuth.Errors;
 using Application.Core.DTOs.PatientAuth.Request;
@@ -22,15 +23,19 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
     private readonly ITimeProvider _timeProvider;
     private readonly JwtConfig _jwtConfig;
 
+    private readonly ICatalogWriteValidator _catalog;
+
     public PatientAuthenticationService(
         IPatientCredentialRepository repository,
         IPassword passwordService,
         IJwt jwtService,
         IDeterministicEncryption deterministicEncryption,
         ITimeProvider timeProvider,
-        JwtConfig jwtConfig)
+        JwtConfig jwtConfig,
+        ICatalogWriteValidator catalog)
     {
         _repository = repository;
+        _catalog = catalog;
         _passwordService = passwordService;
         _jwtService = jwtService;
         _deterministicEncryption = deterministicEncryption;
@@ -67,6 +72,15 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
 
         if (!hashResult.IsSuccess)
             return Result<PatientAuthResponse, PatientAuthError>.Failure(hashResult.Error);
+
+        if (!request.PersonCode.HasValue)
+        {
+            Result<Unit, PatientAuthError> catalogCheck = await _catalog
+                .ValidatePersonAsync(request.SexCode, request.DocumentTypeCode)
+                .MapErrorAsync(PatientAuthError (error) => new PatientAuthCatalogValidationError(error));
+            if (!catalogCheck.IsSuccess)
+                return Result<PatientAuthResponse, PatientAuthError>.Failure(catalogCheck.Error);
+        }
 
         Result<PatientCredential, PatientAuthError> credentialResult;
 

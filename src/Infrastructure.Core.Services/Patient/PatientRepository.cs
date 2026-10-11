@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Infrastructure.Core.DTOs.Patient;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Patient;
 using Infrastructure.Core.Models.Patient;
 
@@ -13,20 +14,22 @@ namespace Infrastructure.Core.Services.Patient;
 public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public PatientRepository(IDbConnection connection)
+    public PatientRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
 
     /// <inheritdoc/>
     public async Task<Result<IEnumerable<PatientRow>, PatientRepositoryError>> GetPageAsync(
-        int offset, int limit, string? search) =>
+        int offset, int limit, string? search, Guid? careTeamOfUserCode) =>
         await Result.TryAsync(
             operation: async () => await ExecuteQueryAsync<object, PatientRow>(
                 _connection,
                 PatientRepositorySql.GetPage,
-                new { Offset = offset, Limit = limit, Search = search }),
+                new { Offset = offset, Limit = limit, Search = search, UserCode = careTeamOfUserCode }),
             errorFactory: PatientRepositoryError (ex) => new GetPatientsPageError(ex.Message, ex)
         );
 
@@ -34,8 +37,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<PatientRow?, PatientRepositoryError>> InsertAsync(
         Guid personCode, string allergiesJson) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PatientRow>(_connection, _userContext,
                 PatientRepositorySql.Insert,
                 new
                 {
@@ -49,8 +51,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<PatientRow?, PatientRepositoryError>> UpdateAsync(
         Guid code, string medicalRecordNumber) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PatientRow>(_connection, _userContext,
                 PatientRepositorySql.Update,
                 new
                 {
@@ -64,8 +65,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<int, PatientRepositoryError>> DeactivateAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 PatientRepositorySql.Deactivate,
                 new { Code = code, PerformedByUserCode = performedByUserCode }),
             errorFactory: PatientRepositoryError (ex) => new DeactivatePatientError(ex.Message, ex)
@@ -74,8 +74,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     /// <inheritdoc/>
     public async Task<Result<int, PatientRepositoryError>> ActivateAsync(Guid code) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 PatientRepositorySql.Activate,
                 new { Code = code }),
             errorFactory: PatientRepositoryError (ex) => new DeactivatePatientError(ex.Message, ex)
@@ -85,8 +84,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<PatientAllergyRow?, PatientRepositoryError>> AddAllergyAsync(
         Guid patientCode, Guid allergyCode, Guid severityCode, string? notes) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PatientAllergyRow>(_connection, _userContext,
                 PatientRepositorySql.AddAllergy,
                 new
                 {
@@ -99,8 +97,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<PatientAllergyRow?, PatientRepositoryError>> UpdateAllergyAsync(
         Guid patientCode, Guid patientAllergyCode, Guid severityCode, string? notes) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PatientAllergyRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PatientAllergyRow>(_connection, _userContext,
                 PatientRepositorySql.UpdateAllergy,
                 new
                 {
@@ -135,8 +132,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
         Guid patientCode, string phone, string? alternativePhone,
         string? address, string? emergencyContactName, string? emergencyContactPhone) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 PatientRepositorySql.UpdatePersonContact,
                 new
                 {
@@ -154,8 +150,7 @@ public sealed class PatientRepository : BaseDatabaseService, IPatientRepository
     public async Task<Result<int, PatientRepositoryError>> DeleteAllergyAsync(
         Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 PatientRepositorySql.DeleteAllergy,
                 new
                 {

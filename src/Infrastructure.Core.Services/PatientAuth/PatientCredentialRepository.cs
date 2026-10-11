@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Infrastructure.Core.DTOs.PatientAuth;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.PatientAuth;
 using Infrastructure.Core.Models.PatientAuth;
 
@@ -9,10 +10,12 @@ namespace Infrastructure.Core.Services.PatientAuth;
 public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientCredentialRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public PatientCredentialRepository(IDbConnection connection)
+    public PatientCredentialRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
 
     public async Task<Result<PatientRegistrationCheckRow?, PatientCredentialError>> GetByDocumentAsync(
@@ -62,8 +65,7 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
         await Result.TryAsync(
             operation: async () =>
             {
-                PatientCredential? row = await ExecuteSingleOrDefaultAsync<object, PatientCredential?>(
-                    _connection,
+                PatientCredential? row = await ExecuteAuditedSingleOrDefaultAsync<object, PatientCredential?>(_connection, _userContext,
                     PatientCredentialRepositorySql.CreatePersonAndPatient,
                     new
                     {
@@ -92,8 +94,7 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
         await Result.TryAsync(
             operation: async () =>
             {
-                PatientCredential? row = await ExecuteSingleOrDefaultAsync<object, PatientCredential?>(
-                    _connection,
+                PatientCredential? row = await ExecuteAuditedSingleOrDefaultAsync<object, PatientCredential?>(_connection, _userContext,
                     PatientCredentialRepositorySql.CreatePatientForPerson,
                     new { PersonCode = personCode, PasswordHash = passwordHash });
                 return row!;
@@ -107,8 +108,7 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
         await Result.TryAsync(
             operation: async () =>
             {
-                PatientCredential? row = await ExecuteSingleOrDefaultAsync<object, PatientCredential?>(
-                    _connection,
+                PatientCredential? row = await ExecuteAuditedSingleOrDefaultAsync<object, PatientCredential?>(_connection, _userContext,
                     PatientCredentialRepositorySql.AddCredentials,
                     new { PersonCode = personCode, PasswordHash = passwordHash });
                 return row!;

@@ -1,8 +1,14 @@
+using Application.Core.Interfaces.Catalog;
 using System.Text.Json;
 using Application.Core.DTOs.Patient.Errors;
 using Application.Core.DTOs.Patient.Request;
 using Application.Core.DTOs.Patient.Response;
+using Application.Core.DTOs.PatientAccess;
+using Application.Core.DTOs.PatientAccess.Errors;
 using Application.Core.Interfaces.Patient;
+using Application.Core.Interfaces.PatientAccess;
+using Application.Core.Services.PatientAccess;
+using Infrastructure.Core.Interfaces.Activity;
 using BindSharp;
 using BindSharp.Extensions;
 using Infrastructure.Core.Interfaces.Patient;
@@ -13,21 +19,33 @@ namespace Application.Core.Services.Patient;
 public sealed class PatientService : IPatient
 {
     private readonly IPatientRepository _repository;
+    private readonly IRecordAccessLogger _accessLogger;
+    private readonly IPatientAccessPolicy _accessPolicy;
 
     private static readonly JsonSerializerOptions JsonOptions =
         new() { PropertyNameCaseInsensitive = true };
 
-    public PatientService(IPatientRepository repository)
+    private readonly ICatalogWriteValidator _catalog;
+
+    public PatientService(IPatientRepository repository, IRecordAccessLogger accessLogger,
+        IPatientAccessPolicy accessPolicy, ICatalogWriteValidator catalog)
     {
         _repository = repository;
+        _accessLogger = accessLogger;
+        _accessPolicy = accessPolicy;
+        _catalog = catalog;
     }
 
     /// <inheritdoc/>
     public Task<Result<PatientPageResponse, PatientError>> GetPageAsync(PatientPageRequest request) =>
-        _repository.GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search)
-            .MapErrorAsync(PatientError (error) =>
-                new PatientDataAccessError(error.Message, error.Details, error.Exception))
-            .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize));
+        _accessPolicy.GetListScopeAsync()
+            .MapErrorAsync(ToDataError)
+            .BindAsync(scope => _repository
+                .GetPageAsync((request.Page - 1) * request.PageSize, request.PageSize, request.Search,
+                    scope.RestrictToCareTeamOfUserCode)
+                .MapErrorAsync(PatientError (error) =>
+                    new PatientDataAccessError(error.Message, error.Details, error.Exception))
+                .MapAsync(rows => BuildPageResponse(rows, request.Page, request.PageSize, scope.IncludeClinical)));
 
     /// <inheritdoc/>
     public Task<Result<PatientResponse, PatientError>> CreateAsync(CreatePatientRequest request)
@@ -36,12 +54,18 @@ public sealed class PatientService : IPatient
             request.Allergies.Select(a => new
                 { AllergyCode = a.AllergyCode, SeverityCode = a.SeverityCode, Notes = a.Notes }));
 
-        return _repository.InsertAsync(request.PersonCode, allergiesJson)
+        return ValidateAllergiesAsync(request.Allergies.Select(a => (a.AllergyCode, a.SeverityCode)).ToList())
+            .BindAsync(_ => _repository.InsertAsync(request.PersonCode, allergiesJson)
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientPersonNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
     }
+
+    private Task<Result<Unit, PatientError>> ValidateAllergiesAsync(
+        IReadOnlyCollection<(Guid AllergyCode, Guid SeverityCode)> allergies) =>
+        _catalog.ValidateAllergiesAsync(allergies)
+            .MapErrorAsync(PatientError (error) => new PatientCatalogValidationError(error));
 
     /// <inheritdoc/>
     public Task<Result<PatientResponse, PatientError>> UpdateAsync(Guid code, UpdatePatientRequest request) =>
@@ -73,7 +97,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
-            .MapAsync(MapToResponse);
+            .BindAsync(AuthorizeAndMapAsync);
 
     /// <inheritdoc/>
     public Task<Result<PatientResponse, PatientError>> GetByPersonCodeAsync(Guid personCode) =>
@@ -81,7 +105,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
-            .MapAsync(MapToResponse);
+            .BindAsync(AuthorizeAndMapAsync);
 
     /// <inheritdoc/>
     public Task<Result<Unit, PatientError>> UpdateSelfAsync(Guid patientCode, UpdatePatientSelfRequest request) =>
@@ -100,20 +124,22 @@ public sealed class PatientService : IPatient
     /// <inheritdoc/>
     public Task<Result<PatientAllergyResponse, PatientError>> AddAllergyAsync(
         Guid patientCode, PatientAllergyRequest request) =>
-        _repository.AddAllergyAsync(patientCode, request.AllergyCode, request.SeverityCode, request.Notes)
+        ValidateAllergiesAsync([(request.AllergyCode, request.SeverityCode)])
+            .BindAsync(_ => _repository.AddAllergyAsync(patientCode, request.AllergyCode, request.SeverityCode, request.Notes)
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
-            .MapAsync(MapAllergyToResponse);
+            .MapAsync(MapAllergyToResponse));
 
     /// <inheritdoc/>
     public Task<Result<PatientAllergyResponse, PatientError>> UpdateAllergyAsync(
         Guid patientCode, Guid patientAllergyCode, PatientAllergyRequest request) =>
-        _repository.UpdateAllergyAsync(patientCode, patientAllergyCode, request.SeverityCode, request.Notes)
+        ValidateAllergiesAsync([(request.AllergyCode, request.SeverityCode)])
+            .BindAsync(_ => _repository.UpdateAllergyAsync(patientCode, patientAllergyCode, request.SeverityCode, request.Notes)
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientAllergyNotFoundError())
-            .MapAsync(MapAllergyToResponse);
+            .MapAsync(MapAllergyToResponse));
 
     /// <inheritdoc/>
     public Task<Result<Unit, PatientError>> RemoveAllergyAsync(
@@ -124,7 +150,25 @@ public sealed class PatientService : IPatient
             .EnsureAsync(affected => affected > 0, new PatientAllergyNotFoundError())
             .MapAsync(_ => Unit.Value);
 
-    private static PatientPageResponse BuildPageResponse(IEnumerable<PatientRow> rows, int page, int pageSize)
+    private static PatientError ToDataError(PatientAccessError error) =>
+        new PatientDataAccessError(error.Message, error.Details, error.Exception);
+
+    /// <summary>
+    /// Identity data needs an administrative-scope allow; allergies are only included when the clinical scope
+    /// is allowed too. The read is logged after both checks and before the response (fail-closed).
+    /// </summary>
+    private Task<Result<PatientResponse, PatientError>> AuthorizeAndMapAsync(PatientRow row) =>
+        _accessPolicy
+            .RequireAsync<PatientError>(row.PatientCode, PatientDataScope.Administrative, ToDataError,
+                new PatientAccessDeniedError())
+            .BindAsync(decision => _accessPolicy.EvaluateAsync(row.PatientCode, PatientDataScope.Clinical)
+                .MapErrorAsync(ToDataError)
+                .TapAsync(_ => _accessLogger.LogAsync(AccessResourceTypes.PatientProfile, row.PatientCode,
+                    viaBreakGlass: decision == PatientAccessDecision.AllowedViaBreakGlass))
+                .MapAsync(clinical => MapToResponse(row, clinical != PatientAccessDecision.Denied)));
+
+    private static PatientPageResponse BuildPageResponse(
+        IEnumerable<PatientRow> rows, int page, int pageSize, bool includeClinical)
     {
         List<PatientRow> list = rows.ToList();
         int totalCount = list.Count > 0 ? (int)list[0].TotalCount : 0;
@@ -132,7 +176,7 @@ public sealed class PatientService : IPatient
 
         return new PatientPageResponse
         {
-            Items = list.Select(MapToResponse).ToList(),
+            Items = list.Select(r => MapToResponse(r, includeClinical)).ToList(),
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize,
@@ -151,7 +195,9 @@ public sealed class PatientService : IPatient
             Notes = row.Notes
         };
 
-    private static PatientResponse MapToResponse(PatientRow row) =>
+    private static PatientResponse MapToResponse(PatientRow row) => MapToResponse(row, includeClinical: true);
+
+    private static PatientResponse MapToResponse(PatientRow row, bool includeClinical) =>
         new()
         {
             PatientCode = row.PatientCode,
@@ -167,7 +213,8 @@ public sealed class PatientService : IPatient
             Address = row.Address,
             EmergencyContactName = row.EmergencyContactName,
             EmergencyContactPhone = row.EmergencyContactPhone,
-            Allergies = JsonSerializer.Deserialize<List<PatientAllergyResponse>>(
-                row.AllergiesJson, JsonOptions) ?? []
+            Allergies = includeClinical
+                ? JsonSerializer.Deserialize<List<PatientAllergyResponse>>(row.AllergiesJson, JsonOptions) ?? []
+                : []
         };
 }

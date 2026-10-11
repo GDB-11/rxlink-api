@@ -8,10 +8,14 @@ public sealed class LookupErrorMapper : IErrorHttpMapper<LookupError>
     public IActionResult MapToHttp(LookupError error) =>
         error switch
         {
+            LookupCatalogUnavailableError => new ObjectResult(new { message = error.Message })
+            {
+                StatusCode = StatusCodes.Status503ServiceUnavailable
+            },
+
             LookupDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

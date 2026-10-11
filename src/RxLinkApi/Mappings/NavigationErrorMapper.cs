@@ -15,8 +15,7 @@ public sealed class NavigationErrorMapper : IErrorHttpMapper<NavigationError>
 
             NavigationDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

@@ -34,38 +34,17 @@ internal static class AuthenticationRegistration
 
                     options.Events = new JwtBearerEvents
                     {
-                        OnMessageReceived = ctx =>
-                        {
-                            var log = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<JwtBearerEvents>>();
-                            var header = ctx.Request.Headers.Authorization.FirstOrDefault();
-                            log.LogDebug("[JWT] OnMessageReceived — Authorization header: {Header}",
-                                string.IsNullOrEmpty(header)
-                                    ? "<missing>"
-                                    : header[..Math.Min(40, header.Length)] + "...");
-                            return Task.CompletedTask;
-                        },
-
-                        OnTokenValidated = ctx =>
-                        {
-                            var log = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<JwtBearerEvents>>();
-                            var claims = ctx.Principal?.Claims.Select(c => $"{c.Type}={c.Value}");
-                            log.LogDebug("[JWT] OnTokenValidated — claims: {Claims}", string.Join(", ", claims ?? []));
-                            return Task.CompletedTask;
-                        },
-
                         OnAuthenticationFailed = ctx =>
                         {
                             var log = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<JwtBearerEvents>>();
-                            log.LogWarning("[JWT] OnAuthenticationFailed — {ExceptionType}: {Message}",
-                                ctx.Exception.GetType().Name, ctx.Exception.Message);
+                            log.LogWarning("[JWT] OnAuthenticationFailed — {ExceptionType}", ctx.Exception.GetType().Name);
                             return Task.CompletedTask;
                         },
 
                         OnChallenge = ctx =>
                         {
                             var log = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<JwtBearerEvents>>();
-                            log.LogWarning("[JWT] OnChallenge — error: {Error}, description: {Description}",
-                                ctx.Error ?? "<none>", ctx.ErrorDescription ?? "<none>");
+                            log.LogWarning("[JWT] OnChallenge — error: {Error}", ctx.Error ?? "<none>");
                             return Task.CompletedTask;
                         }
                     };

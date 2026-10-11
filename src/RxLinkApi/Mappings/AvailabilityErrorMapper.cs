@@ -17,8 +17,7 @@ public sealed class AvailabilityErrorMapper : IErrorHttpMapper<AvailabilityError
 
             AvailabilityDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

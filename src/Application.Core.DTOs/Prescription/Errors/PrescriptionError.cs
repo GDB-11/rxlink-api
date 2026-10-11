@@ -29,3 +29,7 @@ public sealed record PrescriptionInvalidTransitionError()
 /// <summary>The prescription does not belong to the authenticated patient.</summary>
 public sealed record PrescriptionPatientForbiddenError()
     : PrescriptionError("No tiene permiso para acceder a esta receta.");
+
+/// <summary>A catalog code in the request was rejected (missing, deactivated, not enabled) or the catalog is unavailable.</summary>
+public sealed record PrescriptionCatalogValidationError(Application.Core.DTOs.Catalog.Errors.CatalogValidationError Inner)
+    : PrescriptionError(Inner.Message, Inner.Details, Inner.Exception);

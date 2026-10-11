@@ -22,6 +22,9 @@ internal static class CredentialRepositorySql
                                           u."IsActive",
                                           u."CreatedAt",
                                           u."LastAccess",
+                                          EXISTS (SELECT 1 FROM public."UserMfa" m
+                                                  WHERE m."UserId" = u."UserId" AND m."ConfirmedAt" IS NOT NULL) AS "MfaEnabled",
+                                          lk."LockedUntil",
                                           p."Names",
                                           p."Surnames"
                                           """;
@@ -30,6 +33,7 @@ internal static class CredentialRepositorySql
                                         FROM public."User"   u
                                         INNER JOIN public."Person" p ON p."PersonId" = u."PersonId"
                                         INNER JOIN public."Role" r ON u."RoleId" = r."RoleId"
+                                        LEFT JOIN public."UserLockout" lk ON lk."UserId" = u."UserId"
                                         """;
 
     private const string ActiveUserFilter = """
@@ -60,7 +64,7 @@ internal static class CredentialRepositorySql
     /// The token hash is compared against <c>RefreshToken."TokenHash"</c>.
     /// </summary>
     internal const string GetByRefreshToken = $"""
-                                               SELECT {UserProjection}
+                                               SELECT {UserProjection}, rt."SessionStartedAt"
                                                {UserFromJoin}
                                                INNER JOIN "RefreshToken" rt ON rt."UserId" = u."UserId"
                                                WHERE rt."TokenHash" = @TokenHash
@@ -85,11 +89,12 @@ internal static class CredentialRepositorySql
                                                    WHERE  "UserId"    = (SELECT "UserId" FROM "User" WHERE "UserCode" = @UserCode)
                                                      AND  "RevokedAt" IS NULL
                                                )
-                                               INSERT INTO "RefreshToken" ("UserId", "TokenHash", "ExpiresAt")
+                                               INSERT INTO "RefreshToken" ("UserId", "TokenHash", "ExpiresAt", "SessionStartedAt")
                                                VALUES (
                                                    (SELECT "UserId" FROM "User" WHERE "UserCode" = @UserCode),
                                                    @TokenHash,
-                                                   @ExpiresAt
+                                                   @ExpiresAt,
+                                                   @SessionStartedAt
                                                )
                                                """;
 
@@ -104,5 +109,47 @@ internal static class CredentialRepositorySql
                                                      "RevokedBy" = (SELECT "UserId" FROM "User" WHERE "UserCode" = @UserCode)
                                               WHERE  "UserId"    = (SELECT "UserId" FROM "User" WHERE "UserCode" = @UserCode)
                                                 AND  "RevokedAt" IS NULL
+                                              """;
+
+    /// <summary>Owner of an already-revoked refresh token (token-reuse detection).</summary>
+    internal const string GetRevokedRefreshTokenOwner = """
+                                                        SELECT u."UserCode"
+                                                        FROM "RefreshToken" rt
+                                                        INNER JOIN "User" u ON u."UserId" = rt."UserId"
+                                                        WHERE rt."TokenHash" = @TokenHash
+                                                          AND rt."RevokedAt" IS NOT NULL
+                                                        LIMIT 1
+                                                        """;
+
+    /// <summary>
+    /// Registers one failed credential attempt atomically. An expired lock restarts the count at 1;
+    /// reaching <c>@MaxAttempts</c> sets <c>LockedUntil</c>. Returns the resulting <c>LockedUntil</c> (NULL = not locked).
+    /// </summary>
+    internal const string RecordFailedLogin = """
+                                              INSERT INTO "UserLockout" AS t ("UserId", "FailedCount", "LockedUntil", "LastFailedAt")
+                                              SELECT u."UserId",
+                                                     1,
+                                                     CASE WHEN 1 >= @MaxAttempts THEN @LockedUntil END,
+                                                     @Now
+                                              FROM "User" u
+                                              WHERE u."UserCode" = @UserCode
+                                              ON CONFLICT ("UserId") DO UPDATE
+                                              SET "FailedCount"  = CASE WHEN t."LockedUntil" IS NOT NULL AND t."LockedUntil" <= @Now
+                                                                        THEN 1 ELSE t."FailedCount" + 1 END,
+                                                  "LockedUntil"  = CASE
+                                                                       WHEN t."LockedUntil" IS NOT NULL AND t."LockedUntil" > @Now
+                                                                           THEN t."LockedUntil"
+                                                                       WHEN (CASE WHEN t."LockedUntil" IS NOT NULL AND t."LockedUntil" <= @Now
+                                                                                  THEN 1 ELSE t."FailedCount" + 1 END) >= @MaxAttempts
+                                                                           THEN @LockedUntil
+                                                                       ELSE NULL END,
+                                                  "LastFailedAt" = @Now
+                                              RETURNING "LockedUntil"
+                                              """;
+
+    /// <summary>Clears the failure counter after a completed login.</summary>
+    internal const string ResetFailedLogins = """
+                                              DELETE FROM "UserLockout"
+                                              WHERE "UserId" = (SELECT "UserId" FROM "User" WHERE "UserCode" = @UserCode)
                                               """;
 }

@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Infrastructure.Core.DTOs.User;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Models.Users;
 
@@ -12,10 +13,12 @@ namespace Infrastructure.Core.Services.Users;
 public sealed class UserRepository : BaseDatabaseService, IUserRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public UserRepository(IDbConnection connection)
+    public UserRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
 
     /// <inheritdoc/>
@@ -45,8 +48,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
         string roleName, Guid? specialtyCode,
         string username, string email, string passwordHash, string? licenseNumber) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, UserRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, UserRow>(_connection, _userContext,
                 UserRepositorySql.Insert,
                 new
                 {
@@ -67,8 +69,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
         string roleName, Guid? specialtyCode,
         string username, string email, string? licenseNumber) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, UserRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, UserRow>(_connection, _userContext,
                 UserRepositorySql.Update,
                 new
                 {
@@ -85,8 +86,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
     /// <inheritdoc/>
     public async Task<Result<UserRow?, UserRepositoryError>> UpdateRoleAsync(Guid code, string roleName) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, UserRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, UserRow>(_connection, _userContext,
                 UserRepositorySql.UpdateRole,
                 new { Code = code, RoleName = roleName }),
             errorFactory: UserRepositoryError (ex) => new UpdateUserError(ex.Message, ex)
@@ -96,8 +96,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
     public async Task<Result<int, UserRepositoryError>> DeactivateAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 UserRepositorySql.Deactivate,
                 new { Code = code, UserCode = performedByUserCode }),
             errorFactory: UserRepositoryError (ex) => new DeactivateUserError(ex.Message, ex)
@@ -106,8 +105,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
     /// <inheritdoc/>
     public async Task<Result<int, UserRepositoryError>> ActivateAsync(Guid code) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 UserRepositorySql.Activate,
                 new { Code = code }),
             errorFactory: UserRepositoryError (ex) => new ActivateUserError(ex.Message, ex)
@@ -126,8 +124,7 @@ public sealed class UserRepository : BaseDatabaseService, IUserRepository
     /// <inheritdoc/>
     public async Task<Result<int, UserRepositoryError>> UpdatePasswordAsync(Guid code, string passwordHash) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 UserRepositorySql.UpdatePassword,
                 new { Code = code, PasswordHash = passwordHash }),
             errorFactory: UserRepositoryError (ex) => new UpdatePasswordError(ex.Message, ex)

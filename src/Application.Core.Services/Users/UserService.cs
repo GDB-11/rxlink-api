@@ -1,3 +1,4 @@
+using Application.Core.Interfaces.Catalog;
 using Application.Core.DTOs.User.Errors;
 using Application.Core.DTOs.User.Request;
 using Application.Core.DTOs.User.Response;
@@ -5,6 +6,7 @@ using Application.Core.Interfaces.Auth;
 using Application.Core.Interfaces.Users;
 using BindSharp;
 using BindSharp.Extensions;
+using Infrastructure.Core.Interfaces.Activity;
 using Infrastructure.Core.Interfaces.Users;
 using Infrastructure.Core.Models.Users;
 
@@ -14,11 +16,18 @@ public sealed class UserService : IUser
 {
     private readonly IUserRepository _repository;
     private readonly IPassword _password;
+    private readonly IActivityLogger _activityLogger;
+    private readonly IPasswordPolicy _passwordPolicy;
+    private readonly ICatalogWriteValidator _catalog;
 
-    public UserService(IUserRepository repository, IPassword password)
+    public UserService(IUserRepository repository, IPassword password, IActivityLogger activityLogger,
+        IPasswordPolicy passwordPolicy, ICatalogWriteValidator catalog)
     {
+        _passwordPolicy = passwordPolicy;
         _repository = repository;
         _password = password;
+        _activityLogger = activityLogger;
+        _catalog = catalog;
     }
 
     /// <inheritdoc/>
@@ -40,8 +49,10 @@ public sealed class UserService : IUser
 
     /// <inheritdoc/>
     public Task<Result<UserResponse, UserError>> CreateAsync(CreateUserRequest request) =>
-        _password.HashPassword(request.Password)
-            .MapError(UserError (_) => new UserPasswordError())
+        ValidateSpecialtyAsync(request.SpecialtyCode)
+            .BindAsync(_ => CheckPasswordPolicyAsync(request.Password, request.Username)
+            .BindAsync(_ => Task.FromResult(_password.HashPassword(request.Password)
+                .MapError(UserError (_) => new UserPasswordError())))
             .BindAsync(passwordHash => _repository.InsertAsync(
                     personCode: request.PersonCode,
                     roleName: request.RoleName,
@@ -53,11 +64,12 @@ public sealed class UserService : IUser
                 .MapErrorAsync(UserError (error) =>
                     new UserDataAccessError(error.Message, error.Details, error.Exception))
                 .EnsureNotNullAsync(new UserRoleNotFoundError())
-                .MapAsync(MapToResponse));
+                .MapAsync(MapToResponse)));
 
     /// <inheritdoc/>
     public Task<Result<UserResponse, UserError>> UpdateAsync(Guid code, UpdateUserRequest request) =>
-        _repository.UpdateAsync(
+        ValidateSpecialtyAsync(request.SpecialtyCode)
+            .BindAsync(_ => _repository.UpdateAsync(
                 code: code,
                 roleName: request.RoleName,
                 specialtyCode: request.SpecialtyCode,
@@ -66,7 +78,11 @@ public sealed class UserService : IUser
                 licenseNumber: request.LicenseNumber)
             .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new UserNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
+
+    private Task<Result<Unit, UserError>> ValidateSpecialtyAsync(Guid? specialtyCode) =>
+        _catalog.ValidateSpecialtyAsync(specialtyCode)
+            .MapErrorAsync(UserError (error) => new UserCatalogValidationError(error));
 
     /// <inheritdoc/>
     public Task<Result<UserResponse, UserError>> UpdateRoleAsync(Guid code, UpdateUserRoleRequest request) =>
@@ -98,7 +114,8 @@ public sealed class UserService : IUser
 
     /// <inheritdoc/>
     public Task<Result<Unit, UserError>> ChangePasswordAsync(Guid userCode, ChangePasswordRequest request) =>
-        _repository.GetPasswordHashAsync(userCode)
+        CheckPasswordPolicyAsync(request.NewPassword, null)
+            .BindAsync(_ => _repository.GetPasswordHashAsync(userCode)
             .MapErrorAsync(UserError (error) => new UserDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new UserNotFoundError())
             .BindAsync(currentHash =>
@@ -112,7 +129,18 @@ public sealed class UserService : IUser
                             .MapErrorAsync(UserError (error) =>
                                 new UserDataAccessError(error.Message, error.Details, error.Exception))
                             .EnsureAsync(affected => affected > 0, new UserNotFoundError())
-                            .MapAsync(_ => Unit.Value)));
+                            .TapAsync(_ => _activityLogger.LogAsync(new ActivityEvent(
+                                ActivityEventTypes.PasswordChanged, userCode, ActivityEntityTypes.User, userCode,
+                                "Password changed")))
+                            .MapAsync(_ => Unit.Value))));
+
+    private async Task<Result<Unit, UserError>> CheckPasswordPolicyAsync(string password, string? username)
+    {
+        Result<Unit, string> check = await _passwordPolicy.ValidateAsync(password, username);
+        return check.IsSuccess
+            ? Result<Unit, UserError>.Success(Unit.Value)
+            : Result<Unit, UserError>.Failure(new UserPasswordPolicyError(check.Error));
+    }
 
     private static UserPageResponse BuildPageResponse(IEnumerable<UserRow> rows, int page, int pageSize)
     {

@@ -1,8 +1,13 @@
 using System.Text.Json;
 using Application.Core.DTOs.Prescription.Errors;
+using Application.Core.Interfaces.Catalog;
 using Application.Core.DTOs.Prescription.Request;
 using Application.Core.DTOs.Prescription.Response;
+using Application.Core.DTOs.PatientAccess;
+using Application.Core.Interfaces.PatientAccess;
 using Application.Core.Interfaces.Prescription;
+using Application.Core.Services.PatientAccess;
+using Infrastructure.Core.Interfaces.Activity;
 using BindSharp;
 using BindSharp.Extensions;
 using Common.Helpers;
@@ -15,13 +20,23 @@ namespace Application.Core.Services.Prescription;
 public sealed class PrescriptionService : IPrescription
 {
     private readonly IPrescriptionRepository _repository;
+    private readonly IRecordAccessLogger _accessLogger;
+    private readonly IPatientAccessPolicy _accessPolicy;
+    private readonly ICatalogWriteValidator _catalog;
+    private readonly PrescriptionLineSnapshotBuilder _snapshots;
 
     private static readonly JsonSerializerOptions JsonOptions =
         new() { PropertyNameCaseInsensitive = true };
 
-    public PrescriptionService(IPrescriptionRepository repository)
+    public PrescriptionService(IPrescriptionRepository repository, IRecordAccessLogger accessLogger,
+        IPatientAccessPolicy accessPolicy, ICatalogWriteValidator catalog,
+        PrescriptionLineSnapshotBuilder snapshots)
     {
         _repository = repository;
+        _accessLogger = accessLogger;
+        _accessPolicy = accessPolicy;
+        _catalog = catalog;
+        _snapshots = snapshots;
     }
 
     /// <inheritdoc/>
@@ -67,15 +82,16 @@ public sealed class PrescriptionService : IPrescription
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> CreateAsync(
         CreatePrescriptionRequest request, Guid createdByUserCode) =>
-        _repository.InsertAsync(request.DiagnosticCode, request.Notes, request.ValidUntil.ToDateTime(),
-                JsonSerializer.Serialize(request.Details), createdByUserCode)
+        ValidateLinesAsync(request.Details)
+            .BindAsync(detailsJson => _repository.InsertAsync(request.DiagnosticCode, request.Notes,
+                request.ValidUntil.ToDateTime(), detailsJson, createdByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 InsertPrescriptionDuplicateError => new PrescriptionDuplicateError(),
                 _ => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception)
             })
             .EnsureNotNullAsync(new PrescriptionDiagnosticNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> GetAsync(Guid code) =>
@@ -83,7 +99,14 @@ public sealed class PrescriptionService : IPrescription
             .MapErrorAsync(PrescriptionError (error) =>
                 new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PrescriptionNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse)
+            .BindAsync(response => _accessPolicy
+                .RequireAsync<PrescriptionError>(response.PatientCode, PatientDataScope.Clinical,
+                    error => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception),
+                    new PrescriptionPatientForbiddenError())
+                .TapAsync(decision => _accessLogger.LogAsync(AccessResourceTypes.Prescription,
+                    response.PatientCode, code, decision == PatientAccessDecision.AllowedViaBreakGlass))
+                .MapAsync(_ => response));
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> GetForPatientAsync(Guid code, Guid patientCode) =>
@@ -92,21 +115,38 @@ public sealed class PrescriptionService : IPrescription
                 new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PrescriptionNotFoundError())
             .MapAsync(MapToResponse)
-            .EnsureAsync(r => r.PatientCode == patientCode, new PrescriptionPatientForbiddenError());
+            .EnsureAsync(r => r.PatientCode == patientCode, new PrescriptionPatientForbiddenError())
+            .TapAsync(r => _accessLogger.LogAsync(AccessResourceTypes.Prescription, r.PatientCode, code));
 
     /// <inheritdoc/>
     public Task<Result<PrescriptionResponse, PrescriptionError>> UpdateAsync(
         Guid code, UpdatePrescriptionRequest request, Guid modifiedByUserCode) =>
-        _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(),
-                JsonSerializer.Serialize(request.Details),
-                modifiedByUserCode)
+        ValidateLinesAsync(request.Details)
+            .BindAsync(detailsJson => _repository.UpdateAsync(code, request.Notes, request.ValidUntil.ToDateTime(),
+                detailsJson, modifiedByUserCode)
             .MapErrorAsync(PrescriptionError (error) => error switch
             {
                 UpdatePrescriptionInvalidStatusError => new PrescriptionInvalidStatusError(),
                 _ => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception)
             })
             .EnsureNotNullAsync(new PrescriptionNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(MapToResponse));
+
+    /// <summary>Validates the catalog codes and returns the lines as JSON with the §6.2 snapshot values attached.</summary>
+    private async Task<Result<string, PrescriptionError>> ValidateLinesAsync(
+        IReadOnlyList<PrescriptionDetailRequest> details)
+    {
+        Result<Unit, Application.Core.DTOs.Catalog.Errors.CatalogValidationError> validation =
+            await _catalog.ValidatePrescriptionLinesAsync(details
+                .Select(d => (d.MedicationCode, d.AdministrationRouteCode, d.FrequencyCode)).ToList());
+        if (!validation.IsSuccess)
+            return Result<string, PrescriptionError>.Failure(new PrescriptionCatalogValidationError(validation.Error));
+
+        Result<string, Application.Core.DTOs.Catalog.Errors.CatalogValidationError> json = _snapshots.BuildJson(details);
+        return json.IsSuccess
+            ? Result<string, PrescriptionError>.Success(json.Value)
+            : Result<string, PrescriptionError>.Failure(new PrescriptionCatalogValidationError(json.Error));
+    }
 
     /// <inheritdoc/>
     public Task<Result<Unit, PrescriptionError>> SignAsync(Guid code, Guid performedByUserCode) =>

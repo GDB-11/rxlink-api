@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using RxLinkApi.DependencyInjection;
 using Scalar.AspNetCore;
@@ -8,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.RegisterKeys();
 
 builder.RegisterDatabase();
+
+builder.RegisterCatalog();
 
 builder.RegisterLogger();
 
@@ -50,6 +54,10 @@ builder.Services.Configure<FormOptions>(options =>
 
 builder.RegisterAuthentication();
 
+builder.RegisterForwardedHeaders();
+
+builder.RegisterRateLimiting();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevelopmentCors", policy =>
@@ -75,6 +83,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Must run first so every later component (rate limiter, audit IP) sees the real client address.
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -97,9 +108,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(app.Environment.IsDevelopment() ? "DevelopmentCors" : "ProductionCors");
 
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Anonymous, status text only (no check descriptions or data in the body).
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.Run();

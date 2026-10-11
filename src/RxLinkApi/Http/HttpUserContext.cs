@@ -20,6 +20,8 @@ internal sealed class HttpUserContext : IUserContext
             ? code
             : null;
 
+    public string? Role => _accessor.HttpContext?.User.FindFirst(ClaimTypes.Role)?.Value;
+
     public string? IpAddress => _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
     public string? RequestId => _accessor.HttpContext?.TraceIdentifier;

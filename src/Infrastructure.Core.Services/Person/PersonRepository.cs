@@ -1,6 +1,7 @@
 using System.Data;
 using BindSharp;
 using Infrastructure.Core.DTOs.Person;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Person;
 using Infrastructure.Core.Models.Person;
 
@@ -9,10 +10,12 @@ namespace Infrastructure.Core.Services.Person;
 public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
 
-    public PersonRepository(IDbConnection connection)
+    public PersonRepository(IDbConnection connection, IUserContext userContext)
     {
         _connection = connection;
+        _userContext = userContext;
     }
 
     /// <inheritdoc/>
@@ -62,8 +65,7 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
         string? address, string? emergencyContactName, string? emergencyContactPhone,
         Guid documentTypeCode, string documentNumber, string passwordHash, string allergiesJson) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PersonRow>(_connection, _userContext,
                 PersonRepositorySql.Insert,
                 new
                 {
@@ -92,8 +94,7 @@ public sealed class PersonRepository : BaseDatabaseService, IPersonRepository
         string? address, string? emergencyContactName, string? emergencyContactPhone,
         Guid documentTypeCode, string documentNumber) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteFirstOrDefaultAsync<object, PersonRow>(
-                _connection,
+            operation: async () => await ExecuteAuditedFirstOrDefaultAsync<object, PersonRow>(_connection, _userContext,
                 PersonRepositorySql.Update,
                 new
                 {

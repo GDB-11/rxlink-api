@@ -13,6 +13,11 @@ public sealed class UserErrorMapper : IErrorHttpMapper<UserError>
                 message = error.Message
             }),
 
+            UserPasswordPolicyError => new BadRequestObjectResult(new
+            {
+                message = error.Message
+            }),
+
             UserInvalidCurrentPasswordError => new UnprocessableEntityObjectResult(new
             {
                 message = error.Message
@@ -43,6 +48,8 @@ public sealed class UserErrorMapper : IErrorHttpMapper<UserError>
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            UserCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new
             {

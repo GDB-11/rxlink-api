@@ -34,3 +34,7 @@ public sealed record PatientPasswordHashError(string Message, string? Details = 
 
 public sealed record PatientRepositoryError(string Message, string? Details = null, Exception? Exception = null)
     : PatientAuthError(Message, Details, Exception);
+
+/// <summary>A catalog code in the request was rejected (missing, deactivated, not enabled) or the catalog is unavailable.</summary>
+public sealed record PatientAuthCatalogValidationError(Application.Core.DTOs.Catalog.Errors.CatalogValidationError Inner)
+    : PatientAuthError(Inner.Message, Inner.Details, Inner.Exception);

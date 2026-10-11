@@ -20,25 +20,27 @@ public sealed class PatientAuthErrorMapper : IErrorHttpMapper<PatientAuthError>
 
             PersonNotFoundError => new NotFoundObjectResult(new { message = error.Message }),
 
-            PatientJwtGenerationError e => new ObjectResult(new { message = e.Message, details = e.Details })
+            PatientJwtGenerationError e => new ObjectResult(new { message = e.Message })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
 
-            PatientJwtStorageError e => new ObjectResult(new { message = e.Message, details = e.Details })
+            PatientJwtStorageError e => new ObjectResult(new { message = e.Message })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
 
-            PatientPasswordHashError e => new ObjectResult(new { message = e.Message, details = e.Details })
+            PatientPasswordHashError e => new ObjectResult(new { message = e.Message })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
 
-            PatientRepositoryError e => new ObjectResult(new { message = e.Message, details = e.Details })
+            PatientRepositoryError e => new ObjectResult(new { message = e.Message })
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             },
+
+            PatientAuthCatalogValidationError catalogError => CatalogValidationHttp.Map(catalogError.Inner),
 
             _ => new ObjectResult(new { message = "Ocurrió un error inesperado." })
             {

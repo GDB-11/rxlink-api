@@ -19,8 +19,13 @@ public interface IPatientRepository
         Guid patientCode, Guid patientAllergyCode, Guid performedByUserCode);
 
 
-    /// <summary>Returns one page of patients, with a total count via window function.</summary>
-    Task<Result<IEnumerable<PatientRow>, PatientRepositoryError>> GetPageAsync(int offset, int limit, string? search);
+    /// <summary>
+    /// Returns one page of patients, with a total count via window function.
+    /// When <paramref name="careTeamOfUserCode"/> is set, only patients in the care team (or holding a live
+    /// break-glass grant for that user) are returned, so out-of-scope patients never appear in a search.
+    /// </summary>
+    Task<Result<IEnumerable<PatientRow>, PatientRepositoryError>> GetPageAsync(
+        int offset, int limit, string? search, Guid? careTeamOfUserCode);
 
     /// <summary>
     /// Inserts a Patient linked to an existing Person identified by <paramref name="personCode"/>.

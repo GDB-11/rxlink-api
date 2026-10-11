@@ -2,6 +2,8 @@ using System.Data;
 using BindSharp;
 using Dapper;
 using Infrastructure.Core.DTOs.Appointment;
+using Infrastructure.Core.Interfaces.Activity;
+using Infrastructure.Core.Interfaces.Audit;
 using Infrastructure.Core.Interfaces.Appointment;
 using Infrastructure.Core.Models.Appointment;
 
@@ -10,11 +12,22 @@ namespace Infrastructure.Core.Services.Appointment;
 public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRepository
 {
     private readonly IDbConnection _connection;
+    private readonly IUserContext _userContext;
+    private readonly IActivityLogger _activityLogger;
 
-    public AppointmentRepository(IDbConnection connection)
+    public AppointmentRepository(IDbConnection connection, IUserContext userContext,
+        IActivityLogger activityLogger)
     {
         _connection = connection;
+        _userContext = userContext;
+        _activityLogger = activityLogger;
     }
+
+    private Task LogEventAsync(IDbTransaction transaction, string eventType, Guid appointmentCode, string summary,
+        Guid? actorUserCode = null, object? payload = null) =>
+        _activityLogger.LogAsync(_connection, transaction,
+            new ActivityEvent(eventType, actorUserCode ?? _userContext.UserCode, ActivityEntityTypes.Appointment,
+                appointmentCode, summary, payload));
 
     /// <inheritdoc/>
     public async Task<Result<AppointmentRow?, AppointmentRepositoryError>> InsertAsync(
@@ -31,6 +44,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             int? patientId = await _connection.ExecuteScalarAsync<int?>(
                 AppointmentRepositorySql.GetPatientId,
                 new { PatientCode = patientCode },
@@ -126,6 +140,13 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                     transaction);
             }
 
+            await LogEventAsync(transaction, ActivityEventTypes.AppointmentCreated, identity.AppointmentCode,
+                "Appointment created", null, new { payNow });
+
+            if (payNow)
+                await LogEventAsync(transaction, ActivityEventTypes.AppointmentPaymentConfirmed,
+                    identity.AppointmentCode, "Appointment payment confirmed", null);
+
             AppointmentRow? row = await _connection.QueryFirstOrDefaultAsync<AppointmentRow>(
                 AppointmentRepositorySql.GetByCode,
                 new { Code = identity.AppointmentCode },
@@ -162,6 +183,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             PricingContextRow? pricing = await _connection.QueryFirstOrDefaultAsync<PricingContextRow>(
                 AppointmentRepositorySql.GetAppointmentPricingContext,
                 new { Code = code },
@@ -193,6 +215,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 return Result<int, AppointmentRepositoryError>.Success(0);
             }
 
+            await LogEventAsync(transaction, ActivityEventTypes.AppointmentPaymentConfirmed, code, "Appointment payment confirmed");
+
             transaction.Commit();
             return Result<int, AppointmentRepositoryError>.Success(rows);
         }
@@ -215,6 +239,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             CancellableRow? target = patientCode.HasValue
                 ? await _connection.QueryFirstOrDefaultAsync<CancellableRow>(
                     AppointmentRepositorySql.GetCancellableByPatient,
@@ -241,6 +266,9 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 new { target.AppointmentId },
                 transaction);
 
+            if (rows > 0)
+                await LogEventAsync(transaction, ActivityEventTypes.AppointmentCancelled, code, "Appointment cancelled");
+
             transaction.Commit();
             return Result<int, AppointmentRepositoryError>.Success(rows);
         }
@@ -256,8 +284,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     public async Task<Result<int, AppointmentRepositoryError>> CompleteAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
-                _connection,
+            operation: async () => await ExecuteAuditedNonQueryAsync(_connection, _userContext,
                 AppointmentRepositorySql.Complete,
                 new { Code = code, PerformedByUserCode = performedByUserCode }),
             errorFactory: AppointmentRepositoryError (ex) => new TransitionAppointmentError(ex.Message, ex));
@@ -266,10 +293,24 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     public async Task<Result<int, AppointmentRepositoryError>> NoShowAsync(
         Guid code, Guid performedByUserCode) =>
         await Result.TryAsync(
-            operation: async () => await ExecuteNonQueryAsync(
+            operation: () => ExecuteAuditedWriteAsync(
                 _connection,
-                AppointmentRepositorySql.NoShow,
-                new { Code = code, PerformedByUserCode = performedByUserCode }),
+                _userContext,
+                async transaction =>
+                {
+                    int rows = await ExecuteNonQueryAsync(
+                        _connection,
+                        AppointmentRepositorySql.NoShow,
+                        new { Code = code, PerformedByUserCode = performedByUserCode },
+                        transaction);
+
+                    if (rows > 0)
+                        await LogEventAsync(transaction, ActivityEventTypes.AppointmentNoShow, code,
+                            "Appointment marked as no-show", performedByUserCode);
+
+                    return rows;
+                },
+                performedByUserCode),
             errorFactory: AppointmentRepositoryError (ex) => new TransitionAppointmentError(ex.Message, ex));
 
     /// <inheritdoc/>
@@ -328,6 +369,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             int? foundPatientId = await _connection.ExecuteScalarAsync<int?>(
                 AppointmentRepositorySql.GetPatientId,
                 new { PatientCode = patientCode },
@@ -422,6 +464,13 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                     transaction);
             }
 
+            await LogEventAsync(transaction, ActivityEventTypes.AppointmentCreated, identity.AppointmentCode,
+                "Appointment created", recordedByUserCode, new { payNow });
+
+            if (payNow)
+                await LogEventAsync(transaction, ActivityEventTypes.AppointmentPaymentConfirmed,
+                    identity.AppointmentCode, "Appointment payment confirmed", recordedByUserCode);
+
             AppointmentRow? row = await _connection.QueryFirstOrDefaultAsync<AppointmentRow>(
                 AppointmentRepositorySql.GetByCode,
                 new { Code = identity.AppointmentCode },
@@ -449,6 +498,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             PricingContextRow? pricing = await _connection.QueryFirstOrDefaultAsync<PricingContextRow>(
                 AppointmentRepositorySql.GetAppointmentPricingContext,
                 new { Code = code },
@@ -480,6 +530,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 return Result<int, AppointmentRepositoryError>.Success(0);
             }
 
+            await LogEventAsync(transaction, ActivityEventTypes.AppointmentPaymentConfirmed, code, "Appointment payment confirmed", recordedByUserCode);
+
             transaction.Commit();
             return Result<int, AppointmentRepositoryError>.Success(rows);
         }
@@ -501,6 +553,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
         try
         {
+            await SetAuditContextAsync(_connection, _userContext, transaction);
             int rows = await _connection.ExecuteAsync(
                 AppointmentRepositorySql.RevertPayment,
                 new { Code = code },
@@ -582,6 +635,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
         Guid? recordedByUserCode, IDbTransaction transaction)
     {
         int? insuranceId = null;
+        Guid? snapshotInsuranceCode = null;
+        string? insuranceName = null;
         decimal coveragePercentage = 0m;
 
         if (insuranceCode.HasValue)
@@ -595,6 +650,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 return Result<Unit, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError());
 
             insuranceId = insurance.InsuranceId;
+            snapshotInsuranceCode = insurance.InsuranceCode;
+            insuranceName = insurance.InsuranceName;
             coveragePercentage = insurance.CoveragePercentage;
         }
 
@@ -607,6 +664,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             {
                 AppointmentId = appointmentId,
                 InsuranceId = insuranceId,
+                InsuranceCode = snapshotInsuranceCode,
+                InsuranceName = insuranceName,
                 BaseAmount = baseAmount,
                 CoveragePercentage = coveragePercentage,
                 CoveredAmount = coveredAmount,
@@ -654,6 +713,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     private sealed class InsuranceForPaymentRow
     {
         public required int InsuranceId { get; init; }
+        public required Guid InsuranceCode { get; init; }
+        public required string InsuranceName { get; init; }
         public required decimal CoveragePercentage { get; init; }
     }
 }

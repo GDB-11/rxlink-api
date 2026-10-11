@@ -145,13 +145,14 @@ internal static class UserRepositorySql
                                    ),
                                    new_user AS (
                                        INSERT INTO "User" (
-                                           "PersonId", "RoleId", "SpecialtyId",
+                                           "PersonId", "RoleId", "SpecialtyId", "SpecialtyCode",
                                            "Username", "Email", "PasswordHash", "LicenseNumber"
                                        )
                                        SELECT
                                            refs."PersonId",
                                            refs."RoleId",
                                            refs."SpecialtyId",
+                                           refs."SpecialtyCode",
                                            @Username,
                                            @Email,
                                            @PasswordHash,
@@ -228,6 +229,7 @@ internal static class UserRepositorySql
                                        SET
                                            "RoleId"        = refs."RoleId",
                                            "SpecialtyId"   = refs."SpecialtyId",
+                                           "SpecialtyCode" = refs."SpecialtyCode",
                                            "Username"      = @Username,
                                            "Email"         = @Email,
                                            "LicenseNumber" = @LicenseNumber

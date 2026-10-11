@@ -15,8 +15,7 @@ public sealed class SpecialtyErrorMapper : IErrorHttpMapper<SpecialtyError>
 
             SpecialtyDataAccessError dataError => new ObjectResult(new
             {
-                message = dataError.Message,
-                details = dataError.Details
+                message = dataError.Message
             })
             {
                 StatusCode = StatusCodes.Status500InternalServerError

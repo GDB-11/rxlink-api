@@ -24,8 +24,8 @@ public abstract class BaseDatabaseService
         await connection.QueryFirstOrDefaultAsync<TOut?>(sql, entity, transaction);
 
     protected static async Task<TOut?> ExecuteSingleOrDefaultAsync<TIn, TOut>(IDbConnection connection, string sql,
-        TIn entity) =>
-        await connection.QuerySingleOrDefaultAsync<TOut?>(sql, entity);
+        TIn entity, IDbTransaction? transaction = null) =>
+        await connection.QuerySingleOrDefaultAsync<TOut?>(sql, entity, transaction);
 
     protected static async Task<TOut?>
         ExecuteScalarAsync<TIn, TOut>(IDbConnection connection, string sql, TIn entity) =>
@@ -60,11 +60,34 @@ public abstract class BaseDatabaseService
     }
 
     /// <summary>
-    /// Runs <paramref name="operation"/> inside a transaction whose first statement stamps the caller's
-    /// identity into transaction-local settings (<c>app.user_code</c>, <c>app.ip</c>, <c>app.request_id</c>).
-    /// Row-level audit triggers read these with <c>current_setting(..., true)</c>. The settings are
-    /// transaction-local (<c>set_config(..., true)</c>) so a pooled connection cannot leak them between requests.
-    /// Every write to an audited table must go through this helper.
+    /// Stamps the caller's identity into transaction-local settings (<c>app.user_code</c>, <c>app.ip</c>,
+    /// <c>app.request_id</c>) that the row-level audit triggers read with <c>current_setting(..., true)</c>.
+    /// The settings are transaction-local (<c>set_config(..., true)</c>) so a pooled connection cannot leak
+    /// them between requests. Must be the first statement of any transaction that writes to an audited table.
+    /// </summary>
+    protected static Task SetAuditContextAsync(
+        IDbConnection connection,
+        IUserContext userContext,
+        IDbTransaction transaction,
+        Guid? actorOverride = null) =>
+        connection.ExecuteAsync(
+            """
+            SELECT set_config('app.user_code', @UserCode,  true),
+                   set_config('app.ip',         @Ip,        true),
+                   set_config('app.request_id', @RequestId, true)
+            """,
+            new
+            {
+                UserCode = (actorOverride ?? userContext.UserCode)?.ToString() ?? string.Empty,
+                Ip = userContext.IpAddress ?? string.Empty,
+                RequestId = userContext.RequestId ?? string.Empty
+            },
+            transaction);
+
+    /// <summary>
+    /// Runs <paramref name="operation"/> inside a transaction whose first statement sets the audit context.
+    /// Every write to an audited table must go through this helper (or call
+    /// <see cref="SetAuditContextAsync"/> itself when it manages its own transaction).
     /// </summary>
     protected static Task<TOut> ExecuteAuditedWriteAsync<TOut>(
         IDbConnection connection,
@@ -73,20 +96,22 @@ public abstract class BaseDatabaseService
         Guid? actorOverride = null) =>
         ExecuteWithTransactionAsync(connection, async transaction =>
         {
-            await connection.ExecuteAsync(
-                """
-                SELECT set_config('app.user_code', @UserCode, true),
-                       set_config('app.ip',         @Ip,       true),
-                       set_config('app.request_id', @RequestId, true)
-                """,
-                new
-                {
-                    UserCode = (actorOverride ?? userContext.UserCode)?.ToString() ?? string.Empty,
-                    Ip = userContext.IpAddress ?? string.Empty,
-                    RequestId = userContext.RequestId ?? string.Empty
-                },
-                transaction);
-
+            await SetAuditContextAsync(connection, userContext, transaction, actorOverride);
             return await operation(transaction);
         });
+
+    protected static Task<int> ExecuteAuditedNonQueryAsync<TIn>(
+        IDbConnection connection, IUserContext userContext, string sql, TIn entity) =>
+        ExecuteAuditedWriteAsync(connection, userContext,
+            transaction => ExecuteNonQueryAsync(connection, sql, entity, transaction));
+
+    protected static Task<TOut?> ExecuteAuditedFirstOrDefaultAsync<TIn, TOut>(
+        IDbConnection connection, IUserContext userContext, string sql, TIn entity) =>
+        ExecuteAuditedWriteAsync(connection, userContext,
+            transaction => ExecuteFirstOrDefaultAsync<TIn, TOut>(connection, sql, entity, transaction));
+
+    protected static Task<TOut?> ExecuteAuditedSingleOrDefaultAsync<TIn, TOut>(
+        IDbConnection connection, IUserContext userContext, string sql, TIn entity) =>
+        ExecuteAuditedWriteAsync(connection, userContext,
+            transaction => ExecuteSingleOrDefaultAsync<TIn, TOut>(connection, sql, entity, transaction));
 }
