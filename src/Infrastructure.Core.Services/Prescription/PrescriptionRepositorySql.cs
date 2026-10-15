@@ -17,6 +17,7 @@ internal static class PrescriptionRepositorySql
                                              'AdministrationRouteName', ar."Name",
                                              'FrequencyCode',           f."FrequencyCode",
                                              'FrequencyDescription',    f."Description",
+                                             'FrequencyIntervalHours',  f."IntervalHours",
                                              'DurationDays',            pd."DurationDays",
                                              'Instructions',            pd."Instructions"
                                          ) ORDER BY pd."PrescriptionDetailId")::text
@@ -350,7 +351,7 @@ internal static class PrescriptionRepositorySql
                                                             d."Description"        AS "DiagnosticDescription",
                                                             p."DispensedAt",
                                                             COUNT(pd."PrescriptionDetailId")                                AS "DetailCount",
-                                                            STRING_AGG(m."GenericName", ', ' ORDER BY pd."PrescriptionDetailId") AS "MedicationNames"
+                                                            STRING_AGG(pd."MedicationGenericName", ', ' ORDER BY pd."PrescriptionDetailId") AS "MedicationNames"
                                                         FROM "Prescription" p
                                                         JOIN "PrescriptionStatus" ps  ON ps."PrescriptionStatusId" = p."PrescriptionStatusId"
                                                         JOIN "Diagnostic" d           ON d."DiagnosticId"          = p."DiagnosticId"
@@ -358,7 +359,6 @@ internal static class PrescriptionRepositorySql
                                                         JOIN "Person" pat_per          ON pat_per."PersonId"        = pat."PersonId"
                                                         JOIN "User" u                  ON u."UserId"                = p."DispensedBy"
                                                         LEFT JOIN "PrescriptionDetail" pd ON pd."PrescriptionId"   = p."PrescriptionId"
-                                                        LEFT JOIN "Medication" m       ON m."MedicationId"         = pd."MedicationId"
                                                         WHERE u."UserCode"             = @NurseUserCode
                                                           AND ps."Name"               = 'Dispensado'
                                                           AND p."DispensedAt"::date   = @Date::date
@@ -379,6 +379,64 @@ internal static class PrescriptionRepositorySql
                                          "ModifiedAt"  = NOW()
                                      WHERE "PrescriptionCode"     = @Code
                                        AND "PrescriptionStatusId" = (SELECT "PrescriptionStatusId" FROM "PrescriptionStatus" WHERE "Name" = 'Activo')
+                                       AND "ValidUntil"           >= (NOW() AT TIME ZONE 'America/Lima')::date
                                        AND "DeletedAt"            IS NULL
                                      """;
+    /// <summary>Lines of a prescription with the catalog code of the medication each one takes out of stock.</summary>
+    internal const string GetDispenseDetails = """
+                                               SELECT pd."PrescriptionDetailId", pd."PrescriptionDetailCode", pd."MedicationCode"
+                                               FROM "PrescriptionDetail" pd
+                                               JOIN "Prescription" p ON p."PrescriptionId" = pd."PrescriptionId"
+                                               WHERE p."PrescriptionCode" = @Code
+                                               """;
+
+    /// <summary>Medications on the patient's Activo prescriptions, except the one being checked.</summary>
+    internal const string GetActiveMedicationsOfPatient = """
+                                                          SELECT p."PrescriptionCode", pd."MedicationCode"
+                                                          FROM "Prescription" p
+                                                          JOIN "Patient" pat ON pat."PatientId" = p."PatientId"
+                                                          JOIN "PrescriptionDetail" pd ON pd."PrescriptionId" = p."PrescriptionId"
+                                                          WHERE pat."PatientCode" = @PatientCode
+                                                            AND p."PrescriptionCode" <> @ExcludePrescriptionCode
+                                                            AND p."DeletedAt" IS NULL
+                                                            AND p."PrescriptionStatusId" =
+                                                                (SELECT "PrescriptionStatusId" FROM "PrescriptionStatus" WHERE "Name" = 'Activo')
+                                                          """;
+
+    internal const string GetDefaultClinicId = """
+                                               SELECT "ClinicId" FROM "Clinic" WHERE "IsDefault" AND "IsActive"
+                                               """;
+
+    /// <summary>Locks the stock row so two concurrent dispensations of the same medication serialize.</summary>
+    internal const string LockClinicStock = """
+                                            SELECT "StockQuantity"
+                                            FROM "ClinicStock"
+                                            WHERE "ClinicId" = @ClinicId AND "MedicationCode" = @MedicationCode
+                                            FOR UPDATE
+                                            """;
+
+    internal const string DecrementClinicStock = """
+                                                 UPDATE "ClinicStock"
+                                                 SET "StockQuantity" = "StockQuantity" - @Quantity,
+                                                     "UpdatedAt"     = NOW(),
+                                                     "UpdatedBy"     = (SELECT "UserId" FROM "User" WHERE "UserCode" = @PerformedByUserCode)
+                                                 WHERE "ClinicId" = @ClinicId AND "MedicationCode" = @MedicationCode
+                                                 """;
+
+    /// <summary>Only for an override: a medication with no stock row yet is treated as a balance of zero.</summary>
+    internal const string EnsureClinicStock = """
+                                              INSERT INTO "ClinicStock" ("ClinicId", "MedicationCode")
+                                              VALUES (@ClinicId, @MedicationCode)
+                                              ON CONFLICT DO NOTHING
+                                              """;
+
+    internal const string InsertDispenseMovement = """
+                                                   INSERT INTO "StockMovement" (
+                                                       "ClinicId", "MedicationCode", "MovementType", "Direction", "Quantity",
+                                                       "PrescriptionDetailId", "ShortfallQuantity", "Reason", "UserId"
+                                                   )
+                                                   SELECT @ClinicId, @MedicationCode, 'Dispense', -1, @Quantity,
+                                                          @PrescriptionDetailId, @ShortfallQuantity::numeric, @Reason::text,
+                                                          (SELECT "UserId" FROM "User" WHERE "UserCode" = @PerformedByUserCode)
+                                                   """;
 }

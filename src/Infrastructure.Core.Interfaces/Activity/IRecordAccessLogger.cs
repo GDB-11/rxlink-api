@@ -21,4 +21,9 @@ public static class AccessResourceTypes
     public const string Prescription = "Prescription";
     public const string Appointment = "Appointment";
     public const string Appointments = "Appointments";
+    public const string Amendments = "Amendments";
+    public const string Disclosures = "Disclosures";
+    public const string CommunicationPreferences = "CommunicationPreferences";
+    public const string PrivacyNotice = "PrivacyNotice";
+    public const string Consents = "Consents";
 }

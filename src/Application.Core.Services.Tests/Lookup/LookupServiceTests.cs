@@ -110,6 +110,30 @@ public sealed class LookupServiceTests
     private static Result<T, PartnerCatalogRepositoryError> Ok<T>(T value) =>
         Result<T, PartnerCatalogRepositoryError>.Success(value);
 
+    [Theory]
+    [InlineData(null, null, "Out")]
+    [InlineData(0, 5, "Out")]
+    [InlineData(-2, null, "Out")]
+    [InlineData(5, 5, "Low")]
+    [InlineData(6, 5, "InStock")]
+    [InlineData(1, null, "InStock")]
+    public async Task PrescriptionLookups_StockStatus_FollowsBalanceAndReorderLevel(
+        int? quantity, int? reorderLevel, string expected)
+    {
+        _partner.GetAllMedicationsAsync().Returns(Ok<IReadOnlyList<PartnerMedicationRow>>(
+        [
+            new()
+            {
+                MedicationCode = _enabledMed, IsEnabled = true,
+                StockQuantity = (decimal?)quantity, ReorderLevel = (decimal?)reorderLevel
+            }
+        ]));
+
+        var result = await _sut.GetPrescriptionLookupsAsync();
+
+        Assert.Equal(expected, Assert.Single(result.Value.Medications).StockStatus);
+    }
+
     [Fact]
     public async Task PrescriptionLookups_OnlyEnabledMedications_WithCommercialNameLabel()
     {

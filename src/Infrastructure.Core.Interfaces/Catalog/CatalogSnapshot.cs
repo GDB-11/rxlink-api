@@ -23,4 +23,18 @@ public sealed class CatalogSnapshot
     public required FrozenDictionary<Guid, AllergySeverityCatalogRow> AllergySeverities { get; init; }
     public required FrozenDictionary<Guid, MedicationCatalogRow> Medications { get; init; }
     public required FrozenDictionary<Guid, InsuranceCatalogRow> Insurances { get; init; }
+
+    // Interaction/allergy rules (Phase 11.1). Optional so a catalog without them (or a test) just yields no warnings.
+    public FrozenDictionary<Guid, MedicationClassCatalogRow> MedicationClasses { get; init; } =
+        FrozenDictionary<Guid, MedicationClassCatalogRow>.Empty;
+
+    /// <summary>Medication code → codes of the (active) classes it belongs to.</summary>
+    public FrozenDictionary<Guid, IReadOnlyList<Guid>> ClassesByMedication { get; init; } =
+        FrozenDictionary<Guid, IReadOnlyList<Guid>>.Empty;
+
+    /// <summary>Allergy code → codes of the classes the allergy implies avoiding.</summary>
+    public FrozenDictionary<Guid, IReadOnlyList<Guid>> ClassesByAllergy { get; init; } =
+        FrozenDictionary<Guid, IReadOnlyList<Guid>>.Empty;
+
+    public IReadOnlyList<MedicationInteractionCatalogRow> MedicationInteractions { get; init; } = [];
 }

@@ -2,6 +2,8 @@ using Application.Core.DTOs.Patient.Errors;
 using Application.Core.DTOs.Patient.Request;
 using Application.Core.DTOs.Patient.Response;
 using Application.Core.Interfaces.Patient;
+using Application.Core.Interfaces.PatientExport;
+using Application.Core.DTOs.PatientExport.Response;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RxLinkApi.Logging;
@@ -15,15 +17,18 @@ namespace RxLinkApi.Controllers;
 public sealed class PatientController : FunctionalController
 {
     private readonly IPatient _patientService;
+    private readonly IPatientExport _exportService;
     private readonly IErrorHttpMapper<PatientError> _errorMapper;
 
     public PatientController(
         IPatient patientService,
+        IPatientExport exportService,
         IErrorHttpMapper<PatientError> errorMapper,
         IResultLogger logger)
         : base(logger)
     {
         _patientService = patientService;
+        _exportService = exportService;
         _errorMapper = errorMapper;
     }
 
@@ -72,6 +77,23 @@ public sealed class PatientController : FunctionalController
             operation: () => _patientService.GetSelfAsync(code),
             errorMapper: _errorMapper,
             operationName: nameof(GetByCode)
+        );
+
+    /// <summary>
+    /// Staff-assisted copy of a patient's whole record (right of access). Subject to the same patient-access
+    /// policy as reading each part, and recorded as a <c>Patient.ExportGenerated</c> event.
+    /// </summary>
+    [HttpGet("{code:guid}/export")]
+    [ProducesResponseType(typeof(PatientExportResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public Task<IActionResult> Export(Guid code) =>
+        ExecuteAsync(
+            operation: () => _exportService.ExportAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(Export)
         );
 
     /// <summary>

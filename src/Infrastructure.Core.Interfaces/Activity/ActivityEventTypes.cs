@@ -19,6 +19,10 @@ public static class ActivityEventTypes
     public const string PrescriptionReactivated = "Prescription.Reactivated";
     public const string PrescriptionCancelled = "Prescription.Cancelled";
     public const string PrescriptionDispensed = "Prescription.Dispensed";
+    public const string PrescriptionExpired = "Prescription.Expired";
+    public const string PrescriptionFinalized = "Prescription.Finalized";
+
+    public const string StockOverrideDispense = "Stock.OverrideDispense";
 
     public const string AppointmentCreated = "Appointment.Created";
     public const string AppointmentCancelled = "Appointment.Cancelled";
@@ -28,6 +32,15 @@ public static class ActivityEventTypes
     public const string RecordAccessed = "Record.Accessed";
     public const string BreakGlassAccess = "Record.BreakGlassAccess";
     public const string ReportViewed = "Report.Viewed";
+    public const string PatientExportGenerated = "Patient.ExportGenerated";
+    public const string AmendmentRequested = "Patient.AmendmentRequested";
+    public const string AmendmentDecided = "Patient.AmendmentDecided";
+    public const string DisclosureRecorded = "Patient.DisclosureRecorded";
+    public const string CommunicationPreferencesUpdated = "Patient.CommunicationPreferencesUpdated";
+    public const string PrivacyNoticePublished = "PrivacyNotice.Published";
+    public const string PrivacyNoticeAcknowledged = "Patient.PrivacyNoticeAcknowledged";
+    public const string ConsentRecorded = "Patient.ConsentRecorded";
+    public const string ConsentRevoked = "Patient.ConsentRevoked";
 }
 
 public static class ActivityEntityTypes
@@ -36,4 +49,8 @@ public static class ActivityEntityTypes
     public const string Prescription = "Prescription";
     public const string Appointment = "Appointment";
     public const string Patient = "Patient";
+    public const string AmendmentRequest = "PatientAmendmentRequest";
+    public const string Disclosure = "PatientDisclosure";
+    public const string PrivacyNotice = "PrivacyNotice";
+    public const string Consent = "PatientConsent";
 }

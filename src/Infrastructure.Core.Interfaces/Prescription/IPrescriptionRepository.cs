@@ -42,6 +42,13 @@ public interface IPrescriptionRepository
     Task<Result<PrescriptionRow?, PrescriptionRepositoryError>> UpdateAsync(
         Guid code, string? notes, DateTime validUntil, string detailsJson, Guid modifiedByUserCode);
 
+    /// <summary>
+    /// Returns the medications of the patient's <c>Activo</c> prescriptions, excluding <paramref name="excludePrescriptionCode"/>
+    /// (the one being checked).
+    /// </summary>
+    Task<Result<IReadOnlyList<ActivePatientMedicationRow>, PrescriptionRepositoryError>>
+        GetActiveMedicationsOfPatientAsync(Guid patientCode, Guid excludePrescriptionCode);
+
     /// <summary>Transitions Borrador → Activo. Returns 0 when the transition is invalid.</summary>
     Task<Result<int, PrescriptionRepositoryError>> SignAsync(Guid code, Guid performedByUserCode);
 
@@ -54,6 +61,14 @@ public interface IPrescriptionRepository
     /// <summary>Transitions any non-terminal status → Cancelado. Returns 0 when the transition is invalid.</summary>
     Task<Result<int, PrescriptionRepositoryError>> CancelAsync(Guid code, Guid performedByUserCode);
 
-    /// <summary>Transitions Activo → Dispensado. Returns 0 when the transition is invalid.</summary>
-    Task<Result<int, PrescriptionRepositoryError>> DispenseAsync(Guid code, Guid performedByUserCode);
+    /// <summary>
+    /// Transitions Activo → Dispensado and, in the same transaction, writes one <c>Dispense</c> stock movement per
+    /// line and decrements the default clinic's <c>ClinicStock</c> (rows locked FOR UPDATE).
+    /// Returns 0 when the transition is invalid; fails with <see cref="DispenseLinesInvalidError"/> or
+    /// <see cref="InsufficientStockError"/> (nothing is written).
+    /// With an <paramref name="overrideReason"/> a balance that is too low no longer fails: the shortfall is
+    /// recorded on the movement, the balance goes negative and a <c>Stock.OverrideDispense</c> event is written.
+    /// </summary>
+    Task<Result<int, PrescriptionRepositoryError>> DispenseAsync(
+        Guid code, Guid performedByUserCode, IReadOnlyList<DispenseLineRow> lines, string? overrideReason);
 }

@@ -67,3 +67,29 @@ public sealed class CatalogVersionRow
     public required long Version { get; init; }
     public required int SchemaVersion { get; init; }
 }
+
+public sealed class MedicationClassCatalogRow : CatalogNamedRow;
+
+/// <summary>An active membership of a medication in a class (inactive memberships are not loaded).</summary>
+public sealed class MedicationClassMemberCatalogRow
+{
+    public required Guid ClassCode { get; init; }
+    public required Guid MedicationCode { get; init; }
+}
+
+/// <summary>An active link saying an allergy implies avoiding every medication of the class.</summary>
+public sealed class AllergyMedicationClassCatalogRow
+{
+    public required Guid AllergyCode { get; init; }
+    public required Guid ClassCode { get; init; }
+}
+
+/// <summary>An active interaction rule between two medication classes (possibly the same class).</summary>
+public sealed class MedicationInteractionCatalogRow
+{
+    public required Guid Code { get; init; }
+    public required Guid ClassACode { get; init; }
+    public required Guid ClassBCode { get; init; }
+    public required string Severity { get; init; }
+    public required string Description { get; init; }
+}

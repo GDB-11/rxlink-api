@@ -398,3 +398,11 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+class-diagrams.md
+/deploy
+DEPLOY.md
+exposicion-arquitectura-simple.md
+exposicion-arquitectura-tecnico.md
+exposicion-arquitectura.md
+snippets-informe.md
+MOBILE_API_DOCS-v1.2.1.md

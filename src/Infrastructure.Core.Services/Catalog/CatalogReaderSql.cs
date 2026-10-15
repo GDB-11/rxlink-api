@@ -46,4 +46,38 @@ public static class CatalogReaderSql
 
     public const string Insurances =
         """SELECT "InsuranceCode" AS Code, "Name", "DefaultCoveragePercentage", "IsActive" FROM "Insurance" """;
+
+    public const string MedicationClasses =
+        """SELECT "MedicationClassCode" AS Code, "Name", "IsActive" FROM "MedicationClass" """;
+
+    public const string MedicationClassMembers =
+        """
+        SELECT c."MedicationClassCode" AS ClassCode, m."MedicationCode" AS MedicationCode
+        FROM "MedicationClassMember" cm
+        JOIN "MedicationClass" c ON c."MedicationClassId" = cm."MedicationClassId"
+        JOIN "Medication"      m ON m."MedicationId"      = cm."MedicationId"
+        WHERE cm."IsActive"
+        """;
+
+    public const string AllergyMedicationClasses =
+        """
+        SELECT a."AllergyCode" AS AllergyCode, c."MedicationClassCode" AS ClassCode
+        FROM "AllergyMedicationClass" amc
+        JOIN "Allergy"         a ON a."AllergyId"         = amc."AllergyId"
+        JOIN "MedicationClass" c ON c."MedicationClassId" = amc."MedicationClassId"
+        WHERE amc."IsActive"
+        """;
+
+    public const string MedicationInteractions =
+        """
+        SELECT i."MedicationInteractionCode" AS Code,
+               ca."MedicationClassCode"      AS ClassACode,
+               cb."MedicationClassCode"      AS ClassBCode,
+               i."Severity",
+               i."Description"
+        FROM "MedicationInteraction" i
+        JOIN "MedicationClass" ca ON ca."MedicationClassId" = i."MedicationClassAId"
+        JOIN "MedicationClass" cb ON cb."MedicationClassId" = i."MedicationClassBId"
+        WHERE i."IsActive"
+        """;
 }

@@ -9,3 +9,7 @@ public sealed record SpecialtyDataAccessError(string Message, string? Details = 
 /// <summary>The target Specialty does not exist or is already inactive.</summary>
 public sealed record SpecialtyNotFoundError()
     : SpecialtyError("La especialidad no fue encontrada o ya está inactiva.");
+
+/// <summary>The shared catalog snapshot is not loaded yet, so specialty names cannot be resolved.</summary>
+public sealed record SpecialtyCatalogUnavailableError()
+    : SpecialtyError("El catálogo compartido no está disponible. Intente nuevamente en unos minutos.");

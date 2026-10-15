@@ -20,6 +20,10 @@ public sealed class CatalogSnapshotStore : ICatalogSnapshotStore
     private readonly ICatalogReader<AllergySeverityCatalogRow> _allergySeverities;
     private readonly ICatalogReader<MedicationCatalogRow> _medications;
     private readonly ICatalogReader<InsuranceCatalogRow> _insurances;
+    private readonly ICatalogReader<MedicationClassCatalogRow> _medicationClasses;
+    private readonly ICatalogReader<MedicationClassMemberCatalogRow> _medicationClassMembers;
+    private readonly ICatalogReader<AllergyMedicationClassCatalogRow> _allergyMedicationClasses;
+    private readonly ICatalogReader<MedicationInteractionCatalogRow> _medicationInteractions;
     private readonly TimeProvider _clock;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
@@ -38,6 +42,10 @@ public sealed class CatalogSnapshotStore : ICatalogSnapshotStore
         ICatalogReader<AllergySeverityCatalogRow> allergySeverities,
         ICatalogReader<MedicationCatalogRow> medications,
         ICatalogReader<InsuranceCatalogRow> insurances,
+        ICatalogReader<MedicationClassCatalogRow> medicationClasses,
+        ICatalogReader<MedicationClassMemberCatalogRow> medicationClassMembers,
+        ICatalogReader<AllergyMedicationClassCatalogRow> allergyMedicationClasses,
+        ICatalogReader<MedicationInteractionCatalogRow> medicationInteractions,
         TimeProvider clock)
     {
         _versionReader = versionReader;
@@ -51,6 +59,10 @@ public sealed class CatalogSnapshotStore : ICatalogSnapshotStore
         _allergySeverities = allergySeverities;
         _medications = medications;
         _insurances = insurances;
+        _medicationClasses = medicationClasses;
+        _medicationClassMembers = medicationClassMembers;
+        _allergyMedicationClasses = allergyMedicationClasses;
+        _medicationInteractions = medicationInteractions;
         _clock = clock;
     }
 
@@ -132,16 +144,23 @@ public sealed class CatalogSnapshotStore : ICatalogSnapshotStore
         var allergySeverities = _allergySeverities.GetAllAsync();
         var medications = _medications.GetAllAsync();
         var insurances = _insurances.GetAllAsync();
+        var medicationClasses = _medicationClasses.GetAllAsync();
+        var classMembers = _medicationClassMembers.GetAllAsync();
+        var allergyClasses = _allergyMedicationClasses.GetAllAsync();
+        var interactions = _medicationInteractions.GetAllAsync();
 
         await Task.WhenAll(documentTypes, sexes, specialties, pharmaceuticalForms, administrationRoutes,
-            frequencies, allergies, allergySeverities, medications, insurances);
+            frequencies, allergies, allergySeverities, medications, insurances,
+            medicationClasses, classMembers, allergyClasses, interactions);
 
         CatalogRepositoryError? failure = new[]
         {
             Failure(documentTypes.Result), Failure(sexes.Result), Failure(specialties.Result),
             Failure(pharmaceuticalForms.Result), Failure(administrationRoutes.Result),
             Failure(frequencies.Result), Failure(allergies.Result), Failure(allergySeverities.Result),
-            Failure(medications.Result), Failure(insurances.Result)
+            Failure(medications.Result), Failure(insurances.Result),
+            Failure(medicationClasses.Result), Failure(classMembers.Result),
+            Failure(allergyClasses.Result), Failure(interactions.Result)
         }.FirstOrDefault(error => error is not null);
 
         if (failure is not null)
@@ -161,12 +180,37 @@ public sealed class CatalogSnapshotStore : ICatalogSnapshotStore
             Allergies = Index(allergies.Result.Value, r => r.Code),
             AllergySeverities = Index(allergySeverities.Result.Value, r => r.Code),
             Medications = Index(medications.Result.Value, r => r.Code),
-            Insurances = Index(insurances.Result.Value, r => r.Code)
+            Insurances = Index(insurances.Result.Value, r => r.Code),
+            MedicationClasses = Index(medicationClasses.Result.Value, r => r.Code),
+            ClassesByMedication = Group(ActiveMembers(classMembers.Result.Value, medicationClasses.Result.Value),
+                r => r.MedicationCode, r => r.ClassCode),
+            ClassesByAllergy = Group(allergyClasses.Result.Value
+                    .Where(r => IsActiveClass(medicationClasses.Result.Value, r.ClassCode)),
+                r => r.AllergyCode, r => r.ClassCode),
+            MedicationInteractions = interactions.Result.Value
+                .Where(r => IsActiveClass(medicationClasses.Result.Value, r.ClassACode)
+                            && IsActiveClass(medicationClasses.Result.Value, r.ClassBCode))
+                .ToList()
         });
     }
 
     private static CatalogRepositoryError? Failure<T>(Result<IReadOnlyList<T>, CatalogRepositoryError> result) =>
         result.IsFailure ? result.Error : null;
+
+    private static bool IsActiveClass(IReadOnlyList<MedicationClassCatalogRow> classes, Guid code) =>
+        classes.Any(c => c.Code == code && c.IsActive);
+
+    private static IEnumerable<MedicationClassMemberCatalogRow> ActiveMembers(
+        IReadOnlyList<MedicationClassMemberCatalogRow> members, IReadOnlyList<MedicationClassCatalogRow> classes)
+    {
+        HashSet<Guid> active = classes.Where(c => c.IsActive).Select(c => c.Code).ToHashSet();
+        return members.Where(m => active.Contains(m.ClassCode));
+    }
+
+    private static FrozenDictionary<Guid, IReadOnlyList<Guid>> Group<T>(
+        IEnumerable<T> rows, Func<T, Guid> key, Func<T, Guid> value) =>
+        rows.GroupBy(key)
+            .ToFrozenDictionary(g => g.Key, g => (IReadOnlyList<Guid>)g.Select(value).Distinct().ToList());
 
     private static FrozenDictionary<Guid, T> Index<T>(IReadOnlyList<T> rows, Func<T, Guid> code) =>
         rows.ToFrozenDictionary(code);

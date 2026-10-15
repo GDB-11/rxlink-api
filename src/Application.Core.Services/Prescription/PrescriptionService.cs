@@ -181,10 +181,17 @@ public sealed class PrescriptionService : IPrescription
             .MapAsync(_ => Unit.Value);
 
     /// <inheritdoc/>
-    public Task<Result<Unit, PrescriptionError>> DispenseAsync(Guid code, Guid performedByUserCode) =>
-        _repository.DispenseAsync(code, performedByUserCode)
-            .MapErrorAsync(PrescriptionError (error) =>
-                new PrescriptionDataAccessError(error.Message, error.Details, error.Exception))
+    public Task<Result<Unit, PrescriptionError>> DispenseAsync(
+        Guid code, DispensePrescriptionRequest request, Guid performedByUserCode) =>
+        _repository.DispenseAsync(code, performedByUserCode,
+                request.Items.Select(i => new DispenseLineRow(i.PrescriptionDetailCode, i.Quantity)).ToList(),
+                string.IsNullOrWhiteSpace(request.OverrideReason) ? null : request.OverrideReason.Trim())
+            .MapErrorAsync(PrescriptionError (error) => error switch
+            {
+                DispenseLinesInvalidError => new PrescriptionDispenseLinesInvalidError(),
+                InsufficientStockError => new PrescriptionInsufficientStockError(),
+                _ => new PrescriptionDataAccessError(error.Message, error.Details, error.Exception)
+            })
             .EnsureAsync(affected => affected > 0, new PrescriptionInvalidTransitionError())
             .MapAsync(_ => Unit.Value);
 

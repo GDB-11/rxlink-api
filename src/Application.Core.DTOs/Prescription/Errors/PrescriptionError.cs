@@ -33,3 +33,12 @@ public sealed record PrescriptionPatientForbiddenError()
 /// <summary>A catalog code in the request was rejected (missing, deactivated, not enabled) or the catalog is unavailable.</summary>
 public sealed record PrescriptionCatalogValidationError(Application.Core.DTOs.Catalog.Errors.CatalogValidationError Inner)
     : PrescriptionError(Inner.Message, Inner.Details, Inner.Exception);
+
+
+/// <summary>The dispensed lines do not match the prescription's lines (missing, repeated or unknown).</summary>
+public sealed record PrescriptionDispenseLinesInvalidError()
+    : PrescriptionError("Las cantidades a dispensar deben incluir exactamente una vez cada medicamento de la receta.");
+
+/// <summary>The clinic's balance of a medication is lower than the quantity to dispense.</summary>
+public sealed record PrescriptionInsufficientStockError()
+    : PrescriptionError("No hay stock suficiente para dispensar la receta.");

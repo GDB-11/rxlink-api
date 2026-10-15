@@ -6,14 +6,10 @@ namespace Infrastructure.Core.Interfaces.Specialty;
 
 public interface ISpecialtyRepository
 {
-    /// <summary>Returns all active specialties with their active doctor count.</summary>
-    Task<Result<IEnumerable<SpecialtyWithDoctorCountRow>, SpecialtyRepositoryError>> GetAllActiveWithDoctorCountAsync();
+    /// <summary>Returns the active doctor count per specialty code (only codes that have at least one doctor).</summary>
+    Task<Result<IReadOnlyList<SpecialtyDoctorCountRow>, SpecialtyRepositoryError>> GetDoctorCountsAsync();
 
-    /// <summary>
-    /// Returns active doctors for the given specialty code.
-    /// Returns <c>null</c> when the specialty does not exist or is inactive.
-    /// Returns an empty enumerable when the specialty exists but has no active doctors.
-    /// </summary>
-    Task<Result<IEnumerable<DoctorSummaryRow>?, SpecialtyRepositoryError>> GetDoctorsBySpecialtyCodeAsync(
+    /// <summary>Returns the active doctors assigned to the given specialty code; empty when there are none.</summary>
+    Task<Result<IReadOnlyList<DoctorSummaryRow>, SpecialtyRepositoryError>> GetDoctorsBySpecialtyCodeAsync(
         Guid specialtyCode, string? search = null);
 }

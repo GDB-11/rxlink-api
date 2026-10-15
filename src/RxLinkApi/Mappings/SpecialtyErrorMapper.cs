@@ -13,6 +13,14 @@ public sealed class SpecialtyErrorMapper : IErrorHttpMapper<SpecialtyError>
                 message = error.Message
             }),
 
+            SpecialtyCatalogUnavailableError => new ObjectResult(new
+            {
+                message = error.Message
+            })
+            {
+                StatusCode = StatusCodes.Status503ServiceUnavailable
+            },
+
             SpecialtyDataAccessError dataError => new ObjectResult(new
             {
                 message = dataError.Message

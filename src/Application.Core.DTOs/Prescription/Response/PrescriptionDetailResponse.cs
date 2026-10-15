@@ -10,6 +10,7 @@ public sealed class PrescriptionDetailResponse
     public required string AdministrationRouteName { get; init; }
     public required Guid FrequencyCode { get; init; }
     public required string FrequencyDescription { get; init; }
+    public required int FrequencyIntervalHours { get; init; }
     public required int DurationDays { get; init; }
     public string? Instructions { get; init; }
 }

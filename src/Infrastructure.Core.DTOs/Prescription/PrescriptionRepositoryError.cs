@@ -28,3 +28,15 @@ public sealed record GetDoctorDraftPrescriptionsError(string? Details = null, Ex
 public sealed record GetNurseDispensationsError(string? Details = null, Exception? Exception = null)
     : PrescriptionRepositoryError("Error inesperado al recuperar las dispensaciones del enfermero.", Details,
         Exception);
+
+public sealed record GetActiveMedicationsError(string? Details = null, Exception? Exception = null)
+    : PrescriptionRepositoryError("Error inesperado al recuperar los medicamentos activos del paciente.", Details,
+        Exception);
+
+public sealed record DispenseLinesInvalidError(string? Details = null, Exception? Exception = null)
+    : PrescriptionRepositoryError(
+        "Las cantidades a dispensar deben incluir exactamente una vez cada medicamento de la receta.", Details,
+        Exception);
+
+public sealed record InsufficientStockError(string? Details = null, Exception? Exception = null)
+    : PrescriptionRepositoryError("No hay stock suficiente para dispensar la receta.", Details, Exception);

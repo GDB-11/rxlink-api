@@ -21,6 +21,18 @@ builder.RegisterErrorMappers();
 
 builder.RegisterApplicationServices();
 
+builder.Services.AddHostedService<RxLinkApi.DependencyInjection.PrescriptionExpiryService>();
+
+// Channel providers are chosen per deployment: Notifications:<Channel>:Provider = None (default, off) | Log (accepts and logs only the channel).
+foreach (string channel in new[] { Infrastructure.Core.Interfaces.Notifications.NotificationChannels.Email, Infrastructure.Core.Interfaces.Notifications.NotificationChannels.Sms })
+{
+    if (string.Equals(builder.Configuration[$"Notifications:{channel}:Provider"], "Log", StringComparison.OrdinalIgnoreCase))
+        builder.Services.AddSingleton<Infrastructure.Core.Interfaces.Notifications.INotificationChannel>(sp =>
+            new RxLinkApi.DependencyInjection.LogOnlyNotificationChannel(channel,
+                sp.GetRequiredService<ILogger<RxLinkApi.DependencyInjection.LogOnlyNotificationChannel>>()));
+}
+builder.Services.AddHostedService<RxLinkApi.DependencyInjection.NotificationDispatchService>();
+
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {

@@ -1,3 +1,4 @@
+using Application.Core.DTOs.Inventory.Response;
 using Application.Core.DTOs.Lookup.Errors;
 using Application.Core.DTOs.Lookup.Response;
 using Application.Core.Interfaces.Lookup;
@@ -7,6 +8,7 @@ using Infrastructure.Core.Interfaces.Catalog;
 using Infrastructure.Core.Interfaces.Lookup;
 using Infrastructure.Core.Interfaces.PartnerCatalog;
 using Infrastructure.Core.Models.Lookup;
+using Infrastructure.Core.Models.PartnerCatalog;
 
 namespace Application.Core.Services.Lookup;
 
@@ -85,7 +87,7 @@ public sealed class LookupService : ILookup
 
         var settings = await _partner.GetAllMedicationsAsync();
         if (!settings.IsSuccess) return Failure<PrescriptionLookupsResponse>(settings.Error);
-        HashSet<Guid> enabled = settings.Value.Where(m => m.IsEnabled).Select(m => m.MedicationCode).ToHashSet();
+        Dictionary<Guid, PartnerMedicationRow> enabled = settings.Value.Where(m => m.IsEnabled).ToDictionary(m => m.MedicationCode);
 
         return Result<PrescriptionLookupsResponse, LookupError>.Success(new PrescriptionLookupsResponse
         {
@@ -93,14 +95,15 @@ public sealed class LookupService : ILookup
             Medications =
             [
                 .. catalog.Medications.Values
-                    .Where(m => m.IsActive && m.DeletedAt is null && enabled.Contains(m.Code))
+                    .Where(m => m.IsActive && m.DeletedAt is null && enabled.ContainsKey(m.Code))
                     .OrderBy(m => m.GenericName, StringComparer.OrdinalIgnoreCase)
                     .Select(m => new MedicationLookupItemResponse
                     {
                         Code = m.Code,
                         Name = m.CommercialName is null ? m.GenericName : $"{m.CommercialName} - {m.GenericName}",
                         DefaultDose = m.Concentration,
-                        DefaultAdministrationRouteCode = m.AdministrationRouteCode
+                        DefaultAdministrationRouteCode = m.AdministrationRouteCode,
+                        StockStatus = StockStatus.From(enabled[m.Code].StockQuantity, enabled[m.Code].ReorderLevel)
                     })
             ],
             AdministrationRoutes =

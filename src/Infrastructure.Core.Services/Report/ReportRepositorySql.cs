@@ -17,7 +17,7 @@ internal static class ReportRepositorySql
                                               ORDER BY u."Username" NULLS LAST, e."EventType"
                                               """;
 
-    /// <summary>Audited writes whose audit context was missing (<c>UserId IS NULL</c>).</summary>
+    /// <summary>Audited writes whose audit context was missing (<c>UserId IS NULL</c>); background jobs mark theirs with a <c>system:</c> request id.</summary>
     internal const string GetUnattributedWrites = """
                                                   SELECT
                                                       a."TableName",
@@ -26,6 +26,7 @@ internal static class ReportRepositorySql
                                                       MAX(a."OccurredAt") AS "LastOccurredAt"
                                                   FROM "AuditLog" a
                                                   WHERE a."UserId" IS NULL
+                                                    AND COALESCE(a."RequestId", '') NOT LIKE 'system:%'
                                                     AND a."OccurredAt" >= @From AND a."OccurredAt" < @ToExclusive
                                                   GROUP BY a."TableName", a."Action"
                                                   ORDER BY "WriteCount" DESC, a."TableName"

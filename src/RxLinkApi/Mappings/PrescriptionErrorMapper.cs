@@ -13,11 +13,20 @@ public sealed class PrescriptionErrorMapper : IErrorHttpMapper<PrescriptionError
                 message = error.Message
             }),
 
+            // The code lets the client offer the stock override instead of a plain error.
+            PrescriptionInsufficientStockError => new ConflictObjectResult(new
+            {
+                message = error.Message,
+                code = "insufficient_stock"
+            }),
+
             PrescriptionDuplicateError or PrescriptionInvalidStatusError or PrescriptionInvalidTransitionError =>
                 new ConflictObjectResult(new
                 {
                     message = error.Message
                 }),
+
+            PrescriptionDispenseLinesInvalidError => new BadRequestObjectResult(new { message = error.Message }),
 
             PrescriptionPatientForbiddenError => new ObjectResult(new { message = error.Message })
             {

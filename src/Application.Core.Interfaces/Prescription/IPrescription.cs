@@ -41,6 +41,7 @@ public interface IPrescription
     /// <summary>Transitions any non-terminal status → Cancelado.</summary>
     Task<Result<Unit, PrescriptionError>> CancelAsync(Guid code, Guid performedByUserCode);
 
-    /// <summary>Transitions Activo → Dispensado.</summary>
-    Task<Result<Unit, PrescriptionError>> DispenseAsync(Guid code, Guid performedByUserCode);
+    /// <summary>Transitions Activo → Dispensado and moves the dispensed quantities out of the clinic's stock.</summary>
+    Task<Result<Unit, PrescriptionError>> DispenseAsync(
+        Guid code, DispensePrescriptionRequest request, Guid performedByUserCode);
 }

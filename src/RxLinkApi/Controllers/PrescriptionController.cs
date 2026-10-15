@@ -16,15 +16,18 @@ namespace RxLinkApi.Controllers;
 public sealed class PrescriptionController : FunctionalController
 {
     private readonly IPrescription _prescriptionService;
+    private readonly IPrescriptionSafety _safetyService;
     private readonly IErrorHttpMapper<PrescriptionError> _errorMapper;
 
     public PrescriptionController(
         IPrescription prescriptionService,
+        IPrescriptionSafety safetyService,
         IErrorHttpMapper<PrescriptionError> errorMapper,
         IResultLogger logger)
         : base(logger)
     {
         _prescriptionService = prescriptionService;
+        _safetyService = safetyService;
         _errorMapper = errorMapper;
     }
 
@@ -98,6 +101,25 @@ public sealed class PrescriptionController : FunctionalController
             operation: () => _prescriptionService.GetAsync(code),
             errorMapper: _errorMapper,
             operationName: nameof(GetByCode)
+        );
+
+    /// <summary>
+    /// Allergy and drug-interaction warnings for a prescription (own medications vs the patient's allergies, each
+    /// other and the patient's other active prescriptions). 503 when the shared catalog has not loaded.
+    /// </summary>
+    [HttpGet("prescription/{code:guid}/safety-check")]
+    [Authorize(Roles = "Doctor")]
+    [ProducesResponseType(typeof(PrescriptionSafetyCheckResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public Task<IActionResult> SafetyCheck(Guid code) =>
+        ExecuteAsync(
+            operation: () => _safetyService.CheckAsync(code),
+            errorMapper: _errorMapper,
+            operationName: nameof(SafetyCheck)
         );
 
     /// <summary>
@@ -210,18 +232,21 @@ public sealed class PrescriptionController : FunctionalController
         );
 
     /// <summary>
-    /// Transitions Activo → Dispensado.
+    /// Transitions Activo → Dispensado, taking the dispensed quantities out of the clinic's stock.
+    /// 400 when the lines don't match the prescription, 409 on an invalid transition or insufficient stock
+    /// (unless <c>overrideReason</c> is given, which dispenses the shortfall and records it).
     /// </summary>
     [HttpPatch("prescription/{code:guid}/dispense")]
     [Authorize(Roles = "Enfermero")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> Dispense(Guid code) =>
+    public Task<IActionResult> Dispense(Guid code, [FromBody] DispensePrescriptionRequest request) =>
         ExecuteAuthenticatedAsync(
-            operation: userCode => _prescriptionService.DispenseAsync(code, userCode),
+            operation: userCode => _prescriptionService.DispenseAsync(code, request, userCode),
             errorMapper: _errorMapper,
             operationName: nameof(Dispense),
             successMapper: _ => NoContent()
