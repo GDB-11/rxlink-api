@@ -34,11 +34,10 @@ internal static class PatientCredentialRepositorySql
                                               pat."PatientCode",
                                               (pat."PasswordHash" IS NOT NULL) AS "HasCredentials"
                                           FROM "PersonDocument" pd
-                                          JOIN "DocumentType" dt  ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                           JOIN "Person" p          ON p."PersonId"        = pd."PersonId"
                                           LEFT JOIN "Patient" pat  ON pat."PersonId"       = p."PersonId"
                                                                    AND pat."IsActive"      = TRUE
-                                          WHERE dt."DocumentTypeCode" = @DocumentTypeCode
+                                          WHERE pd."DocumentTypeCode" = @DocumentTypeCode
                                             AND pd."Number"           = @DocumentNumber
                                           """;
 

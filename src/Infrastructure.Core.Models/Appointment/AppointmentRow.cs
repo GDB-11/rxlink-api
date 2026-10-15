@@ -9,7 +9,8 @@ public sealed class AppointmentRow
     public required Guid DoctorCode { get; init; }
     public required string DoctorNames { get; init; }
     public required string DoctorSurnames { get; init; }
-    public required string SpecialtyName { get; init; }
+    /// <summary>The doctor's specialty; the name is resolved from the catalog snapshot by the service.</summary>
+    public Guid? SpecialtyCode { get; init; }
     public required string ConsultationTypeName { get; init; }
     public required string StatusName { get; init; }
     public required Guid StatusCode { get; init; }

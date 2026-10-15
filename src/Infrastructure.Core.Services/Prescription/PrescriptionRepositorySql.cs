@@ -10,21 +10,18 @@ internal static class PrescriptionRepositorySql
                                      COALESCE(
                                          (SELECT json_agg(json_build_object(
                                              'PrescriptionDetailCode',  pd."PrescriptionDetailCode",
-                                             'MedicationCode',          m."MedicationCode",
-                                             'MedicationName',          m."GenericName",
+                                             'MedicationCode',          pd."MedicationCode",
+                                             'MedicationName',          pd."MedicationGenericName",
                                              'Dose',                    pd."Dose",
-                                             'AdministrationRouteCode', ar."AdministrationRouteCode",
-                                             'AdministrationRouteName', ar."Name",
-                                             'FrequencyCode',           f."FrequencyCode",
-                                             'FrequencyDescription',    f."Description",
-                                             'FrequencyIntervalHours',  f."IntervalHours",
+                                             'AdministrationRouteCode', pd."AdministrationRouteCode",
+                                             'AdministrationRouteName', pd."AdministrationRouteName",
+                                             'FrequencyCode',           pd."FrequencyCode",
+                                             'FrequencyDescription',    pd."FrequencyDescription",
+                                             'FrequencyIntervalHours',  pd."FrequencyIntervalHours",
                                              'DurationDays',            pd."DurationDays",
                                              'Instructions',            pd."Instructions"
                                          ) ORDER BY pd."PrescriptionDetailId")::text
                                          FROM "PrescriptionDetail" pd
-                                         JOIN "Medication" m           ON m."MedicationId"          = pd."MedicationId"
-                                         JOIN "AdministrationRoute" ar ON ar."AdministrationRouteId" = pd."AdministrationRouteId"
-                                         JOIN "Frequency" f            ON f."FrequencyId"            = pd."FrequencyId"
                                          WHERE pd."PrescriptionId" = p."PrescriptionId"
                                          ),
                                          '[]'
@@ -143,20 +140,18 @@ internal static class PrescriptionRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PrescriptionDetailCode',  id."PrescriptionDetailCode",
-                                               'MedicationCode',          m."MedicationCode",
-                                               'MedicationName',          m."GenericName",
+                                               'MedicationCode',          id."MedicationCode",
+                                               'MedicationName',          id."MedicationGenericName",
                                                'Dose',                    id."Dose",
-                                               'AdministrationRouteCode', ar."AdministrationRouteCode",
-                                               'AdministrationRouteName', ar."Name",
-                                               'FrequencyCode',           f."FrequencyCode",
-                                               'FrequencyDescription',    f."Description",
+                                               'AdministrationRouteCode', id."AdministrationRouteCode",
+                                               'AdministrationRouteName', id."AdministrationRouteName",
+                                               'FrequencyCode',           id."FrequencyCode",
+                                               'FrequencyDescription',    id."FrequencyDescription",
+                                               'FrequencyIntervalHours',  id."FrequencyIntervalHours",
                                                'DurationDays',            id."DurationDays",
                                                'Instructions',            id."Instructions"
                                            ) ORDER BY id."PrescriptionDetailId")::text
                                            FROM ins_details id
-                                           JOIN "Medication" m           ON m."MedicationId"          = id."MedicationId"
-                                           JOIN "AdministrationRoute" ar ON ar."AdministrationRouteId" = id."AdministrationRouteId"
-                                           JOIN "Frequency" f            ON f."FrequencyId"            = id."FrequencyId"
                                            ),
                                            '[]'
                                        ) AS "DetailsJson"
@@ -234,20 +229,18 @@ internal static class PrescriptionRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PrescriptionDetailCode',  id."PrescriptionDetailCode",
-                                               'MedicationCode',          m."MedicationCode",
-                                               'MedicationName',          m."GenericName",
+                                               'MedicationCode',          id."MedicationCode",
+                                               'MedicationName',          id."MedicationGenericName",
                                                'Dose',                    id."Dose",
-                                               'AdministrationRouteCode', ar."AdministrationRouteCode",
-                                               'AdministrationRouteName', ar."Name",
-                                               'FrequencyCode',           f."FrequencyCode",
-                                               'FrequencyDescription',    f."Description",
+                                               'AdministrationRouteCode', id."AdministrationRouteCode",
+                                               'AdministrationRouteName', id."AdministrationRouteName",
+                                               'FrequencyCode',           id."FrequencyCode",
+                                               'FrequencyDescription',    id."FrequencyDescription",
+                                               'FrequencyIntervalHours',  id."FrequencyIntervalHours",
                                                'DurationDays',            id."DurationDays",
                                                'Instructions',            id."Instructions"
                                            ) ORDER BY id."PrescriptionDetailId")::text
                                            FROM ins_details id
-                                           JOIN "Medication" m           ON m."MedicationId"          = id."MedicationId"
-                                           JOIN "AdministrationRoute" ar ON ar."AdministrationRouteId" = id."AdministrationRouteId"
-                                           JOIN "Frequency" f            ON f."FrequencyId"            = id."FrequencyId"
                                            ),
                                            '[]'
                                        ) AS "DetailsJson"

@@ -70,9 +70,11 @@ internal static class ServiceRegistration
         internal void RegisterApplicationServices()
         {
             builder.Services.AddScoped<IAppointment, AppointmentService>();
+            builder.Services.AddScoped<IInsuranceTermsResolver, InsuranceTermsResolver>();
             builder.Services.AddScoped<IAvailability, AvailabilityService>();
             builder.Services.AddScoped<IPerson, PersonService>();
             builder.Services.AddScoped<IPatient, PatientService>();
+            builder.Services.AddScoped<IPatientAllergyResolver, PatientAllergyResolver>();
             builder.Services.AddScoped<IPatientExport, PatientExportService>();
             builder.Services.AddScoped<IPatientAccessPolicy, PatientAccessPolicy>();
             builder.Services.AddScoped<IBreakGlass, BreakGlassService>();
@@ -108,6 +110,7 @@ internal static class ServiceRegistration
             builder.Services.AddScoped<ICatalogWriteValidator, CatalogWriteValidator>();
             builder.Services.AddScoped<PrescriptionLineSnapshotBuilder>();
             builder.Services.AddScoped<ICatalogView, CatalogViewService>();
+            builder.Services.AddSingleton<ICatalogNames, CatalogNames>();
             builder.Services.AddScoped<IPartnerConfig, PartnerConfigService>();
             builder.Services.AddScoped<IPartnerIdentityVerifier, PartnerIdentityVerifier>();
             builder.Services.AddScoped<IDiagnostic, DiagnosticService>();

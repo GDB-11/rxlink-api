@@ -65,13 +65,14 @@ internal static class AppointmentRepositorySql
 
     /// <summary>
     /// Resolves the base price (before insurance coverage) for a doctor/consultation-type pair,
-    /// picking Specialty.PriceInPerson for 'Presencial' or Specialty.PriceVirtual otherwise.
+    /// picking PartnerSpecialty.PriceInPerson for 'Presencial' or PartnerSpecialty.PriceVirtual otherwise.
+    /// Returns no row when the doctor has no specialty or the partner has no price row for it.
     /// </summary>
     internal const string GetBasePriceForBooking = """
                                                     SELECT
                                                         CASE WHEN ct."Name" = 'Presencial' THEN sp."PriceInPerson" ELSE sp."PriceVirtual" END
                                                     FROM "User" u
-                                                    JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
+                                                    JOIN "PartnerSpecialty" sp ON sp."SpecialtyCode" = u."SpecialtyCode"
                                                     JOIN "ConsultationType" ct ON ct."ConsultationTypeId" = @ConsultationTypeId
                                                     WHERE u."UserId" = @DoctorId
                                                     """;
@@ -86,18 +87,10 @@ internal static class AppointmentRepositorySql
                                                               CASE WHEN ct."Name" = 'Presencial' THEN sp."PriceInPerson" ELSE sp."PriceVirtual" END AS "BaseAmount"
                                                           FROM "Appointment" a
                                                           JOIN "User" u ON u."UserId" = a."DoctorId"
-                                                          JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
+                                                          LEFT JOIN "PartnerSpecialty" sp ON sp."SpecialtyCode" = u."SpecialtyCode"
                                                           JOIN "ConsultationType" ct ON ct."ConsultationTypeId" = a."ConsultationTypeId"
                                                           WHERE a."AppointmentCode" = @Code
                                                           """;
-
-    /// <summary>Resolves an active insurance's Id/CoveragePercentage by its code.</summary>
-    internal const string GetInsuranceForPayment = """
-                                                    SELECT "InsuranceId", "InsuranceCode", "Name" AS "InsuranceName", "CoveragePercentage"
-                                                    FROM "Insurance"
-                                                    WHERE "InsuranceCode" = @InsuranceCode
-                                                      AND "IsActive"      = TRUE
-                                                    """;
 
     /// <summary>
     /// Inserts the payment snapshot for an appointment. RecordedBy resolves to NULL when
@@ -106,7 +99,6 @@ internal static class AppointmentRepositorySql
     internal const string InsertAppointmentPayment = """
                                                       INSERT INTO "AppointmentPayment" (
                                                           "AppointmentId",
-                                                          "InsuranceId",
                                                           "InsuranceCode",
                                                           "InsuranceName",
                                                           "BaseAmount",
@@ -117,7 +109,6 @@ internal static class AppointmentRepositorySql
                                                       )
                                                       VALUES (
                                                           @AppointmentId,
-                                                          @InsuranceId,
                                                           @InsuranceCode,
                                                           @InsuranceName,
                                                           @BaseAmount,
@@ -145,13 +136,13 @@ internal static class AppointmentRepositorySql
                                           u."UserCode"                        AS "DoctorCode",
                                           per."Names"                         AS "DoctorNames",
                                           per."Surnames"                      AS "DoctorSurnames",
-                                          sp."Name"                           AS "SpecialtyName",
+                                          u."SpecialtyCode",
                                           ct."Name"                           AS "ConsultationTypeName",
                                           ast."Name"                          AS "StatusName",
                                           ast."AppointmentStatusCode"         AS "StatusCode",
                                           a."ScheduledAt",
                                           a."CreatedAt",
-                                          ins."Name"                          AS "InsuranceName",
+                                          ap."InsuranceName",
                                           ap."CoveragePercentage",
                                           ap."BaseAmount",
                                           ap."PatientAmount",
@@ -161,11 +152,9 @@ internal static class AppointmentRepositorySql
                                       JOIN "Person"           pat_per ON pat_per."PersonId"       = pat."PersonId"
                                       JOIN "User"             u       ON u."UserId"               = a."DoctorId"
                                       JOIN "Person"           per     ON per."PersonId"           = u."PersonId"
-                                      JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
                                       JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
                                       JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                       LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
-                                      LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                       WHERE a."AppointmentCode" = @Code
                                       """;
 
@@ -283,13 +272,13 @@ internal static class AppointmentRepositorySql
                                                        u."UserCode"                        AS "DoctorCode",
                                                        per."Names"                         AS "DoctorNames",
                                                        per."Surnames"                      AS "DoctorSurnames",
-                                                       sp."Name"                           AS "SpecialtyName",
+                                                       u."SpecialtyCode",
                                                        ct."Name"                           AS "ConsultationTypeName",
                                                        ast."Name"                          AS "StatusName",
                                                        ast."AppointmentStatusCode"         AS "StatusCode",
                                                        a."ScheduledAt",
                                                        a."CreatedAt",
-                                                       ins."Name"                          AS "InsuranceName",
+                                                       ap."InsuranceName",
                                                        ap."CoveragePercentage",
                                                        ap."BaseAmount",
                                                        ap."PatientAmount",
@@ -299,11 +288,9 @@ internal static class AppointmentRepositorySql
                                                    JOIN "Person"           pat_per ON pat_per."PersonId"       = pat."PersonId"
                                                    JOIN "User"             u       ON u."UserId"               = a."DoctorId"
                                                    JOIN "Person"           per     ON per."PersonId"           = u."PersonId"
-                                                   JOIN "Specialty"        sp      ON sp."SpecialtyId"         = u."SpecialtyId"
                                                    JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"  = a."ConsultationTypeId"
                                                    JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                                    LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
-                                                   LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                    WHERE pat."PatientCode" = @PatientCode
                                                    ORDER BY a."ScheduledAt" DESC
                                                    LIMIT @PageSize OFFSET @Offset
@@ -318,13 +305,13 @@ internal static class AppointmentRepositorySql
                                                       u."UserCode"                        AS "DoctorCode",
                                                       per."Names"                         AS "DoctorNames",
                                                       per."Surnames"                      AS "DoctorSurnames",
-                                                      sp."Name"                           AS "SpecialtyName",
+                                                      u."SpecialtyCode",
                                                       ct."Name"                           AS "ConsultationTypeName",
                                                       ast."Name"                          AS "StatusName",
                                                       ast."AppointmentStatusCode"         AS "StatusCode",
                                                       a."ScheduledAt",
                                                       a."CreatedAt",
-                                                      ins."Name"                          AS "InsuranceName",
+                                                      ap."InsuranceName",
                                                       ap."CoveragePercentage",
                                                       ap."BaseAmount",
                                                       ap."PatientAmount",
@@ -334,11 +321,9 @@ internal static class AppointmentRepositorySql
                                                   JOIN "Person"           pat_per ON pat_per."PersonId"        = pat."PersonId"
                                                   JOIN "User"             u       ON u."UserId"                = a."DoctorId"
                                                   JOIN "Person"           per     ON per."PersonId"            = u."PersonId"
-                                                  JOIN "Specialty"        sp      ON sp."SpecialtyId"          = u."SpecialtyId"
                                                   JOIN "ConsultationType" ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
                                                   JOIN "AppointmentStatus" ast    ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                                   LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
-                                                  LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                   WHERE u."UserCode" = @DoctorCode
                                                     AND (@Date::date       IS NULL OR a."ScheduledAt"::date = @Date::date)
                                                     AND (@StatusName::text IS NULL OR ast."Name"            = @StatusName::text)
@@ -379,13 +364,13 @@ internal static class AppointmentRepositorySql
                                                      u."UserCode"                        AS "DoctorCode",
                                                      per."Names"                         AS "DoctorNames",
                                                      per."Surnames"                      AS "DoctorSurnames",
-                                                     sp."Name"                           AS "SpecialtyName",
+                                                     u."SpecialtyCode",
                                                      ct."Name"                           AS "ConsultationTypeName",
                                                      ast."Name"                          AS "StatusName",
                                                      ast."AppointmentStatusCode"         AS "StatusCode",
                                                      a."ScheduledAt",
                                                      a."CreatedAt",
-                                                     ins."Name"                          AS "InsuranceName",
+                                                     ap."InsuranceName",
                                                      ap."CoveragePercentage",
                                                      ap."BaseAmount",
                                                      ap."PatientAmount",
@@ -395,11 +380,9 @@ internal static class AppointmentRepositorySql
                                                  JOIN "Person"            pat_per ON pat_per."PersonId"        = pat."PersonId"
                                                  JOIN "User"              u       ON u."UserId"                = a."DoctorId"
                                                  JOIN "Person"            per     ON per."PersonId"            = u."PersonId"
-                                                 JOIN "Specialty"         sp      ON sp."SpecialtyId"          = u."SpecialtyId"
                                                  JOIN "ConsultationType"  ct      ON ct."ConsultationTypeId"   = a."ConsultationTypeId"
                                                  JOIN "AppointmentStatus" ast     ON ast."AppointmentStatusId" = a."AppointmentStatusId"
                                                  LEFT JOIN "AppointmentPayment" ap ON ap."AppointmentId" = a."AppointmentId"
-                                                 LEFT JOIN "Insurance"          ins ON ins."InsuranceId" = ap."InsuranceId"
                                                  WHERE (@PatientSearch::text IS NULL
                                                         OR pat_per."Names"     ILIKE '%' || @PatientSearch || '%'
                                                         OR pat_per."Surnames"  ILIKE '%' || @PatientSearch || '%')

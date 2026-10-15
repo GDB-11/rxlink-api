@@ -35,7 +35,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
         Guid availabilityCode,
         Guid consultationTypeCode,
         bool payNow,
-        Guid? insuranceCode)
+        InsuranceTerms? insurance)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();
@@ -125,7 +125,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             if (payNow)
             {
                 Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
-                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insuranceCode,
+                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insurance,
                     recordedByUserCode: null, transaction);
 
                 if (!paymentResult.IsSuccess)
@@ -174,7 +174,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
     /// <inheritdoc/>
     public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentAsync(
-        Guid code, Guid patientCode, Guid? insuranceCode)
+        Guid code, Guid patientCode, InsuranceTerms? insurance)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();
@@ -195,8 +195,14 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 return Result<int, AppointmentRepositoryError>.Success(0);
             }
 
+            if (pricing.BaseAmount is null)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError());
+            }
+
             Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
-                pricing.AppointmentId, pricing.BaseAmount, insuranceCode, recordedByUserCode: null, transaction);
+                pricing.AppointmentId, pricing.BaseAmount.Value, insurance, recordedByUserCode: null, transaction);
 
             if (!paymentResult.IsSuccess)
             {
@@ -359,7 +365,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
         Guid availabilityCode,
         Guid consultationTypeCode,
         bool payNow,
-        Guid? insuranceCode,
+        InsuranceTerms? insurance,
         Guid? recordedByUserCode)
     {
         if (_connection.State != ConnectionState.Open)
@@ -449,7 +455,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             if (payNow)
             {
                 Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
-                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insuranceCode,
+                    identity.AppointmentId, slot.DoctorId, consultationTypeId.Value, insurance,
                     recordedByUserCode, transaction);
 
                 if (!paymentResult.IsSuccess)
@@ -489,7 +495,7 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
 
     /// <inheritdoc/>
     public async Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(
-        Guid code, Guid? insuranceCode, Guid recordedByUserCode)
+        Guid code, InsuranceTerms? insurance, Guid recordedByUserCode)
     {
         if (_connection.State != ConnectionState.Open)
             _connection.Open();
@@ -510,8 +516,14 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
                 return Result<int, AppointmentRepositoryError>.Success(0);
             }
 
+            if (pricing.BaseAmount is null)
+            {
+                transaction.Rollback();
+                return Result<int, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError());
+            }
+
             Result<Unit, AppointmentRepositoryError> paymentResult = await ResolveAndRecordPaymentAsync(
-                pricing.AppointmentId, pricing.BaseAmount, insuranceCode, recordedByUserCode, transaction);
+                pricing.AppointmentId, pricing.BaseAmount.Value, insurance, recordedByUserCode, transaction);
 
             if (!paymentResult.IsSuccess)
             {
@@ -607,54 +619,36 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             errorFactory: AppointmentRepositoryError (ex) => new GetAdminAppointmentsError(ex.Message, ex));
 
     /// <summary>
-    /// Resolves the base price for a doctor/consultation-type pair, resolves the insurance (if
-    /// any), and inserts the AppointmentPayment snapshot. Returns a typed failure when
-    /// <paramref name="insuranceCode"/> does not match an active insurance — nothing is written
-    /// in that case.
+    /// Resolves the base price for a doctor/consultation-type pair from the partner's specialty prices and
+    /// inserts the AppointmentPayment snapshot with the given insurer terms. Returns a typed failure when no price
+    /// exists for the doctor's specialty — nothing is written in that case.
     /// </summary>
     private async Task<Result<Unit, AppointmentRepositoryError>> ResolveAndRecordPaymentAsync(
-        int appointmentId, int doctorId, int consultationTypeId, Guid? insuranceCode,
+        int appointmentId, int doctorId, int consultationTypeId, InsuranceTerms? insurance,
         Guid? recordedByUserCode, IDbTransaction transaction)
     {
-        decimal baseAmount = await _connection.ExecuteScalarAsync<decimal>(
+        decimal? baseAmount = await _connection.ExecuteScalarAsync<decimal?>(
             AppointmentRepositorySql.GetBasePriceForBooking,
             new { DoctorId = doctorId, ConsultationTypeId = consultationTypeId },
             transaction);
 
+        if (baseAmount is null)
+            return Result<Unit, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError());
+
         return await ResolveAndRecordPaymentAsync(
-            appointmentId, baseAmount, insuranceCode, recordedByUserCode, transaction);
+            appointmentId, baseAmount.Value, insurance, recordedByUserCode, transaction);
     }
 
     /// <summary>
-    /// Resolves the insurance (if any) for an already-known base price and inserts the
-    /// AppointmentPayment snapshot. Returns a typed failure when <paramref name="insuranceCode"/>
-    /// does not match an active insurance — nothing is written in that case.
+    /// Inserts the AppointmentPayment snapshot for an already-known base price. The coverage, insurer code and
+    /// insurer name come from <paramref name="insurance"/> (resolved by the service); a payment is a historical
+    /// record, so they are stored as given and never re-resolved.
     /// </summary>
     private async Task<Result<Unit, AppointmentRepositoryError>> ResolveAndRecordPaymentAsync(
-        int appointmentId, decimal baseAmount, Guid? insuranceCode,
+        int appointmentId, decimal baseAmount, InsuranceTerms? insurance,
         Guid? recordedByUserCode, IDbTransaction transaction)
     {
-        int? insuranceId = null;
-        Guid? snapshotInsuranceCode = null;
-        string? insuranceName = null;
-        decimal coveragePercentage = 0m;
-
-        if (insuranceCode.HasValue)
-        {
-            InsuranceForPaymentRow? insurance = await _connection.QueryFirstOrDefaultAsync<InsuranceForPaymentRow>(
-                AppointmentRepositorySql.GetInsuranceForPayment,
-                new { InsuranceCode = insuranceCode.Value },
-                transaction);
-
-            if (insurance is null)
-                return Result<Unit, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError());
-
-            insuranceId = insurance.InsuranceId;
-            snapshotInsuranceCode = insurance.InsuranceCode;
-            insuranceName = insurance.InsuranceName;
-            coveragePercentage = insurance.CoveragePercentage;
-        }
-
+        decimal coveragePercentage = insurance?.CoveragePercentage ?? 0m;
         decimal coveredAmount = Math.Round(baseAmount * coveragePercentage / 100m, 2);
         decimal patientAmount = baseAmount - coveredAmount;
 
@@ -663,9 +657,8 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
             new
             {
                 AppointmentId = appointmentId,
-                InsuranceId = insuranceId,
-                InsuranceCode = snapshotInsuranceCode,
-                InsuranceName = insuranceName,
+                InsuranceCode = insurance?.InsuranceCode,
+                InsuranceName = insurance?.InsuranceName,
                 BaseAmount = baseAmount,
                 CoveragePercentage = coveragePercentage,
                 CoveredAmount = coveredAmount,
@@ -706,15 +699,6 @@ public sealed class AppointmentRepository : BaseDatabaseService, IAppointmentRep
     private sealed class PricingContextRow
     {
         public required int AppointmentId { get; init; }
-        public required decimal BaseAmount { get; init; }
-    }
-
-    // Internal projection for an active insurance's coverage.
-    private sealed class InsuranceForPaymentRow
-    {
-        public required int InsuranceId { get; init; }
-        public required Guid InsuranceCode { get; init; }
-        public required string InsuranceName { get; init; }
-        public required decimal CoveragePercentage { get; init; }
+        public decimal? BaseAmount { get; init; }
     }
 }

@@ -21,19 +21,21 @@ public sealed class AppointmentService : IAppointment
     private readonly IAppointmentRepository _repository;
     private readonly IRecordAccessLogger _accessLogger;
     private readonly IPatientAccessPolicy _accessPolicy;
-    private readonly ICatalogWriteValidator _catalog;
+    private readonly IInsuranceTermsResolver _insurance;
+    private readonly ICatalogNames _names;
 
     public AppointmentService(IAppointmentRepository repository, IRecordAccessLogger accessLogger,
-        IPatientAccessPolicy accessPolicy, ICatalogWriteValidator catalog)
+        IPatientAccessPolicy accessPolicy, IInsuranceTermsResolver insurance, ICatalogNames names)
     {
         _repository = repository;
         _accessLogger = accessLogger;
         _accessPolicy = accessPolicy;
-        _catalog = catalog;
+        _insurance = insurance;
+        _names = names;
     }
 
-    private Task<Result<Unit, AppointmentError>> ValidateInsuranceAsync(Guid? insuranceCode) =>
-        _catalog.ValidateInsuranceAsync(insuranceCode)
+    private Task<Result<InsuranceTerms?, AppointmentError>> ResolveInsuranceAsync(Guid? insuranceCode) =>
+        _insurance.ResolveAsync(insuranceCode)
             .MapErrorAsync(AppointmentError (error) => new AppointmentCatalogValidationError(error));
 
     private static AppointmentError ToDataError(Application.Core.DTOs.PatientAccess.Errors.PatientAccessError error) =>
@@ -42,13 +44,13 @@ public sealed class AppointmentService : IAppointment
     /// <inheritdoc/>
     public Task<Result<AppointmentResponse, AppointmentError>> CreateAsync(
         CreateAppointmentRequest request, Guid patientCode) =>
-        ValidateInsuranceAsync(request.InsuranceCode)
-            .BindAsync(_ => _repository.InsertAsync(
+        ResolveInsuranceAsync(request.InsuranceCode)
+            .BindAsync(insurance => _repository.InsertAsync(
                 patientCode,
                 request.AvailabilityCode,
                 request.ConsultationTypeCode,
                 request.PayNow,
-                request.InsuranceCode)
+                insurance)
             .MapErrorAsync(AppointmentError (error) => error switch
             {
                 InsertPatientNotFoundError => new AppointmentPatientNotFoundError(),
@@ -56,7 +58,7 @@ public sealed class AppointmentService : IAppointment
                 InsertSlotAlreadyBookedError => new AppointmentSlotAlreadyBookedError(),
                 InsertSlotExpiredError => new AppointmentSlotExpiredError(),
                 InsertConsultationTypeNotFoundError => new AppointmentConsultationTypeNotFoundError(),
-                InsertInsuranceNotFoundError => new AppointmentInsuranceNotFoundError(),
+                InsertSpecialtyPriceNotFoundError => new AppointmentSpecialtyPriceNotFoundError(),
                 var e => new AppointmentDataAccessError(e.Message, e.Details, e.Exception)
             })
             .EnsureNotNullAsync(new AppointmentSlotAlreadyBookedError())
@@ -64,11 +66,11 @@ public sealed class AppointmentService : IAppointment
 
     /// <inheritdoc/>
     public Task<Result<Unit, AppointmentError>> ConfirmPaymentAsync(Guid code, Guid patientCode, Guid? insuranceCode) =>
-        ValidateInsuranceAsync(insuranceCode)
-            .BindAsync(_ => _repository.ConfirmPaymentAsync(code, patientCode, insuranceCode)
+        ResolveInsuranceAsync(insuranceCode)
+            .BindAsync(insurance => _repository.ConfirmPaymentAsync(code, patientCode, insurance)
             .MapErrorAsync(AppointmentError (error) => error switch
             {
-                InsertInsuranceNotFoundError => new AppointmentInsuranceNotFoundError(),
+                InsertSpecialtyPriceNotFoundError => new AppointmentSpecialtyPriceNotFoundError(),
                 var e => new AppointmentDataAccessError(e.Message, e.Details, e.Exception)
             })
             .EnsureAsync(affected => affected > 0, new AppointmentInvalidTransitionError())
@@ -179,13 +181,13 @@ public sealed class AppointmentService : IAppointment
     /// <inheritdoc/>
     public Task<Result<AppointmentResponse, AppointmentError>> AdminCreateAsync(
         AdminCreateAppointmentRequest request, Guid adminUserCode) =>
-        ValidateInsuranceAsync(request.InsuranceCode)
-            .BindAsync(_ => _repository.InsertByAdminAsync(
+        ResolveInsuranceAsync(request.InsuranceCode)
+            .BindAsync(insurance => _repository.InsertByAdminAsync(
                 request.PatientCode,
                 request.AvailabilityCode,
                 request.ConsultationTypeCode,
                 request.PayNow,
-                request.InsuranceCode,
+                insurance,
                 adminUserCode)
             .MapErrorAsync(AppointmentError (error) => error switch
             {
@@ -194,7 +196,7 @@ public sealed class AppointmentService : IAppointment
                 InsertSlotAlreadyBookedError => new AppointmentSlotAlreadyBookedError(),
                 InsertSlotExpiredError => new AppointmentSlotExpiredError(),
                 InsertConsultationTypeNotFoundError => new AppointmentConsultationTypeNotFoundError(),
-                InsertInsuranceNotFoundError => new AppointmentInsuranceNotFoundError(),
+                InsertSpecialtyPriceNotFoundError => new AppointmentSpecialtyPriceNotFoundError(),
                 var e => new AppointmentDataAccessError(e.Message, e.Details, e.Exception)
             })
             .EnsureNotNullAsync(new AppointmentSlotAlreadyBookedError())
@@ -203,11 +205,11 @@ public sealed class AppointmentService : IAppointment
     /// <inheritdoc/>
     public Task<Result<Unit, AppointmentError>> AdminConfirmPaymentAsync(
         Guid code, Guid adminUserCode, Guid? insuranceCode) =>
-        ValidateInsuranceAsync(insuranceCode)
-            .BindAsync(_ => _repository.ConfirmPaymentByAdminAsync(code, insuranceCode, adminUserCode)
+        ResolveInsuranceAsync(insuranceCode)
+            .BindAsync(insurance => _repository.ConfirmPaymentByAdminAsync(code, insurance, adminUserCode)
             .MapErrorAsync(AppointmentError (error) => error switch
             {
-                InsertInsuranceNotFoundError => new AppointmentInsuranceNotFoundError(),
+                InsertSpecialtyPriceNotFoundError => new AppointmentSpecialtyPriceNotFoundError(),
                 var e => new AppointmentDataAccessError(e.Message, e.Details, e.Exception)
             })
             .EnsureAsync(affected => affected > 0, new AdminConfirmPaymentConflictError())
@@ -235,7 +237,7 @@ public sealed class AppointmentService : IAppointment
                 Page: request.Page,
                 PageSize: request.PageSize));
 
-    private static AppointmentResponse MapToResponse(AppointmentRow row) =>
+    private AppointmentResponse MapToResponse(AppointmentRow row) =>
         new(
             AppointmentCode: row.AppointmentCode,
             PatientCode: row.PatientCode,
@@ -244,7 +246,7 @@ public sealed class AppointmentService : IAppointment
             DoctorCode: row.DoctorCode,
             DoctorNames: row.DoctorNames,
             DoctorSurnames: row.DoctorSurnames,
-            SpecialtyName: row.SpecialtyName,
+            SpecialtyName: row.SpecialtyCode is { } specialty ? _names.Specialty(specialty) : string.Empty,
             ConsultationTypeName: row.ConsultationTypeName,
             StatusName: row.StatusName,
             StatusCode: row.StatusCode,

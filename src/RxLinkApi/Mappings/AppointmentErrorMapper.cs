@@ -11,8 +11,7 @@ public sealed class AppointmentErrorMapper : IErrorHttpMapper<AppointmentError>
             AppointmentNotFoundError
                 or AppointmentPatientNotFoundError
                 or AppointmentSlotNotFoundError
-                or AppointmentConsultationTypeNotFoundError
-                or AppointmentInsuranceNotFoundError => new NotFoundObjectResult(new
+                or AppointmentConsultationTypeNotFoundError => new NotFoundObjectResult(new
                 {
                     message = error.Message
                 }),
@@ -25,7 +24,8 @@ public sealed class AppointmentErrorMapper : IErrorHttpMapper<AppointmentError>
                 StatusCode = StatusCodes.Status403Forbidden
             },
 
-            AppointmentSlotExpiredError => new ObjectResult(new
+            AppointmentSpecialtyPriceNotFoundError
+                or AppointmentSlotExpiredError => new ObjectResult(new
             {
                 message = error.Message
             })

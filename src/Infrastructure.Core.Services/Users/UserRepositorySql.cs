@@ -21,23 +21,20 @@ internal static class UserRepositorySql
                                         p."Names",
                                         p."Surnames",
                                         p."BirthDate",
-                                        s."SexCode",
-                                        s."Name"                AS "SexName",
+                                        p."SexCode",
                                         p."Phone",
                                         p."AlternativePhone",
                                         p."Email"               AS "PersonEmail",
                                         p."Address",
                                         p."EmergencyContactName",
                                         p."EmergencyContactPhone",
-                                        dt."DocumentTypeCode",
-                                        dt."Name"               AS "DocumentTypeName",
+                                        pd."DocumentTypeCode",
                                         pd."Number"             AS "DocumentNumber",
                                         pd."IssueDate"          AS "DocumentIssueDate",
                                         pd."ExpirationDate"     AS "DocumentExpirationDate",
                                         r."RoleCode",
                                         r."Name"                AS "RoleName",
-                                        sp."SpecialtyCode",
-                                        sp."Name"               AS "SpecialtyName",
+                                        u."SpecialtyCode",
                                         u."Username",
                                         u."Email",
                                         u."LicenseNumber",
@@ -46,7 +43,6 @@ internal static class UserRepositorySql
                                         COUNT(*) OVER ()        AS "TotalCount"
                                     FROM "User" u
                                     INNER JOIN "Person" p ON p."PersonId" = u."PersonId"
-                                    INNER JOIN "Sex" s ON s."SexId" = p."SexId"
                                     LEFT JOIN LATERAL (
                                         SELECT *
                                         FROM "PersonDocument"
@@ -54,16 +50,14 @@ internal static class UserRepositorySql
                                         ORDER BY "PersonDocumentId" DESC
                                         LIMIT 1
                                     ) pd ON TRUE
-                                    LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                     INNER JOIN "Role" r ON r."RoleId" = u."RoleId"
-                                    LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
                                     WHERE (@Search IS NULL OR
                                            p."Names"    ILIKE '%' || @Search || '%' OR
                                            p."Surnames" ILIKE '%' || @Search || '%' OR
                                            u."Username" ILIKE '%' || @Search || '%' OR
                                            u."Email"    ILIKE '%' || @Search || '%')
                                       AND (@Role IS NULL OR r."Name" = @Role)
-                                      AND (@SpecialtyCode IS NULL OR sp."SpecialtyCode" = @SpecialtyCode)
+                                      AND (@SpecialtyCode IS NULL OR u."SpecialtyCode" = @SpecialtyCode)
                                     ORDER BY p."Surnames", p."Names"
                                     LIMIT @Limit OFFSET @Offset
                                     """;
@@ -78,23 +72,20 @@ internal static class UserRepositorySql
                                           p."Names",
                                           p."Surnames",
                                           p."BirthDate",
-                                          s."SexCode",
-                                          s."Name"                AS "SexName",
+                                          p."SexCode",
                                           p."Phone",
                                           p."AlternativePhone",
                                           p."Email"               AS "PersonEmail",
                                           p."Address",
                                           p."EmergencyContactName",
                                           p."EmergencyContactPhone",
-                                          dt."DocumentTypeCode",
-                                          dt."Name"               AS "DocumentTypeName",
+                                          pd."DocumentTypeCode",
                                           pd."Number"             AS "DocumentNumber",
                                           pd."IssueDate"          AS "DocumentIssueDate",
                                           pd."ExpirationDate"     AS "DocumentExpirationDate",
                                           r."RoleCode",
                                           r."Name"                AS "RoleName",
-                                          sp."SpecialtyCode",
-                                          sp."Name"               AS "SpecialtyName",
+                                          u."SpecialtyCode",
                                           u."Username",
                                           u."Email",
                                           u."LicenseNumber",
@@ -103,7 +94,6 @@ internal static class UserRepositorySql
                                           0                       AS "TotalCount"
                                       FROM "User" u
                                       INNER JOIN "Person" p ON p."PersonId" = u."PersonId"
-                                      INNER JOIN "Sex" s ON s."SexId" = p."SexId"
                                       LEFT JOIN LATERAL (
                                           SELECT *
                                           FROM "PersonDocument"
@@ -111,9 +101,7 @@ internal static class UserRepositorySql
                                           ORDER BY "PersonDocumentId" DESC
                                           LIMIT 1
                                       ) pd ON TRUE
-                                      LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                       INNER JOIN "Role" r ON r."RoleId" = u."RoleId"
-                                      LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = u."SpecialtyId"
                                       WHERE u."UserCode"  = @Code
                                         AND u."DeletedAt" IS NULL
                                       """;
@@ -132,8 +120,7 @@ internal static class UserRepositorySql
                                            r."RoleCode",
                                            r."Name"   AS "RoleName",
                                            sp."SpecialtyId",
-                                           sp."SpecialtyCode",
-                                           sp."Name"  AS "SpecialtyName"
+                                           sp."SpecialtyCode"
                                        FROM "Person" p
                                        CROSS JOIN "Role" r
                                        LEFT JOIN "Specialty" sp
@@ -166,23 +153,20 @@ internal static class UserRepositorySql
                                        p."Names",
                                        p."Surnames",
                                        p."BirthDate",
-                                       s."SexCode",
-                                       s."Name"                AS "SexName",
+                                       p."SexCode",
                                        p."Phone",
                                        p."AlternativePhone",
                                        p."Email"               AS "PersonEmail",
                                        p."Address",
                                        p."EmergencyContactName",
                                        p."EmergencyContactPhone",
-                                       dt."DocumentTypeCode",
-                                       dt."Name"               AS "DocumentTypeName",
+                                       pd."DocumentTypeCode",
                                        pd."Number"             AS "DocumentNumber",
                                        pd."IssueDate"          AS "DocumentIssueDate",
                                        pd."ExpirationDate"     AS "DocumentExpirationDate",
                                        refs."RoleCode",
                                        refs."RoleName",
                                        refs."SpecialtyCode",
-                                       refs."SpecialtyName",
                                        nu."Username",
                                        nu."Email",
                                        nu."LicenseNumber",
@@ -192,7 +176,6 @@ internal static class UserRepositorySql
                                    FROM new_user nu
                                    INNER JOIN refs ON refs."PersonId" = nu."PersonId"
                                    INNER JOIN "Person" p ON p."PersonId" = nu."PersonId"
-                                   INNER JOIN "Sex" s ON s."SexId" = p."SexId"
                                    LEFT JOIN LATERAL (
                                        SELECT *
                                        FROM "PersonDocument"
@@ -200,7 +183,6 @@ internal static class UserRepositorySql
                                        ORDER BY "PersonDocumentId" DESC
                                        LIMIT 1
                                    ) pd ON TRUE
-                                   LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                    """;
 
     /// <summary>
@@ -215,8 +197,7 @@ internal static class UserRepositorySql
                                            r."RoleCode",
                                            r."Name"   AS "RoleName",
                                            sp."SpecialtyId",
-                                           sp."SpecialtyCode",
-                                           sp."Name"  AS "SpecialtyName"
+                                           sp."SpecialtyCode"
                                        FROM "Role" r
                                        LEFT JOIN "Specialty" sp
                                            ON sp."SpecialtyCode" = @SpecialtyCode
@@ -240,7 +221,7 @@ internal static class UserRepositorySql
                                        RETURNING u."PersonId", u."UserCode", u."Username", u."Email",
                                                  u."LicenseNumber", u."IsActive", u."CreatedAt",
                                                  refs."RoleCode", refs."RoleName",
-                                                 refs."SpecialtyCode", refs."SpecialtyName"
+                                                 refs."SpecialtyCode"
                                    )
                                    SELECT
                                        uu."UserCode",
@@ -248,23 +229,20 @@ internal static class UserRepositorySql
                                        p."Names",
                                        p."Surnames",
                                        p."BirthDate",
-                                       s."SexCode",
-                                       s."Name"                AS "SexName",
+                                       p."SexCode",
                                        p."Phone",
                                        p."AlternativePhone",
                                        p."Email"               AS "PersonEmail",
                                        p."Address",
                                        p."EmergencyContactName",
                                        p."EmergencyContactPhone",
-                                       dt."DocumentTypeCode",
-                                       dt."Name"               AS "DocumentTypeName",
+                                       pd."DocumentTypeCode",
                                        pd."Number"             AS "DocumentNumber",
                                        pd."IssueDate"          AS "DocumentIssueDate",
                                        pd."ExpirationDate"     AS "DocumentExpirationDate",
                                        uu."RoleCode",
                                        uu."RoleName",
                                        uu."SpecialtyCode",
-                                       uu."SpecialtyName",
                                        uu."Username",
                                        uu."Email",
                                        uu."LicenseNumber",
@@ -273,7 +251,6 @@ internal static class UserRepositorySql
                                        0                       AS "TotalCount"
                                    FROM upd_user uu
                                    INNER JOIN "Person" p ON p."PersonId" = uu."PersonId"
-                                   INNER JOIN "Sex" s ON s."SexId" = p."SexId"
                                    LEFT JOIN LATERAL (
                                        SELECT *
                                        FROM "PersonDocument"
@@ -281,7 +258,6 @@ internal static class UserRepositorySql
                                        ORDER BY "PersonDocumentId" DESC
                                        LIMIT 1
                                    ) pd ON TRUE
-                                   LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                    """;
 
     /// <summary>
@@ -308,7 +284,7 @@ internal static class UserRepositorySql
                                              AND u."IsActive"  = TRUE
                                              AND u."DeletedAt" IS NULL
                                            RETURNING u."PersonId", u."UserCode", u."Username", u."Email",
-                                                     u."LicenseNumber", u."SpecialtyId", u."IsActive", u."CreatedAt"
+                                                     u."LicenseNumber", u."SpecialtyCode", u."IsActive", u."CreatedAt"
                                        )
                                        SELECT
                                            uu."UserCode",
@@ -316,23 +292,20 @@ internal static class UserRepositorySql
                                            p."Names",
                                            p."Surnames",
                                            p."BirthDate",
-                                           s."SexCode",
-                                           s."Name"                AS "SexName",
+                                           p."SexCode",
                                            p."Phone",
                                            p."AlternativePhone",
                                            p."Email"               AS "PersonEmail",
                                            p."Address",
                                            p."EmergencyContactName",
                                            p."EmergencyContactPhone",
-                                           dt."DocumentTypeCode",
-                                           dt."Name"               AS "DocumentTypeName",
+                                           pd."DocumentTypeCode",
                                            pd."Number"             AS "DocumentNumber",
                                            pd."IssueDate"          AS "DocumentIssueDate",
                                            pd."ExpirationDate"     AS "DocumentExpirationDate",
                                            refs."RoleCode",
                                            refs."RoleName",
-                                           sp."SpecialtyCode",
-                                           sp."Name"               AS "SpecialtyName",
+                                           uu."SpecialtyCode",
                                            uu."Username",
                                            uu."Email",
                                            uu."LicenseNumber",
@@ -342,7 +315,6 @@ internal static class UserRepositorySql
                                        FROM upd_user uu
                                        INNER JOIN refs ON TRUE
                                        INNER JOIN "Person" p ON p."PersonId" = uu."PersonId"
-                                       INNER JOIN "Sex" s ON s."SexId" = p."SexId"
                                        LEFT JOIN LATERAL (
                                            SELECT *
                                            FROM "PersonDocument"
@@ -350,8 +322,6 @@ internal static class UserRepositorySql
                                            ORDER BY "PersonDocumentId" DESC
                                            LIMIT 1
                                        ) pd ON TRUE
-                                       LEFT JOIN "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
-                                       LEFT JOIN "Specialty" sp ON sp."SpecialtyId" = uu."SpecialtyId"
                                        """;
 
     /// <summary>

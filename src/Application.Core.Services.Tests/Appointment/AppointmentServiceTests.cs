@@ -1,6 +1,7 @@
 using Application.Core.DTOs.Appointment.Errors;
 using Application.Core.DTOs.Appointment.Request;
 using Application.Core.DTOs.Catalog.Errors;
+using Application.Core.Interfaces.Appointment;
 using Application.Core.Interfaces.Catalog;
 using Application.Core.DTOs.PatientAccess;
 using Application.Core.DTOs.PatientAccess.Errors;
@@ -20,7 +21,8 @@ public sealed class AppointmentServiceTests
     private readonly IAppointmentRepository _repository = Substitute.For<IAppointmentRepository>();
     private readonly IRecordAccessLogger _accessLogger = Substitute.For<IRecordAccessLogger>();
     private readonly IPatientAccessPolicy _accessPolicy = Substitute.For<IPatientAccessPolicy>();
-    private readonly ICatalogWriteValidator _catalog = Substitute.For<ICatalogWriteValidator>();
+    private readonly IInsuranceTermsResolver _insurance = Substitute.For<IInsuranceTermsResolver>();
+    private readonly ICatalogNames _names = Substitute.For<ICatalogNames>();
     private readonly AppointmentService _sut;
 
     public AppointmentServiceTests()
@@ -28,13 +30,18 @@ public sealed class AppointmentServiceTests
         _accessPolicy.EvaluateAsync(Arg.Any<Guid>(), Arg.Any<PatientDataScope>())
             .Returns(Task.FromResult(
                 Result<PatientAccessDecision, PatientAccessError>.Success(PatientAccessDecision.Allowed)));
-        _catalog.ValidateInsuranceAsync(Arg.Any<Guid?>())
-            .Returns(Task.FromResult(Result<Unit, CatalogValidationError>.Success(Unit.Value)));
-        _sut = new AppointmentService(_repository, _accessLogger, _accessPolicy, _catalog);
+        _insurance.ResolveAsync(Arg.Any<Guid?>())
+            .Returns(call => Task.FromResult(Result<InsuranceTerms?, CatalogValidationError>.Success(
+                call.Arg<Guid?>() is { } code ? TermsFor(code) : null)));
+        _sut = new AppointmentService(_repository, _accessLogger, _accessPolicy, _insurance, _names);
     }
 
+    private static readonly Guid SpecialtyCode = Guid.NewGuid();
+
+    private static InsuranceTerms TermsFor(Guid insuranceCode) => new(insuranceCode, "Seguro de prueba", 30m);
+
     private static AppointmentRow MakeRow(Guid? appointmentCode = null, Guid? patientCode = null,
-        Guid? doctorCode = null) => new()
+        Guid? doctorCode = null, Guid? specialtyCode = null, bool withoutSpecialty = false) => new()
     {
         AppointmentCode = appointmentCode ?? Guid.NewGuid(),
         PatientCode = patientCode ?? Guid.NewGuid(),
@@ -43,7 +50,7 @@ public sealed class AppointmentServiceTests
         DoctorCode = doctorCode ?? Guid.NewGuid(),
         DoctorNames = "Carlos",
         DoctorSurnames = "López",
-        SpecialtyName = "Medicina General",
+        SpecialtyCode = withoutSpecialty ? null : specialtyCode ?? SpecialtyCode,
         ConsultationTypeName = "Consulta",
         StatusName = "Confirmado",
         StatusCode = Guid.NewGuid(),
@@ -58,8 +65,8 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_InsuranceNotEnabled_RejectsWithoutWriting()
     {
         var insuranceCode = Guid.NewGuid();
-        _catalog.ValidateInsuranceAsync(insuranceCode)
-            .Returns(Task.FromResult(Result<Unit, CatalogValidationError>.Failure(
+        _insurance.ResolveAsync(insuranceCode)
+            .Returns(Task.FromResult(Result<InsuranceTerms?, CatalogValidationError>.Failure(
                 new CatalogItemNotEnabledError(CatalogItemKind.Insurance))));
 
         var result = await _sut.CreateAsync(
@@ -96,7 +103,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_RepositoryReturnsNull_ReturnsSlotAlreadyBookedError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Success(null)));
 
@@ -111,7 +118,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_PatientNotFoundError_MapsToAppointmentPatientNotFoundError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
                     new InsertPatientNotFoundError())));
@@ -127,7 +134,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_SlotNotFoundError_MapsToAppointmentSlotNotFoundError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
                     new InsertSlotNotFoundError())));
@@ -143,7 +150,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_SlotAlreadyBookedError_MapsToAppointmentSlotAlreadyBookedError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
                     new InsertSlotAlreadyBookedError())));
@@ -159,7 +166,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_SlotExpiredError_MapsToAppointmentSlotExpiredError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
                     new InsertSlotExpiredError())));
@@ -175,7 +182,7 @@ public sealed class AppointmentServiceTests
     public async Task CreateAsync_GenericRepositoryError_MapsToAppointmentDataAccessError()
     {
         _repository
-            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>())
+            .InsertAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<AppointmentRow?, AppointmentRepositoryError>.Failure(
                     new InsertAppointmentError("DB failure"))));
@@ -206,7 +213,7 @@ public sealed class AppointmentServiceTests
     [Fact]
     public async Task ConfirmPaymentAsync_RepositoryAffectsZeroRows_ReturnsInvalidTransitionError()
     {
-        _repository.ConfirmPaymentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid?>())
+        _repository.ConfirmPaymentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(Result<int, AppointmentRepositoryError>.Success(0)));
 
         var result = await _sut.ConfirmPaymentAsync(Guid.NewGuid(), Guid.NewGuid(), null);
@@ -220,7 +227,7 @@ public sealed class AppointmentServiceTests
     {
         // BindSharp 2.1.0: EnsureAsync evaluates predicate(0) on int Failure,
         // so the exact error type is overwritten — we can only assert IsFailure.
-        _repository.ConfirmPaymentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid?>())
+        _repository.ConfirmPaymentAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<InsuranceTerms?>())
             .Returns(Task.FromResult(
                 Result<int, AppointmentRepositoryError>.Failure(
                     new TransitionAppointmentError())));
@@ -231,16 +238,16 @@ public sealed class AppointmentServiceTests
     }
 
     [Fact]
-    public async Task ConfirmPaymentAsync_InvalidInsuranceCode_ReturnsFailure()
+    public async Task ConfirmPaymentAsync_SpecialtyPriceMissing_ReturnsFailure()
     {
         // BindSharp 2.1.0: EnsureAsync evaluates predicate(0) on int Failure,
         // so the exact error type is overwritten — we can only assert IsFailure.
         var code = Guid.NewGuid();
         var patientCode = Guid.NewGuid();
         var insuranceCode = Guid.NewGuid();
-        _repository.ConfirmPaymentAsync(code, patientCode, insuranceCode)
+        _repository.ConfirmPaymentAsync(code, patientCode, TermsFor(insuranceCode))
             .Returns(Task.FromResult(
-                Result<int, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError())));
+                Result<int, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError())));
 
         var result = await _sut.ConfirmPaymentAsync(code, patientCode, insuranceCode);
 
@@ -259,7 +266,7 @@ public sealed class AppointmentServiceTests
         var insuranceCode = Guid.NewGuid();
         var adminCode = Guid.NewGuid();
         _repository
-            .InsertByAdminAsync(patientCode, availabilityCode, consultationTypeCode, true, insuranceCode, adminCode)
+            .InsertByAdminAsync(patientCode, availabilityCode, consultationTypeCode, true, TermsFor(insuranceCode), adminCode)
             .Returns(Task.FromResult(Result<AppointmentRow?, AppointmentRepositoryError>.Success(row)));
 
         var result = await _sut.AdminCreateAsync(
@@ -269,7 +276,7 @@ public sealed class AppointmentServiceTests
 
         Assert.True(result.IsSuccess);
         await _repository.Received(1).InsertByAdminAsync(
-            patientCode, availabilityCode, consultationTypeCode, true, insuranceCode, adminCode);
+            patientCode, availabilityCode, consultationTypeCode, true, TermsFor(insuranceCode), adminCode);
     }
 
     [Fact]
@@ -316,20 +323,20 @@ public sealed class AppointmentServiceTests
     }
 
     [Fact]
-    public async Task AdminCreateAsync_InvalidInsuranceCode_ReturnsAppointmentInsuranceNotFoundError()
+    public async Task AdminCreateAsync_SpecialtyPriceMissing_ReturnsAppointmentSpecialtyPriceNotFoundError()
     {
         _repository
             .InsertByAdminAsync(
-                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<Guid?>(), Arg.Any<Guid?>())
+                Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<InsuranceTerms?>(), Arg.Any<Guid?>())
             .Returns(Task.FromResult(
-                Result<AppointmentRow?, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError())));
+                Result<AppointmentRow?, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError())));
 
         var result = await _sut.AdminCreateAsync(
             new AdminCreateAppointmentRequest(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), true, Guid.NewGuid()),
             Guid.NewGuid());
 
         Assert.True(result.IsFailure);
-        Assert.IsType<AppointmentInsuranceNotFoundError>(result.Error);
+        Assert.IsType<AppointmentSpecialtyPriceNotFoundError>(result.Error);
     }
 
     // ── AdminConfirmPaymentAsync ────────────────────────────────────────────
@@ -340,7 +347,7 @@ public sealed class AppointmentServiceTests
         var code = Guid.NewGuid();
         var adminCode = Guid.NewGuid();
         var insuranceCode = Guid.NewGuid();
-        _repository.ConfirmPaymentByAdminAsync(code, insuranceCode, adminCode)
+        _repository.ConfirmPaymentByAdminAsync(code, TermsFor(insuranceCode), adminCode)
             .Returns(Task.FromResult(Result<int, AppointmentRepositoryError>.Success(1)));
 
         var result = await _sut.AdminConfirmPaymentAsync(code, adminCode, insuranceCode);
@@ -365,7 +372,7 @@ public sealed class AppointmentServiceTests
     [Fact]
     public async Task AdminConfirmPaymentAsync_RepositoryAffectsZeroRows_ReturnsAdminConfirmPaymentConflictError()
     {
-        _repository.ConfirmPaymentByAdminAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<Guid>())
+        _repository.ConfirmPaymentByAdminAsync(Arg.Any<Guid>(), Arg.Any<InsuranceTerms?>(), Arg.Any<Guid>())
             .Returns(Task.FromResult(Result<int, AppointmentRepositoryError>.Success(0)));
 
         var result = await _sut.AdminConfirmPaymentAsync(Guid.NewGuid(), Guid.NewGuid(), null);
@@ -375,14 +382,14 @@ public sealed class AppointmentServiceTests
     }
 
     [Fact]
-    public async Task AdminConfirmPaymentAsync_InvalidInsuranceCode_ReturnsFailure()
+    public async Task AdminConfirmPaymentAsync_SpecialtyPriceMissing_ReturnsFailure()
     {
         // BindSharp 2.1.0: EnsureAsync evaluates predicate(0) on int Failure,
         // so the exact error type is overwritten — we can only assert IsFailure.
         var insuranceCode = Guid.NewGuid();
-        _repository.ConfirmPaymentByAdminAsync(Arg.Any<Guid>(), insuranceCode, Arg.Any<Guid>())
+        _repository.ConfirmPaymentByAdminAsync(Arg.Any<Guid>(), TermsFor(insuranceCode), Arg.Any<Guid>())
             .Returns(Task.FromResult(
-                Result<int, AppointmentRepositoryError>.Failure(new InsertInsuranceNotFoundError())));
+                Result<int, AppointmentRepositoryError>.Failure(new InsertSpecialtyPriceNotFoundError())));
 
         var result = await _sut.AdminConfirmPaymentAsync(Guid.NewGuid(), Guid.NewGuid(), insuranceCode);
 
@@ -712,5 +719,34 @@ public sealed class AppointmentServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value.Total);
+    }
+
+    // ── Names from the catalog snapshot ─────────────────────────────────────
+
+    [Fact]
+    public async Task GetAsync_ResolvesSpecialtyNameFromCatalogSnapshot()
+    {
+        var row = MakeRow();
+        _names.Specialty(SpecialtyCode).Returns("Cardiología");
+        _repository.GetByCodeAsync(row.AppointmentCode)
+            .Returns(Task.FromResult(Result<AppointmentRow?, AppointmentRepositoryError>.Success(row)));
+
+        var result = await _sut.GetAsync(row.AppointmentCode, row.PatientCode, "Patient");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Cardiología", result.Value.SpecialtyName);
+    }
+
+    [Fact]
+    public async Task GetAsync_DoctorWithoutSpecialty_ReturnsEmptySpecialtyName()
+    {
+        var row = MakeRow(specialtyCode: Guid.Empty, withoutSpecialty: true);
+        _repository.GetByCodeAsync(row.AppointmentCode)
+            .Returns(Task.FromResult(Result<AppointmentRow?, AppointmentRepositoryError>.Success(row)));
+
+        var result = await _sut.GetAsync(row.AppointmentCode, row.PatientCode, "Patient");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(string.Empty, result.Value.SpecialtyName);
     }
 }

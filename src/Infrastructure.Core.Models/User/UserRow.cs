@@ -2,8 +2,8 @@ namespace Infrastructure.Core.Models.Users;
 
 /// <summary>
 /// Flat row returned by user queries.
-/// Combines columns from User, Person, PersonDocument, Role, Specialty, Sex, and DocumentType.
-/// Catalog integer IDs are not projected; only public UUIDs (codes) are exposed.
+/// Combines columns from User, Person, PersonDocument and Role.
+/// Catalog references (sex, document type, specialty) are codes only; the service resolves their names from the catalog snapshot.
 /// <c>TotalCount</c> is populated by the paginated query via a window function;
 /// single-row operations (insert/update) return 0.
 /// </summary>
@@ -17,7 +17,6 @@ public sealed class UserRow
     public required string Surnames { get; init; }
     public required DateOnly BirthDate { get; init; }
     public required Guid SexCode { get; init; }
-    public required string SexName { get; init; }
     public required string Phone { get; init; }
     public string? AlternativePhone { get; init; }
     public required string PersonEmail { get; init; }
@@ -27,7 +26,6 @@ public sealed class UserRow
 
     // PersonDocument (optional — a person may have no document yet)
     public Guid? DocumentTypeCode { get; init; }
-    public string? DocumentTypeName { get; init; }
     public string? DocumentNumber { get; init; }
     public DateOnly? DocumentIssueDate { get; init; }
     public DateOnly? DocumentExpirationDate { get; init; }
@@ -38,7 +36,6 @@ public sealed class UserRow
 
     // Specialty (optional)
     public Guid? SpecialtyCode { get; init; }
-    public string? SpecialtyName { get; init; }
 
     // User account
     public required string Username { get; init; }

@@ -14,15 +14,11 @@ internal static class PatientRepositorySql
                                       COALESCE(
                                           (SELECT json_agg(json_build_object(
                                               'PatientAllergyCode', pa."PatientAllergyCode",
-                                              'AllergyCode',        a."AllergyCode",
-                                              'AllergyName',        a."Name",
-                                              'SeverityCode',       sv."SeverityCode",
-                                              'SeverityName',       sv."Name",
+                                              'AllergyCode',        pa."AllergyCode",
+                                              'SeverityCode',       pa."SeverityCode",
                                               'Notes',              pa."Notes"
-                                          ) ORDER BY a."Name")
+                                          ) ORDER BY pa."PatientAllergyId")
                                           FROM "PatientAllergy" pa
-                                          JOIN "Allergy" a ON a."AllergyId" = pa."AllergyId"
-                                          LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = pa."SeverityId"
                                           WHERE pa."PatientId" = pat."PatientId"
                                             AND pa."DeletedAt" IS NULL
                                           ),
@@ -116,15 +112,11 @@ internal static class PatientRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PatientAllergyCode', ia."PatientAllergyCode",
-                                               'AllergyCode',        a."AllergyCode",
-                                               'AllergyName',        a."Name",
-                                               'SeverityCode',       sv."SeverityCode",
-                                               'SeverityName',       sv."Name",
+                                               'AllergyCode',        ia."AllergyCode",
+                                               'SeverityCode',       ia."SeverityCode",
                                                'Notes',              ia."Notes"
-                                           ) ORDER BY a."Name")
+                                           ) ORDER BY ia."PatientAllergyId")
                                            FROM ins_allergies ia
-                                           JOIN "Allergy" a ON a."AllergyId" = ia."AllergyId"
-                                           LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = ia."SeverityId"
                                            WHERE ia."PatientId" = ip."PatientId"
                                            ),
                                            '[]'::json
@@ -163,15 +155,11 @@ internal static class PatientRepositorySql
                                        COALESCE(
                                            (SELECT json_agg(json_build_object(
                                                'PatientAllergyCode', pa."PatientAllergyCode",
-                                               'AllergyCode',        a."AllergyCode",
-                                               'AllergyName',        a."Name",
-                                               'SeverityCode',       sv."SeverityCode",
-                                               'SeverityName',       sv."Name",
+                                               'AllergyCode',        pa."AllergyCode",
+                                               'SeverityCode',       pa."SeverityCode",
                                                'Notes',              pa."Notes"
-                                           ) ORDER BY a."Name")
+                                           ) ORDER BY pa."PatientAllergyId")
                                            FROM "PatientAllergy" pa
-                                           JOIN "Allergy" a ON a."AllergyId" = pa."AllergyId"
-                                           LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = pa."SeverityId"
                                            WHERE pa."PatientId" = upd_patient."PatientId"
                                              AND pa."DeletedAt" IS NULL
                                            ),
@@ -237,14 +225,10 @@ internal static class PatientRepositorySql
                                        )
                                        SELECT
                                            ins."PatientAllergyCode",
-                                           a."AllergyCode",
-                                           a."Name"  AS "AllergyName",
-                                           sv."SeverityCode",
-                                           sv."Name" AS "SeverityName",
+                                           ins."AllergyCode",
+                                           ins."SeverityCode",
                                            ins."Notes"
                                        FROM ins
-                                       JOIN "Allergy" a ON a."AllergyId" = ins."AllergyId"
-                                       LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = ins."SeverityId"
                                        """;
 
     /// <summary>
@@ -265,14 +249,10 @@ internal static class PatientRepositorySql
                                           )
                                           SELECT
                                               upd."PatientAllergyCode",
-                                              a."AllergyCode",
-                                              a."Name"  AS "AllergyName",
-                                              sv."SeverityCode",
-                                              sv."Name" AS "SeverityName",
+                                              upd."AllergyCode",
+                                              upd."SeverityCode",
                                               upd."Notes"
                                           FROM upd
-                                          JOIN "Allergy" a ON a."AllergyId" = upd."AllergyId"
-                                          LEFT JOIN "AllergySeverity" sv ON sv."SeverityId" = upd."SeverityId"
                                           """;
 
     /// <summary>

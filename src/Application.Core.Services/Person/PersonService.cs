@@ -20,9 +20,12 @@ public sealed class PersonService : IPerson
     private readonly IPassword _passwordService;
 
     private readonly ICatalogWriteValidator _catalog;
+    private readonly ICatalogNames _names;
 
-    public PersonService(IPersonRepository repository, IPassword passwordService, ICatalogWriteValidator catalog)
+    public PersonService(IPersonRepository repository, IPassword passwordService, ICatalogWriteValidator catalog,
+        ICatalogNames names)
     {
+        _names = names;
         _repository = repository;
         _passwordService = passwordService;
         _catalog = catalog;
@@ -99,7 +102,7 @@ public sealed class PersonService : IPerson
             .EnsureNotNullAsync(new PersonNotFoundError())
             .MapAsync(MapToResponse));
 
-    private static PersonPageResponse BuildPageResponse(IEnumerable<PersonRow> rows, int page, int pageSize)
+    private PersonPageResponse BuildPageResponse(IEnumerable<PersonRow> rows, int page, int pageSize)
     {
         List<PersonRow> list = rows.ToList();
         int totalCount = list.Count > 0 ? (int)list[0].TotalCount : 0;
@@ -115,7 +118,7 @@ public sealed class PersonService : IPerson
         };
     }
 
-    private static PersonResponse MapToResponse(PersonRow row) =>
+    private PersonResponse MapToResponse(PersonRow row) =>
         new()
         {
             PersonCode = row.PersonCode,
@@ -123,7 +126,7 @@ public sealed class PersonService : IPerson
             Surnames = row.Surnames,
             BirthDate = row.BirthDate,
             SexCode = row.SexCode,
-            SexName = row.SexName,
+            SexName = _names.Sex(row.SexCode),
             Phone = row.Phone,
             AlternativePhone = row.AlternativePhone,
             Email = row.Email,
@@ -131,7 +134,7 @@ public sealed class PersonService : IPerson
             EmergencyContactName = row.EmergencyContactName,
             EmergencyContactPhone = row.EmergencyContactPhone,
             DocumentTypeCode = row.DocumentTypeCode,
-            DocumentTypeName = row.DocumentTypeName,
+            DocumentTypeName = row.DocumentTypeCode is { } dt ? _names.DocumentType(dt) : null,
             DocumentNumber = row.DocumentNumber
         };
 }

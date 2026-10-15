@@ -8,8 +8,7 @@ internal static class PersonRepositorySql
                                         p."Names",
                                         p."Surnames",
                                         p."BirthDate",
-                                        s."SexCode",
-                                        s."Name"  AS "SexName",
+                                        p."SexCode",
                                         p."Phone",
                                         p."AlternativePhone",
                                         p."Email",
@@ -17,17 +16,13 @@ internal static class PersonRepositorySql
                                         p."EmergencyContactName",
                                         p."EmergencyContactPhone",
                                         doc."DocumentTypeCode",
-                                        doc."DocumentTypeName",
                                         doc."DocumentNumber",
                                         COUNT(*) OVER () AS "TotalCount"
                                     FROM "Person" p
-                                    JOIN "Sex" s ON s."SexId" = p."SexId"
                                     LEFT JOIN LATERAL (
-                                        SELECT dt."DocumentTypeCode",
-                                               dt."Name"   AS "DocumentTypeName",
+                                        SELECT pd."DocumentTypeCode",
                                                pd."Number" AS "DocumentNumber"
                                         FROM   "PersonDocument" pd
-                                        JOIN   "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                         WHERE  pd."PersonId" = p."PersonId"
                                         ORDER  BY pd."PersonDocumentId"
                                         LIMIT  1
@@ -49,8 +44,7 @@ internal static class PersonRepositorySql
                                              p."Names",
                                              p."Surnames",
                                              p."BirthDate",
-                                             s."SexCode",
-                                             s."Name"  AS "SexName",
+                                             p."SexCode",
                                              p."Phone",
                                              p."AlternativePhone",
                                              p."Email",
@@ -58,17 +52,13 @@ internal static class PersonRepositorySql
                                              p."EmergencyContactName",
                                              p."EmergencyContactPhone",
                                              doc."DocumentTypeCode",
-                                             doc."DocumentTypeName",
                                              doc."DocumentNumber",
                                              COUNT(*) OVER () AS "TotalCount"
                                          FROM "Person" p
-                                         JOIN "Sex" s ON s."SexId" = p."SexId"
                                          LEFT JOIN LATERAL (
-                                             SELECT dt."DocumentTypeCode",
-                                                    dt."Name"   AS "DocumentTypeName",
+                                             SELECT pd."DocumentTypeCode",
                                                     pd."Number" AS "DocumentNumber"
                                              FROM   "PersonDocument" pd
-                                             JOIN   "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                              WHERE  pd."PersonId" = p."PersonId"
                                              ORDER  BY pd."PersonDocumentId"
                                              LIMIT  1
@@ -92,8 +82,7 @@ internal static class PersonRepositorySql
                                           p."Names",
                                           p."Surnames",
                                           p."BirthDate",
-                                          s."SexCode",
-                                          s."Name"  AS "SexName",
+                                          p."SexCode",
                                           p."Phone",
                                           p."AlternativePhone",
                                           p."Email",
@@ -101,17 +90,13 @@ internal static class PersonRepositorySql
                                           p."EmergencyContactName",
                                           p."EmergencyContactPhone",
                                           doc."DocumentTypeCode",
-                                          doc."DocumentTypeName",
                                           doc."DocumentNumber",
                                           1 AS "TotalCount"
                                       FROM "Person" p
-                                      JOIN "Sex" s ON s."SexId" = p."SexId"
                                       LEFT JOIN LATERAL (
-                                          SELECT dt."DocumentTypeCode",
-                                                 dt."Name"   AS "DocumentTypeName",
+                                          SELECT pd."DocumentTypeCode",
                                                  pd."Number" AS "DocumentNumber"
                                           FROM   "PersonDocument" pd
-                                          JOIN   "DocumentType" dt ON dt."DocumentTypeId" = pd."DocumentTypeId"
                                           WHERE  pd."PersonId" = p."PersonId"
                                           ORDER  BY pd."PersonDocumentId"
                                           LIMIT  1
@@ -139,7 +124,7 @@ internal static class PersonRepositorySql
                                        SELECT i."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
                                        FROM ins i
                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
-                                       RETURNING "PersonId", "DocumentTypeId", "Number"
+                                       RETURNING "PersonId", "DocumentTypeCode", "Number"
                                    ),
                                    mrn AS (
                                        SELECT 'PAC-' || TO_CHAR(NOW(), 'YYYYMM') || '-' ||
@@ -171,22 +156,18 @@ internal static class PersonRepositorySql
                                        ins."Names",
                                        ins."Surnames",
                                        ins."BirthDate",
-                                       s."SexCode",
-                                       s."Name"  AS "SexName",
+                                       ins."SexCode",
                                        ins."Phone",
                                        ins."AlternativePhone",
                                        ins."Email",
                                        ins."Address",
                                        ins."EmergencyContactName",
                                        ins."EmergencyContactPhone",
-                                       dt."DocumentTypeCode",
-                                       dt."Name"  AS "DocumentTypeName",
+                                       doc_ins."DocumentTypeCode",
                                        doc_ins."Number" AS "DocumentNumber",
                                        0 AS "TotalCount"
                                    FROM ins
-                                   JOIN "Sex" s ON s."SexId" = ins."SexId"
                                    JOIN doc_ins ON doc_ins."PersonId" = ins."PersonId"
-                                   JOIN "DocumentType" dt ON dt."DocumentTypeId" = doc_ins."DocumentTypeId"
                                    JOIN ins_patient ON ins_patient."PersonId" = ins."PersonId"
                                    """;
 
@@ -217,28 +198,24 @@ internal static class PersonRepositorySql
                                        SELECT u."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
                                        FROM upd u
                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
-                                       RETURNING "PersonId", "DocumentTypeId", "Number"
+                                       RETURNING "PersonId", "DocumentTypeCode", "Number"
                                    )
                                    SELECT
                                        upd."PersonCode",
                                        upd."Names",
                                        upd."Surnames",
                                        upd."BirthDate",
-                                       s."SexCode",
-                                       s."Name"  AS "SexName",
+                                       upd."SexCode",
                                        upd."Phone",
                                        upd."AlternativePhone",
                                        upd."Email",
                                        upd."Address",
                                        upd."EmergencyContactName",
                                        upd."EmergencyContactPhone",
-                                       dt."DocumentTypeCode",
-                                       dt."Name"  AS "DocumentTypeName",
+                                       doc_ins."DocumentTypeCode",
                                        doc_ins."Number" AS "DocumentNumber",
                                        0 AS "TotalCount"
                                    FROM upd
-                                   JOIN "Sex" s ON s."SexId" = upd."SexId"
                                    JOIN doc_ins ON doc_ins."PersonId" = upd."PersonId"
-                                   JOIN "DocumentType" dt ON dt."DocumentTypeId" = doc_ins."DocumentTypeId"
                                    """;
 }

@@ -9,7 +9,7 @@ public interface IAppointmentRepository
     /// <summary>
     /// Atomically locks the availability slot and inserts the appointment.
     /// When <paramref name="payNow"/> is true, resolves the price (Specialty x ConsultationType),
-    /// resolves <paramref name="insuranceCode"/> if given, records the payment snapshot, and
+    /// records the given <paramref name="insurance"/> terms (already resolved by the service), records the payment snapshot, and
     /// transitions straight to Confirmado — all within the same transaction.
     /// Returns null when the slot is already booked (race condition → 409).
     /// Returns a typed error for data-access failures or validation mismatches.
@@ -19,7 +19,7 @@ public interface IAppointmentRepository
         Guid availabilityCode,
         Guid consultationTypeCode,
         bool payNow,
-        Guid? insuranceCode);
+        InsuranceTerms? insurance);
 
     /// <summary>Returns the appointment row, or null if not found.</summary>
     Task<Result<AppointmentRow?, AppointmentRepositoryError>> GetByCodeAsync(Guid code);
@@ -30,7 +30,7 @@ public interface IAppointmentRepository
     /// Returns rows affected.
     /// </summary>
     Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentAsync(
-        Guid code, Guid patientCode, Guid? insuranceCode);
+        Guid code, Guid patientCode, InsuranceTerms? insurance);
 
     /// <summary>
     /// Transitions PendientePago/Confirmado → Cancelado and releases the slot atomically.
@@ -66,7 +66,7 @@ public interface IAppointmentRepository
         Guid availabilityCode,
         Guid consultationTypeCode,
         bool payNow,
-        Guid? insuranceCode,
+        InsuranceTerms? insurance,
         Guid? recordedByUserCode);
 
     /// <summary>
@@ -74,7 +74,7 @@ public interface IAppointmentRepository
     /// transaction. No ownership check (admin path).
     /// </summary>
     Task<Result<int, AppointmentRepositoryError>> ConfirmPaymentByAdminAsync(
-        Guid code, Guid? insuranceCode, Guid recordedByUserCode);
+        Guid code, InsuranceTerms? insurance, Guid recordedByUserCode);
 
     /// <summary>
     /// Transitions Confirmado → PendientePago (admin-only, new transition), deleting the

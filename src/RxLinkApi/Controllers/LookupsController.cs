@@ -27,22 +27,6 @@ public sealed class LookupsController : FunctionalController
     }
 
     /// <summary>
-    /// Returns pharmaceutical forms and administration routes used by the medication catalog.
-    /// </summary>
-    [Authorize(Roles = "Administrador,Doctor")]
-    [HttpGet("medications")]
-    [ProducesResponseType(typeof(MedicationLookupsResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> GetMedicationLookups() =>
-        ExecuteAsync(
-            operation: () => _lookupService.GetMedicationLookupsAsync(),
-            errorMapper: _errorMapper,
-            operationName: nameof(GetMedicationLookups)
-        );
-
-    /// <summary>
     /// Returns sexes, document types, roles and active specialties used by the user form.
     /// </summary>
     [Authorize(Roles = "Administrador,Doctor")]

@@ -14,7 +14,7 @@ internal static class CredentialRepositorySql
                                           u."PersonId",
                                           u."RoleId",
                                           r."Name" AS "RoleName",
-                                          u."SpecialtyId",
+                                          u."SpecialtyCode",
                                           u."Username",
                                           u."Email",
                                           u."PasswordHash",

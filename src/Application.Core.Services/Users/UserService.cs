@@ -19,10 +19,12 @@ public sealed class UserService : IUser
     private readonly IActivityLogger _activityLogger;
     private readonly IPasswordPolicy _passwordPolicy;
     private readonly ICatalogWriteValidator _catalog;
+    private readonly ICatalogNames _names;
 
     public UserService(IUserRepository repository, IPassword password, IActivityLogger activityLogger,
-        IPasswordPolicy passwordPolicy, ICatalogWriteValidator catalog)
+        IPasswordPolicy passwordPolicy, ICatalogWriteValidator catalog, ICatalogNames names)
     {
+        _names = names;
         _passwordPolicy = passwordPolicy;
         _repository = repository;
         _password = password;
@@ -142,7 +144,7 @@ public sealed class UserService : IUser
             : Result<Unit, UserError>.Failure(new UserPasswordPolicyError(check.Error));
     }
 
-    private static UserPageResponse BuildPageResponse(IEnumerable<UserRow> rows, int page, int pageSize)
+    private UserPageResponse BuildPageResponse(IEnumerable<UserRow> rows, int page, int pageSize)
     {
         List<UserRow> list = rows.ToList();
         int totalCount = list.Count > 0 ? (int)list[0].TotalCount : 0;
@@ -158,7 +160,7 @@ public sealed class UserService : IUser
         };
     }
 
-    private static UserResponse MapToResponse(UserRow row) =>
+    private UserResponse MapToResponse(UserRow row) =>
         new()
         {
             UserCode = row.UserCode,
@@ -167,7 +169,7 @@ public sealed class UserService : IUser
             Surnames = row.Surnames,
             BirthDate = row.BirthDate,
             SexCode = row.SexCode,
-            SexName = row.SexName,
+            SexName = _names.Sex(row.SexCode),
             Phone = row.Phone,
             AlternativePhone = row.AlternativePhone,
             PersonEmail = row.PersonEmail,
@@ -175,14 +177,14 @@ public sealed class UserService : IUser
             EmergencyContactName = row.EmergencyContactName,
             EmergencyContactPhone = row.EmergencyContactPhone,
             DocumentTypeCode = row.DocumentTypeCode,
-            DocumentTypeName = row.DocumentTypeName,
+            DocumentTypeName = row.DocumentTypeCode is { } dt ? _names.DocumentType(dt) : null,
             DocumentNumber = row.DocumentNumber,
             DocumentIssueDate = row.DocumentIssueDate,
             DocumentExpirationDate = row.DocumentExpirationDate,
             RoleCode = row.RoleCode,
             RoleName = row.RoleName,
             SpecialtyCode = row.SpecialtyCode,
-            SpecialtyName = row.SpecialtyName,
+            SpecialtyName = row.SpecialtyCode is { } sp ? _names.Specialty(sp) : null,
             Username = row.Username,
             Email = row.Email,
             LicenseNumber = row.LicenseNumber,

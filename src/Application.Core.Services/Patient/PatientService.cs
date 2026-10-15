@@ -22,14 +22,13 @@ public sealed class PatientService : IPatient
     private readonly IRecordAccessLogger _accessLogger;
     private readonly IPatientAccessPolicy _accessPolicy;
 
-    private static readonly JsonSerializerOptions JsonOptions =
-        new() { PropertyNameCaseInsensitive = true };
-
     private readonly ICatalogWriteValidator _catalog;
+    private readonly IPatientAllergyResolver _allergies;
 
     public PatientService(IPatientRepository repository, IRecordAccessLogger accessLogger,
-        IPatientAccessPolicy accessPolicy, ICatalogWriteValidator catalog)
+        IPatientAccessPolicy accessPolicy, ICatalogWriteValidator catalog, IPatientAllergyResolver allergies)
     {
+        _allergies = allergies;
         _repository = repository;
         _accessLogger = accessLogger;
         _accessPolicy = accessPolicy;
@@ -59,7 +58,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientPersonNotFoundError())
-            .MapAsync(MapToResponse));
+            .MapAsync(row => MapToResponse(row, includeClinical: true)));
     }
 
     private Task<Result<Unit, PatientError>> ValidateAllergiesAsync(
@@ -73,7 +72,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
-            .MapAsync(MapToResponse);
+            .MapAsync(row => MapToResponse(row, includeClinical: true));
 
     /// <inheritdoc/>
     public Task<Result<Unit, PatientError>> DeactivateAsync(Guid code, Guid performedByUserCode) =>
@@ -129,7 +128,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientNotFoundError())
-            .MapAsync(MapAllergyToResponse));
+            .MapAsync(_allergies.Resolve));
 
     /// <inheritdoc/>
     public Task<Result<PatientAllergyResponse, PatientError>> UpdateAllergyAsync(
@@ -139,7 +138,7 @@ public sealed class PatientService : IPatient
             .MapErrorAsync(PatientError (error) =>
                 new PatientDataAccessError(error.Message, error.Details, error.Exception))
             .EnsureNotNullAsync(new PatientAllergyNotFoundError())
-            .MapAsync(MapAllergyToResponse));
+            .MapAsync(_allergies.Resolve));
 
     /// <inheritdoc/>
     public Task<Result<Unit, PatientError>> RemoveAllergyAsync(
@@ -167,7 +166,7 @@ public sealed class PatientService : IPatient
                     viaBreakGlass: decision == PatientAccessDecision.AllowedViaBreakGlass))
                 .MapAsync(clinical => MapToResponse(row, clinical != PatientAccessDecision.Denied)));
 
-    private static PatientPageResponse BuildPageResponse(
+    private PatientPageResponse BuildPageResponse(
         IEnumerable<PatientRow> rows, int page, int pageSize, bool includeClinical)
     {
         List<PatientRow> list = rows.ToList();
@@ -184,20 +183,7 @@ public sealed class PatientService : IPatient
         };
     }
 
-    private static PatientAllergyResponse MapAllergyToResponse(PatientAllergyRow row) =>
-        new()
-        {
-            PatientAllergyCode = row.PatientAllergyCode,
-            AllergyCode = row.AllergyCode,
-            AllergyName = row.AllergyName,
-            SeverityCode = row.SeverityCode,
-            SeverityName = row.SeverityName,
-            Notes = row.Notes
-        };
-
-    private static PatientResponse MapToResponse(PatientRow row) => MapToResponse(row, includeClinical: true);
-
-    private static PatientResponse MapToResponse(PatientRow row, bool includeClinical) =>
+    private PatientResponse MapToResponse(PatientRow row, bool includeClinical) =>
         new()
         {
             PatientCode = row.PatientCode,
@@ -214,7 +200,7 @@ public sealed class PatientService : IPatient
             EmergencyContactName = row.EmergencyContactName,
             EmergencyContactPhone = row.EmergencyContactPhone,
             Allergies = includeClinical
-                ? JsonSerializer.Deserialize<List<PatientAllergyResponse>>(row.AllergiesJson, JsonOptions) ?? []
+                ? _allergies.ResolveJson(row.AllergiesJson)
                 : []
         };
 }

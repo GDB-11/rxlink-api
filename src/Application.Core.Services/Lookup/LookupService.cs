@@ -30,20 +30,6 @@ public sealed class LookupService : ILookup
     }
 
     /// <inheritdoc/>
-    /// <remarks>Still served by the partner DB: this list feeds the medication write form, which posts integer ids until the write endpoints are removed.</remarks>
-    public Task<Result<MedicationLookupsResponse, LookupError>> GetMedicationLookupsAsync() =>
-        _repository.GetPharmaceuticalFormsAsync()
-            .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
-            .BindAsync(forms =>
-                _repository.GetAdministrationRoutesAsync()
-                    .MapErrorAsync(LookupError (e) => new LookupDataAccessError(e.Message, e.Details, e.Exception))
-                    .MapAsync(routes => new MedicationLookupsResponse
-                    {
-                        PharmaceuticalForms = [.. forms.Select(ToItem)],
-                        AdministrationRoutes = [.. routes.Select(ToItem)]
-                    }));
-
-    /// <inheritdoc/>
     public async Task<Result<UserLookupsResponse, LookupError>> GetUserLookupsAsync()
     {
         if (_store.Current is not { } catalog) return Unavailable<UserLookupsResponse>();
@@ -169,9 +155,6 @@ public sealed class LookupService : ILookup
         rows.Where(s => s.IsEnabled).Select(s => s.SpecialtyCode).ToHashSet();
 
     private static GuidLookupItemResponse Item(Guid code, string name) => new() { Code = code, Name = name };
-
-    private static LookupItemResponse ToItem(LookupRow row) =>
-        new() { Id = row.Id, Name = row.Name };
 
     private static GuidLookupItemResponse ToGuidItem(GuidLookupRow row) =>
         new() { Code = row.Code, Name = row.Name };

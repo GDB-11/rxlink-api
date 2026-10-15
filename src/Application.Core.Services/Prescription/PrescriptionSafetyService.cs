@@ -4,6 +4,7 @@ using Application.Core.DTOs.Patient.Response;
 using Application.Core.DTOs.PatientAccess;
 using Application.Core.DTOs.Prescription.Errors;
 using Application.Core.DTOs.Prescription.Response;
+using Application.Core.Interfaces.Patient;
 using Application.Core.Interfaces.PatientAccess;
 using Application.Core.Interfaces.Prescription;
 using Application.Core.Services.PatientAccess;
@@ -25,12 +26,15 @@ public sealed class PrescriptionSafetyService : IPrescriptionSafety
     private readonly ICatalogSnapshotStore _catalog;
     private readonly IPatientAccessPolicy _accessPolicy;
     private readonly IRecordAccessLogger _accessLogger;
+    private readonly IPatientAllergyResolver _allergyResolver;
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public PrescriptionSafetyService(IPrescriptionRepository prescriptions, IPatientRepository patients,
-        ICatalogSnapshotStore catalog, IPatientAccessPolicy accessPolicy, IRecordAccessLogger accessLogger)
+        ICatalogSnapshotStore catalog, IPatientAccessPolicy accessPolicy, IRecordAccessLogger accessLogger,
+        IPatientAllergyResolver allergyResolver)
     {
+        _allergyResolver = allergyResolver;
         _prescriptions = prescriptions;
         _patients = patients;
         _catalog = catalog;
@@ -76,8 +80,7 @@ public sealed class PrescriptionSafetyService : IPrescriptionSafety
 
         List<PrescriptionDetailResponse> lines =
             JsonSerializer.Deserialize<List<PrescriptionDetailResponse>>(row.DetailsJson, JsonOptions) ?? [];
-        List<PatientAllergyResponse> allergies =
-            JsonSerializer.Deserialize<List<PatientAllergyResponse>>(patient.Value.AllergiesJson, JsonOptions) ?? [];
+        List<PatientAllergyResponse> allergies = _allergyResolver.ResolveJson(patient.Value.AllergiesJson);
 
         return new PrescriptionSafetyCheckResponse
         {
