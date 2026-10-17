@@ -108,7 +108,7 @@ internal static class UserRepositorySql
 
     /// <summary>
     /// Links an existing Person (identified by PersonCode) to a new User account.
-    /// Resolves catalog codes to internal IDs in a <c>refs</c> CTE, then inserts the User row.
+    /// Resolves the role in a <c>refs</c> CTE (the specialty code is validated by the service against the catalog snapshot), then inserts the User row.
     /// Returns no rows when PersonCode is not found or any catalog code (role) is invalid.
     /// </summary>
     internal const string Insert = """
@@ -119,26 +119,21 @@ internal static class UserRepositorySql
                                            r."RoleId",
                                            r."RoleCode",
                                            r."Name"   AS "RoleName",
-                                           sp."SpecialtyId",
-                                           sp."SpecialtyCode"
+                                           @SpecialtyCode::uuid AS "SpecialtyCode"
                                        FROM "Person" p
                                        CROSS JOIN "Role" r
-                                       LEFT JOIN "Specialty" sp
-                                           ON sp."SpecialtyCode" = @SpecialtyCode
-                                          AND sp."IsActive"      = TRUE
                                        WHERE p."PersonCode" = @PersonCode
                                          AND r."Name"       = @RoleName
                                          AND r."IsActive"   = TRUE
                                    ),
                                    new_user AS (
                                        INSERT INTO "User" (
-                                           "PersonId", "RoleId", "SpecialtyId", "SpecialtyCode",
+                                           "PersonId", "RoleId", "SpecialtyCode",
                                            "Username", "Email", "PasswordHash", "LicenseNumber"
                                        )
                                        SELECT
                                            refs."PersonId",
                                            refs."RoleId",
-                                           refs."SpecialtyId",
                                            refs."SpecialtyCode",
                                            @Username,
                                            @Email,
@@ -196,12 +191,8 @@ internal static class UserRepositorySql
                                            r."RoleId",
                                            r."RoleCode",
                                            r."Name"   AS "RoleName",
-                                           sp."SpecialtyId",
-                                           sp."SpecialtyCode"
+                                           @SpecialtyCode::uuid AS "SpecialtyCode"
                                        FROM "Role" r
-                                       LEFT JOIN "Specialty" sp
-                                           ON sp."SpecialtyCode" = @SpecialtyCode
-                                          AND sp."IsActive"      = TRUE
                                        WHERE r."Name"    = @RoleName
                                          AND r."IsActive" = TRUE
                                    ),
@@ -209,7 +200,6 @@ internal static class UserRepositorySql
                                        UPDATE "User" u
                                        SET
                                            "RoleId"        = refs."RoleId",
-                                           "SpecialtyId"   = refs."SpecialtyId",
                                            "SpecialtyCode" = refs."SpecialtyCode",
                                            "Username"      = @Username,
                                            "Email"         = @Email,

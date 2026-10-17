@@ -76,24 +76,21 @@ internal static class PatientCredentialRepositorySql
     internal const string CreatePersonAndPatient = $"""
                                                     WITH ins_person AS (
                                                         INSERT INTO "Person" (
-                                                            "Names", "Surnames", "BirthDate", "SexId", "SexCode",
+                                                            "Names", "Surnames", "BirthDate", "SexCode",
                                                             "Phone", "AlternativePhone", "Email",
                                                             "Address", "EmergencyContactName", "EmergencyContactPhone"
                                                         )
-                                                        SELECT
-                                                            @Names, @Surnames, @BirthDate,
-                                                            s."SexId", s."SexCode",
+                                                        VALUES (
+                                                            @Names, @Surnames, @BirthDate, @SexCode,
                                                             @Phone, @AlternativePhone, @Email,
                                                             @Address, @EmergencyContactName, @EmergencyContactPhone
-                                                        FROM "Sex" s
-                                                        WHERE s."SexCode" = @SexCode
+                                                        )
                                                         RETURNING *
                                                     ),
                                                     ins_doc AS (
-                                                        INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "DocumentTypeCode", "Number")
-                                                        SELECT ip."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
+                                                        INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeCode", "Number")
+                                                        SELECT ip."PersonId", @DocumentTypeCode, @DocumentNumber
                                                         FROM ins_person ip
-                                                        JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                                         RETURNING "PersonId"
                                                     ),
                                                     {MrnCte},

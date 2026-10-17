@@ -95,7 +95,7 @@ internal static class PrescriptionRepositorySql
                                    ),
                                    ins_details AS (
                                        INSERT INTO "PrescriptionDetail" (
-                                           "PrescriptionId", "MedicationId", "AdministrationRouteId", "FrequencyId",
+                                           "PrescriptionId",
                                            "MedicationCode", "AdministrationRouteCode", "FrequencyCode",
                                            "Dose", "DurationDays", "Instructions",
                                            "MedicationGenericName", "MedicationCommercialName", "MedicationConcentration",
@@ -104,12 +104,9 @@ internal static class PrescriptionRepositorySql
                                        )
                                        SELECT
                                            ip."PrescriptionId",
-                                           m."MedicationId",
-                                           ar."AdministrationRouteId",
-                                           f."FrequencyId",
-                                           m."MedicationCode",
-                                           ar."AdministrationRouteCode",
-                                           f."FrequencyCode",
+                                           (elem->>'MedicationCode')::uuid,
+                                           (elem->>'AdministrationRouteCode')::uuid,
+                                           (elem->>'FrequencyCode')::uuid,
                                            (elem->>'Dose')::varchar,
                                            (elem->>'DurationDays')::integer,
                                            elem->>'Instructions',
@@ -122,9 +119,6 @@ internal static class PrescriptionRepositorySql
                                            (elem->>'FrequencyIntervalHours')::integer
                                        FROM ins_prescription ip
                                        CROSS JOIN json_array_elements(@DetailsJson::json) AS elem
-                                       JOIN "Medication" m           ON m."MedicationCode"          = (elem->>'MedicationCode')::uuid          AND m."IsActive" = TRUE
-                                       JOIN "AdministrationRoute" ar ON ar."AdministrationRouteCode" = (elem->>'AdministrationRouteCode')::uuid AND ar."IsActive" = TRUE
-                                       JOIN "Frequency" f            ON f."FrequencyCode"            = (elem->>'FrequencyCode')::uuid            AND f."IsActive" = TRUE
                                        RETURNING *
                                    )
                                    SELECT
@@ -184,7 +178,7 @@ internal static class PrescriptionRepositorySql
                                    ),
                                    ins_details AS (
                                        INSERT INTO "PrescriptionDetail" (
-                                           "PrescriptionId", "MedicationId", "AdministrationRouteId", "FrequencyId",
+                                           "PrescriptionId",
                                            "MedicationCode", "AdministrationRouteCode", "FrequencyCode",
                                            "Dose", "DurationDays", "Instructions",
                                            "MedicationGenericName", "MedicationCommercialName", "MedicationConcentration",
@@ -193,12 +187,9 @@ internal static class PrescriptionRepositorySql
                                        )
                                        SELECT
                                            upd."PrescriptionId",
-                                           m."MedicationId",
-                                           ar."AdministrationRouteId",
-                                           f."FrequencyId",
-                                           m."MedicationCode",
-                                           ar."AdministrationRouteCode",
-                                           f."FrequencyCode",
+                                           (elem->>'MedicationCode')::uuid,
+                                           (elem->>'AdministrationRouteCode')::uuid,
+                                           (elem->>'FrequencyCode')::uuid,
                                            (elem->>'Dose')::varchar,
                                            (elem->>'DurationDays')::integer,
                                            elem->>'Instructions',
@@ -211,9 +202,6 @@ internal static class PrescriptionRepositorySql
                                            (elem->>'FrequencyIntervalHours')::integer
                                        FROM upd_prescription upd
                                        CROSS JOIN json_array_elements(@DetailsJson::json) AS elem
-                                       JOIN "Medication" m           ON m."MedicationCode"          = (elem->>'MedicationCode')::uuid          AND m."IsActive" = TRUE
-                                       JOIN "AdministrationRoute" ar ON ar."AdministrationRouteCode" = (elem->>'AdministrationRouteCode')::uuid AND ar."IsActive" = TRUE
-                                       JOIN "Frequency" f            ON f."FrequencyCode"            = (elem->>'FrequencyCode')::uuid            AND f."IsActive" = TRUE
                                        RETURNING *
                                    )
                                    SELECT

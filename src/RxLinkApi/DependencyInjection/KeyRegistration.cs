@@ -4,14 +4,20 @@ namespace RxLinkApi.DependencyInjection;
 
 internal static class KeyRegistration
 {
+    /// <summary>Secrets are never committed (Phase 1.1/9.14): an empty value means the environment variable was not set.</summary>
+    private static string RequiredSecret(this IConfiguration configuration, string key) =>
+        string.IsNullOrWhiteSpace(configuration[key])
+            ? throw new InvalidOperationException(
+                $"Configuration '{key}' is not set. Provide it as the environment variable '{key.Replace(":", "__")}' (see rxlink-sv/scripts/local-setup/README.md).")
+            : configuration[key]!;
+
     extension(WebApplicationBuilder builder)
     {
         private void AddEncryptionMasterKey()
         {
             EncryptionConfig encryptionConfig = new()
             {
-                MasterKey = builder.Configuration["Encryption:MasterKey"] ??
-                            throw new NullReferenceException("MasterKey")
+                MasterKey = builder.Configuration.RequiredSecret("Encryption:MasterKey")
             };
             builder.Services.AddSingleton(encryptionConfig);
         }
@@ -20,10 +26,8 @@ internal static class KeyRegistration
         {
             DeterministicEncryptionConfig deterministicEncryptionConfig = new()
             {
-                MasterKey = builder.Configuration["DeterministicEncryption:MasterKey"] ??
-                            throw new NullReferenceException("MasterKey"),
-                IvGenerationKey = builder.Configuration["DeterministicEncryption:IvGenerationKey"] ??
-                                  throw new NullReferenceException("IvGenerationKey")
+                MasterKey = builder.Configuration.RequiredSecret("DeterministicEncryption:MasterKey"),
+                IvGenerationKey = builder.Configuration.RequiredSecret("DeterministicEncryption:IvGenerationKey")
             };
             builder.Services.AddSingleton(deterministicEncryptionConfig);
         }
@@ -32,8 +36,7 @@ internal static class KeyRegistration
         {
             JwtConfig jwtConfig = new()
             {
-                SecretKey = builder.Configuration["JwtSettings:SecretKey"] ??
-                            throw new NullReferenceException("SecretKey"),
+                SecretKey = builder.Configuration.RequiredSecret("JwtSettings:SecretKey"),
                 Issuer = builder.Configuration["JwtSettings:Issuer"] ?? throw new NullReferenceException("Issuer"),
                 Audience =
                     builder.Configuration["JwtSettings:Audience"] ?? throw new NullReferenceException("Audience"),

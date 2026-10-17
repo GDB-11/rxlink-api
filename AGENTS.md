@@ -391,4 +391,4 @@ Records are never hard-deleted. Use `Deactivate` / `Activate` (`PATCH {code}/dea
 
 ## AI test database
 
-To boot the API or run SQL for real, agents may use the disposable local Postgres described in `/home/Gianfranco/repos/rxlink-sv/docs/ai-test-database.md` (container `pgtest`, port 55432, synthetic data only, approved by the owner). Never use the Neon connection strings or the user's own Postgres on 5432.
+To boot the API or run SQL for real, agents may use the disposable local Postgres described in `/home/Gianfranco/repos/rxlink-sv/docs/ai-test-database.md` (container `pgtest`, port 55432, synthetic data only, approved by the owner). Never use any real/remote connection string or the user's own Postgres on 5432.

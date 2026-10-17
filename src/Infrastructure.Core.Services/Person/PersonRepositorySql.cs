@@ -107,23 +107,21 @@ internal static class PersonRepositorySql
     internal const string Insert = """
                                    WITH ins AS (
                                        INSERT INTO "Person" (
-                                           "Names", "Surnames", "BirthDate", "SexId", "SexCode",
+                                           "Names", "Surnames", "BirthDate", "SexCode",
                                            "Phone", "AlternativePhone", "Email",
                                            "Address", "EmergencyContactName", "EmergencyContactPhone"
                                        )
-                                       SELECT
-                                           @Names, @Surnames, @BirthDate, s."SexId", s."SexCode",
+                                       VALUES (
+                                           @Names, @Surnames, @BirthDate, @SexCode,
                                            @Phone, @AlternativePhone, @Email,
                                            @Address, @EmergencyContactName, @EmergencyContactPhone
-                                       FROM "Sex" s
-                                       WHERE s."SexCode" = @SexCode
+                                       )
                                        RETURNING *
                                    ),
                                    doc_ins AS (
-                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "DocumentTypeCode", "Number")
-                                       SELECT i."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
+                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeCode", "Number")
+                                       SELECT i."PersonId", @DocumentTypeCode, @DocumentNumber
                                        FROM ins i
-                                       JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                        RETURNING "PersonId", "DocumentTypeCode", "Number"
                                    ),
                                    mrn AS (
@@ -142,14 +140,13 @@ internal static class PersonRepositorySql
                                        RETURNING *
                                    ),
                                    ins_allergies AS (
-                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "AllergyCode", "SeverityId", "SeverityCode", "Notes")
-                                       SELECT ins_patient."PatientId", a."AllergyId", a."AllergyCode", sv."SeverityId", sv."SeverityCode", elem->>'Notes'
+                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyCode", "SeverityCode", "Notes")
+                                       SELECT ins_patient."PatientId",
+                                              (elem->>'AllergyCode')::uuid,
+                                              (elem->>'SeverityCode')::uuid,
+                                              elem->>'Notes'
                                        FROM ins_patient
                                        CROSS JOIN json_array_elements(COALESCE(@AllergiesJson::json, '[]'::json)) AS elem
-                                       JOIN "Allergy" a ON a."AllergyCode" = (elem->>'AllergyCode')::uuid
-                                                        AND a."IsActive" = TRUE
-                                       LEFT JOIN "AllergySeverity" sv ON sv."SeverityCode" = (elem->>'SeverityCode')::uuid
-                                                                     AND sv."IsActive" = TRUE
                                    )
                                    SELECT
                                        ins."PersonCode",
@@ -178,8 +175,7 @@ internal static class PersonRepositorySql
                                            "Names"                 = @Names,
                                            "Surnames"              = @Surnames,
                                            "BirthDate"             = @BirthDate,
-                                           "SexId"                 = (SELECT "SexId" FROM "Sex" WHERE "SexCode" = @SexCode),
-                                           "SexCode"               = (SELECT "SexCode" FROM "Sex" WHERE "SexCode" = @SexCode),
+                                           "SexCode"               = @SexCode,
                                            "Phone"                 = @Phone,
                                            "AlternativePhone"      = @AlternativePhone,
                                            "Email"                 = @Email,
@@ -194,10 +190,9 @@ internal static class PersonRepositorySql
                                        WHERE "PersonId" = (SELECT "PersonId" FROM upd)
                                    ),
                                    doc_ins AS (
-                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeId", "DocumentTypeCode", "Number")
-                                       SELECT u."PersonId", dt."DocumentTypeId", dt."DocumentTypeCode", @DocumentNumber
+                                       INSERT INTO "PersonDocument" ("PersonId", "DocumentTypeCode", "Number")
+                                       SELECT u."PersonId", @DocumentTypeCode, @DocumentNumber
                                        FROM upd u
-                                       JOIN "DocumentType" dt ON dt."DocumentTypeCode" = @DocumentTypeCode
                                        RETURNING "PersonId", "DocumentTypeCode", "Number"
                                    )
                                    SELECT

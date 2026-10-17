@@ -85,14 +85,13 @@ internal static class PatientRepositorySql
                                        RETURNING *
                                    ),
                                    ins_allergies AS (
-                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "AllergyCode", "SeverityId", "SeverityCode", "Notes")
-                                       SELECT ip."PatientId", a."AllergyId", a."AllergyCode", sv."SeverityId", sv."SeverityCode", elem->>'Notes'
+                                       INSERT INTO "PatientAllergy" ("PatientId", "AllergyCode", "SeverityCode", "Notes")
+                                       SELECT ip."PatientId",
+                                              (elem->>'AllergyCode')::uuid,
+                                              (elem->>'SeverityCode')::uuid,
+                                              elem->>'Notes'
                                        FROM ins_patient ip
                                        CROSS JOIN json_array_elements(COALESCE(@AllergiesJson::json, '[]'::json)) AS elem
-                                       JOIN "Allergy" a ON a."AllergyCode" = (elem->>'AllergyCode')::uuid
-                                                        AND a."IsActive" = TRUE
-                                       LEFT JOIN "AllergySeverity" sv ON sv."SeverityCode" = (elem->>'SeverityCode')::uuid
-                                                                     AND sv."IsActive" = TRUE
                                        RETURNING *
                                    )
                                    SELECT
@@ -198,25 +197,21 @@ internal static class PatientRepositorySql
 
     /// <summary>
     /// Inserts a new PatientAllergy or restores a previously soft-deleted one (upsert).
-    /// Returns no rows when PatientCode or AllergyCode are not found.
+    /// Returns no rows when PatientCode is not found (the service validates AllergyCode/SeverityCode against the catalog snapshot).
     /// </summary>
     internal const string AddAllergy = """
                                        WITH ins AS (
-                                           INSERT INTO "PatientAllergy" ("PatientId", "AllergyId", "AllergyCode", "SeverityId", "SeverityCode", "Notes")
+                                           INSERT INTO "PatientAllergy" ("PatientId", "AllergyCode", "SeverityCode", "Notes")
                                            SELECT
                                                pat."PatientId",
-                                               a."AllergyId",
-                                               a."AllergyCode",
-                                               (SELECT "SeverityId" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
-                                               (SELECT "SeverityCode" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
+                                               @AllergyCode,
+                                               @SeverityCode,
                                                @Notes
                                            FROM "Patient" pat
-                                           JOIN "Allergy" a ON a."AllergyCode" = @AllergyCode AND a."IsActive" = TRUE
                                            WHERE pat."PatientCode" = @PatientCode
                                              AND pat."IsActive" = TRUE
                                            ON CONFLICT ON CONSTRAINT uq_patient_allergy
                                            DO UPDATE SET
-                                               "SeverityId"   = EXCLUDED."SeverityId",
                                                "SeverityCode" = EXCLUDED."SeverityCode",
                                                "Notes"      = EXCLUDED."Notes",
                                                "DeletedAt"  = NULL,
@@ -239,8 +234,7 @@ internal static class PatientRepositorySql
                                           WITH upd AS (
                                               UPDATE "PatientAllergy"
                                               SET
-                                                  "SeverityId" = (SELECT "SeverityId" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
-                                                  "SeverityCode" = (SELECT "SeverityCode" FROM "AllergySeverity" WHERE "SeverityCode" = @SeverityCode AND "IsActive" = TRUE),
+                                                  "SeverityCode" = @SeverityCode,
                                                   "Notes"      = @Notes
                                               WHERE "PatientAllergyCode" = @PatientAllergyCode
                                                 AND "PatientId" = (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode AND "IsActive" = TRUE)
