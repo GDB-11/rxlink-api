@@ -30,6 +30,7 @@ public sealed class SexController : FunctionalController
     /// Returns all sexes in the catalog.
     /// </summary>
     [HttpGet]
+    [HttpGet("~/api/v1/sex")]
     [ProducesResponseType(typeof(IEnumerable<GuidLookupItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

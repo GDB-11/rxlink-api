@@ -43,7 +43,11 @@ internal static class KeyRegistration
                 AccessTokenExpiryMinutes = int.Parse(builder.Configuration["JwtSettings:AccessTokenExpiryMinutes"] ??
                                                      throw new NullReferenceException("AccessTokenExpiryMinutes")),
                 RefreshTokenExpiryMinutes = int.Parse(builder.Configuration["JwtSettings:RefreshTokenExpiryMinutes"] ??
-                                                      throw new NullReferenceException("RefreshTokenExpiryMinutes"))
+                                                      throw new NullReferenceException("RefreshTokenExpiryMinutes")),
+                PatientAccessTokenExpiryMinutes =
+                    builder.Configuration.GetValue("JwtSettings:PatientAccessTokenExpiryMinutes", 15),
+                PatientRefreshTokenExpiryMinutes =
+                    builder.Configuration.GetValue("JwtSettings:PatientRefreshTokenExpiryMinutes", 14 * 24 * 60)
             };
             builder.Services.AddSingleton(jwtConfig);
         }
@@ -57,6 +61,17 @@ internal static class KeyRegistration
                 MaxFailedAttempts = section.GetValue("MaxFailedAttempts", defaults.MaxFailedAttempts),
                 LockoutMinutes = section.GetValue("LockoutMinutes", defaults.LockoutMinutes),
                 AbsoluteSessionMinutes = section.GetValue("AbsoluteSessionMinutes", defaults.AbsoluteSessionMinutes)
+            });
+        }
+
+        private void AddMobileClientConfig()
+        {
+            IConfigurationSection section = builder.Configuration.GetSection("Mobile");
+            builder.Services.AddSingleton(new MobileClientConfig
+            {
+                MinimumAppVersion = section.GetValue("MinimumAppVersion", new MobileClientConfig().MinimumAppVersion)!,
+                Features = section.GetSection("Features").GetChildren()
+                    .ToDictionary(f => f.Key, f => f.Get<bool>())
             });
         }
 
@@ -76,6 +91,7 @@ internal static class KeyRegistration
         {
             builder.AddPasswordPolicy();
             builder.AddSessionSecurity();
+            builder.AddMobileClientConfig();
             builder.AddEncryptionMasterKey();
             builder.AddDeterministicEncryptionKeys();
             builder.AddJwtKeys();

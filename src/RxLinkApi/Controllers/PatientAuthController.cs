@@ -12,7 +12,7 @@ using RxLinkApi.Mappings;
 namespace RxLinkApi.Controllers;
 
 [ApiController]
-[Route("api/patient-auth")]
+[Route("api/v1/patient-auth")]
 public sealed class PatientAuthController : FunctionalController
 {
     private readonly IPatientAuthentication _service;
@@ -30,15 +30,14 @@ public sealed class PatientAuthController : FunctionalController
 
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitingRegistration.SensitiveAnonymousPolicy)]
-    [HttpGet("lookup")]
+    [HttpPost("lookup")]
     [ProducesResponseType(typeof(PatientLookupResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public Task<IActionResult> Lookup(
-        [FromQuery] Guid documentTypeCode,
-        [FromQuery] string documentNumber) =>
+    public Task<IActionResult> Lookup([FromBody] PatientLookupRequest request) =>
         ExecuteAsync(
-            operation: () => _service.LookupAsync(documentTypeCode, documentNumber),
+            operation: () => _service.LookupAsync(request),
             errorMapper: _errorMapper,
             operationName: nameof(Lookup)
         );

@@ -1,3 +1,4 @@
+using Application.Core.Config;
 using Application.Core.DTOs.PartnerConfig.Errors;
 using Application.Core.DTOs.PartnerConfig.Response;
 using Application.Core.Services.PartnerConfig;
@@ -32,7 +33,7 @@ public sealed class PartnerConfigServiceTests
 
     public PartnerConfigServiceTests()
     {
-        _sut = new PartnerConfigService(_registry, _clinics);
+        _sut = new PartnerConfigService(_registry, _clinics, new MobileClientConfig { MinimumAppVersion = "1.2.0" });
         _registry.GetIdentityAsync().Returns(Result<PartnerIdentityRow?, CatalogRepositoryError>.Success(Identity));
         _registry.GetLogoAsync().Returns(Result<PartnerLogoRow?, CatalogRepositoryError>.Success(null));
         _clinics.GetDefaultAsync().Returns(Result<ClinicRow?, ClinicRepositoryError>.Success(null));
@@ -49,10 +50,12 @@ public sealed class PartnerConfigServiceTests
         Result<PublicPartnerConfigResponse, PartnerConfigError> result = await _sut.GetPublicAsync();
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("/api/partner/logo?v=abc123", result.Value!.LogoUrl);
+        Assert.Equal("/api/v1/partner/logo?v=abc123", result.Value!.LogoUrl);
         Assert.Equal("Sede Principal", result.Value.ClinicName);
         Assert.Equal(Identity.PartnerCode, result.Value.PartnerCode);
         Assert.Equal("#112233", result.Value.BrandPrimaryColor);
+        Assert.Equal("1.2.0", result.Value.MinimumAppVersion);
+        Assert.Empty(result.Value.Features);
     }
 
     [Fact]

@@ -105,6 +105,7 @@ public sealed class DoctorController : FunctionalController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{code:guid}/available-dates")]
+    [HttpGet("~/api/v1/doctor/{code:guid}/available-dates")]
     [ProducesResponseType(typeof(AvailableDatesResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetAvailableDates(Guid code) =>
@@ -121,6 +122,7 @@ public sealed class DoctorController : FunctionalController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{code:guid}/available-slots")]
+    [HttpGet("~/api/v1/doctor/{code:guid}/available-slots")]
     [ProducesResponseType(typeof(AvailableSlotsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

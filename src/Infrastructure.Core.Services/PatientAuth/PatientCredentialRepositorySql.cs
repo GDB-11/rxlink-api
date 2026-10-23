@@ -39,6 +39,7 @@ internal static class PatientCredentialRepositorySql
                                                                    AND pat."IsActive"      = TRUE
                                           WHERE pd."DocumentTypeCode" = @DocumentTypeCode
                                             AND pd."Number"           = @DocumentNumber
+                                            AND p."BirthDate"         = @BirthDate
                                           """;
 
     internal const string GetByPersonCode = """
@@ -62,16 +63,6 @@ internal static class PatientCredentialRepositorySql
                                         WHERE pe."Email"   = @Email
                                           AND pat."IsActive" = TRUE
                                         """;
-
-    internal const string GetByRefreshToken = $"""
-                                               SELECT {PatientCredentialProjection}
-                                               FROM "Patient" pat
-                                               JOIN "Person" pe               ON pe."PersonId"  = pat."PersonId"
-                                               JOIN "PatientRefreshToken" prt ON prt."PatientId" = pat."PatientId"
-                                               WHERE prt."TokenHash" = @TokenHash
-                                                 AND prt."ExpiresAt" > @CurrentDate
-                                                 AND pat."IsActive"  = TRUE
-                                               """;
 
     internal const string CreatePersonAndPatient = $"""
                                                     WITH ins_person AS (
@@ -99,10 +90,6 @@ internal static class PatientCredentialRepositorySql
                                                         SELECT ip."PersonId", mrn.value, @PasswordHash
                                                         FROM ins_person ip, mrn
                                                         RETURNING *
-                                                    ),
-                                                    ins_token AS (
-                                                        INSERT INTO "PatientRefreshToken" ("PatientId")
-                                                        SELECT "PatientId" FROM ins_patient
                                                     )
                                                     SELECT
                                                         ip."PatientCode",
@@ -125,10 +112,6 @@ internal static class PatientCredentialRepositorySql
                                                         FROM "Person" p, mrn
                                                         WHERE p."PersonCode" = @PersonCode
                                                         RETURNING *
-                                                    ),
-                                                    ins_token AS (
-                                                        INSERT INTO "PatientRefreshToken" ("PatientId")
-                                                        SELECT "PatientId" FROM ins_patient
                                                     )
                                                     SELECT
                                                         ip."PatientCode",
@@ -151,11 +134,6 @@ internal static class PatientCredentialRepositorySql
                                                  AND "PasswordHash" IS NULL
                                                  AND "IsActive"     = TRUE
                                                RETURNING *
-                                           ),
-                                           upsert_token AS (
-                                               INSERT INTO "PatientRefreshToken" ("PatientId")
-                                               SELECT "PatientId" FROM updated
-                                               ON CONFLICT ("PatientId") DO NOTHING
                                            )
                                            SELECT
                                                up."PatientCode",
@@ -170,24 +148,71 @@ internal static class PatientCredentialRepositorySql
                                            JOIN "Person" pe ON pe."PersonId" = up."PersonId"
                                            """;
 
-    internal const string UpdateRefreshToken = """
-                                               INSERT INTO "PatientRefreshToken" ("PatientId", "TokenHash", "ExpiresAt", "CreatedAt")
-                                               VALUES (
-                                                   (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode),
-                                                   @TokenHash,
-                                                   @ExpiresAt,
-                                                   NOW()
-                                               )
-                                               ON CONFLICT ("PatientId") DO UPDATE
-                                               SET "TokenHash" = @TokenHash,
-                                                   "ExpiresAt" = @ExpiresAt,
-                                                   "CreatedAt" = NOW()
-                                               """;
+    /// <summary>Starts or continues a session: stores a new token and drops this patient's expired ones.</summary>
+    internal const string StoreRefreshToken = """
+                                              WITH pruned AS (
+                                                  DELETE FROM "PatientRefreshToken"
+                                                  WHERE "PatientId" = (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode)
+                                                    AND "ExpiresAt" < @Now
+                                              )
+                                              INSERT INTO "PatientRefreshToken" ("PatientId", "FamilyCode", "TokenHash", "ExpiresAt", "CreatedAt")
+                                              SELECT "PatientId", @FamilyCode, @TokenHash, @ExpiresAt, @Now
+                                              FROM "Patient"
+                                              WHERE "PatientCode" = @PatientCode
+                                              """;
 
-    internal const string ClearRefreshToken = """
+    /// <summary>
+    /// Single-use rotation: marks the presented token used and stores its successor in the same family.
+    /// Returns no row when the token is unknown, used, revoked, expired, or its patient is inactive.
+    /// </summary>
+    internal const string RotateRefreshToken = $"""
+                                                WITH consumed AS (
+                                                    UPDATE "PatientRefreshToken"
+                                                    SET "UsedAt" = @Now
+                                                    WHERE "TokenHash"  = @TokenHash
+                                                      AND "UsedAt"    IS NULL
+                                                      AND "RevokedAt" IS NULL
+                                                      AND "ExpiresAt"  > @Now
+                                                    RETURNING "PatientId", "FamilyCode"
+                                                ),
+                                                pruned AS (
+                                                    DELETE FROM "PatientRefreshToken"
+                                                    WHERE "PatientId" IN (SELECT "PatientId" FROM consumed)
+                                                      AND "ExpiresAt" < @Now
+                                                ),
+                                                successor AS (
+                                                    INSERT INTO "PatientRefreshToken" ("PatientId", "FamilyCode", "TokenHash", "ExpiresAt", "CreatedAt")
+                                                    SELECT "PatientId", "FamilyCode", @NewTokenHash, @NewExpiresAt, @Now
+                                                    FROM consumed
+                                                )
+                                                SELECT {PatientCredentialProjection}
+                                                FROM consumed c
+                                                JOIN "Patient" pat ON pat."PatientId" = c."PatientId"
+                                                JOIN "Person" pe   ON pe."PersonId"   = pat."PersonId"
+                                                WHERE pat."IsActive" = TRUE
+                                                """;
+
+    /// <summary>
+    /// Reuse detection: when the presented token was already used, every live token of its family is revoked.
+    /// Returns how many tokens were revoked (0 when the token is unknown, merely expired, or the family was already revoked).
+    /// </summary>
+    internal const string RevokeFamilyOfUsedToken = """
+                                                    WITH revoked AS (
+                                                        UPDATE "PatientRefreshToken"
+                                                        SET "RevokedAt" = @Now
+                                                        WHERE "FamilyCode" = (
+                                                                SELECT "FamilyCode" FROM "PatientRefreshToken"
+                                                                WHERE "TokenHash" = @TokenHash AND "UsedAt" IS NOT NULL)
+                                                          AND "RevokedAt" IS NULL
+                                                        RETURNING 1
+                                                    )
+                                                    SELECT COUNT(*) FROM revoked
+                                                    """;
+
+    internal const string RevokeAllSessions = """
                                               UPDATE "PatientRefreshToken"
-                                              SET "TokenHash" = NULL,
-                                                  "ExpiresAt" = NULL
+                                              SET "RevokedAt" = @Now
                                               WHERE "PatientId" = (SELECT "PatientId" FROM "Patient" WHERE "PatientCode" = @PatientCode)
+                                                AND "RevokedAt" IS NULL
                                               """;
 }

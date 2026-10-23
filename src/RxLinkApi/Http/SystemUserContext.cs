@@ -11,6 +11,7 @@ internal sealed class SystemUserContext(string jobName) : IUserContext
     internal const string RequestIdPrefix = "system:";
 
     public Guid? UserCode => null;
+    public Guid? PatientCode => null;
     public string? Role => null;
     public string? IpAddress => null;
     public string? RequestId { get; } = RequestIdPrefix + jobName;

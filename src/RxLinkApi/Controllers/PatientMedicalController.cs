@@ -37,7 +37,7 @@ namespace RxLinkApi.Controllers;
 
 [Authorize(Roles = "Patient")]
 [ApiController]
-[Route("api/patient")]
+[Route("api/v1/patient")]
 public sealed class PatientMedicalController : FunctionalController
 {
     private readonly IDiagnostic _diagnosticService;
@@ -163,7 +163,7 @@ public sealed class PatientMedicalController : FunctionalController
             errorMapper: _amendmentErrorMapper,
             operationName: nameof(CreateAmendmentRequest),
             successMapper: amendment => Created(
-                $"api/patient/me/amendment-requests/{amendment.AmendmentRequestCode}", amendment)
+                $"api/v1/patient/me/amendment-requests/{amendment.AmendmentRequestCode}", amendment)
         );
 
     /// <summary>The authenticated patient's amendment requests and their outcome, newest first.</summary>

@@ -30,6 +30,7 @@ public sealed class ConsultationTypeController : FunctionalController
     /// Returns all active consultation types in the catalog.
     /// </summary>
     [HttpGet]
+    [HttpGet("~/api/v1/consultationtype")]
     [ProducesResponseType(typeof(IEnumerable<GuidLookupItemResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

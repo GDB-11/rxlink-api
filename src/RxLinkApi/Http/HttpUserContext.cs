@@ -20,6 +20,11 @@ internal sealed class HttpUserContext : IUserContext
             ? code
             : null;
 
+    public Guid? PatientCode =>
+        Guid.TryParse(_accessor.HttpContext?.User.FindFirst("patient_code")?.Value, out Guid code)
+            ? code
+            : null;
+
     public string? Role => _accessor.HttpContext?.User.FindFirst(ClaimTypes.Role)?.Value;
 
     public string? IpAddress => _accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();

@@ -20,12 +20,13 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
 
     public async Task<Result<PatientRegistrationCheckRow?, PatientCredentialError>> GetByDocumentAsync(
         Guid documentTypeCode,
-        string documentNumber) =>
+        string documentNumber,
+        DateTime birthDate) =>
         await Result.TryAsync(
             operation: async () => await ExecuteSingleOrDefaultAsync<object, PatientRegistrationCheckRow?>(
                 _connection,
                 PatientCredentialRepositorySql.GetByDocument,
-                new { DocumentTypeCode = documentTypeCode, DocumentNumber = documentNumber }),
+                new { DocumentTypeCode = documentTypeCode, DocumentNumber = documentNumber, BirthDate = birthDate }),
             errorFactory: PatientCredentialError (ex) => new GetByDocumentAsyncError(ex.Message, ex)
         );
 
@@ -46,17 +47,6 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
                 PatientCredentialRepositorySql.GetByEmail,
                 new { Email = email }),
             errorFactory: PatientCredentialError (ex) => new GetByEmailAsyncError(ex.Message, ex)
-        );
-
-    public async Task<Result<PatientCredential?, PatientCredentialError>> GetByRefreshTokenAsync(
-        string tokenHash,
-        DateTime currentDate) =>
-        await Result.TryAsync(
-            operation: async () => await ExecuteSingleOrDefaultAsync<object, PatientCredential?>(
-                _connection,
-                PatientCredentialRepositorySql.GetByRefreshToken,
-                new { TokenHash = tokenHash, CurrentDate = currentDate }),
-            errorFactory: PatientCredentialError (ex) => new GetByRefreshTokenAsyncError(ex.Message, ex)
         );
 
     public async Task<Result<PatientCredential, PatientCredentialError>> CreatePersonAndPatientAsync(
@@ -116,24 +106,57 @@ public sealed class PatientCredentialRepository : BaseDatabaseService, IPatientC
             errorFactory: PatientCredentialError (ex) => new AddCredentialsAsyncError(ex.Message, ex)
         );
 
-    public async Task<Result<Unit, PatientCredentialError>> UpdateRefreshTokenAsync(
+    public async Task<Result<Unit, PatientCredentialError>> StoreRefreshTokenAsync(
         Guid patientCode,
+        Guid familyCode,
         string tokenHash,
-        DateTime expiresAt) =>
+        DateTime expiresAt,
+        DateTime now) =>
         await Result.TryAsync(
             operation: async () => await ExecuteNonQueryAsync(
                 _connection,
-                PatientCredentialRepositorySql.UpdateRefreshToken,
-                new { PatientCode = patientCode, TokenHash = tokenHash, ExpiresAt = expiresAt }),
-            errorFactory: PatientCredentialError (ex) => new UpdateRefreshTokenAsyncError(ex.Message, ex)
+                PatientCredentialRepositorySql.StoreRefreshToken,
+                new
+                {
+                    PatientCode = patientCode,
+                    FamilyCode = familyCode,
+                    TokenHash = tokenHash,
+                    ExpiresAt = expiresAt,
+                    Now = now
+                }),
+            errorFactory: PatientCredentialError (ex) => new StoreRefreshTokenAsyncError(ex.Message, ex)
         ).MapAsync(_ => Unit.Value);
 
-    public async Task<Result<Unit, PatientCredentialError>> ClearRefreshTokenAsync(Guid patientCode) =>
+    public async Task<Result<PatientCredential?, PatientCredentialError>> RotateRefreshTokenAsync(
+        string tokenHash,
+        string newTokenHash,
+        DateTime newExpiresAt,
+        DateTime now) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteSingleOrDefaultAsync<object, PatientCredential?>(
+                _connection,
+                PatientCredentialRepositorySql.RotateRefreshToken,
+                new { TokenHash = tokenHash, NewTokenHash = newTokenHash, NewExpiresAt = newExpiresAt, Now = now }),
+            errorFactory: PatientCredentialError (ex) => new RotateRefreshTokenAsyncError(ex.Message, ex)
+        );
+
+    public async Task<Result<int, PatientCredentialError>> RevokeFamilyOfUsedTokenAsync(
+        string tokenHash,
+        DateTime now) =>
+        await Result.TryAsync(
+            operation: async () => await ExecuteScalarAsync<object, int?>(
+                _connection,
+                PatientCredentialRepositorySql.RevokeFamilyOfUsedToken,
+                new { TokenHash = tokenHash, Now = now }).ContinueWith(t => t.Result ?? 0),
+            errorFactory: PatientCredentialError (ex) => new RevokeSessionsAsyncError(ex.Message, ex)
+        );
+
+    public async Task<Result<Unit, PatientCredentialError>> RevokeAllSessionsAsync(Guid patientCode, DateTime now) =>
         await Result.TryAsync(
             operation: async () => await ExecuteNonQueryAsync(
                 _connection,
-                PatientCredentialRepositorySql.ClearRefreshToken,
-                new { PatientCode = patientCode }),
-            errorFactory: PatientCredentialError (ex) => new ClearRefreshTokenAsyncError(ex.Message, ex)
+                PatientCredentialRepositorySql.RevokeAllSessions,
+                new { PatientCode = patientCode, Now = now }),
+            errorFactory: PatientCredentialError (ex) => new RevokeSessionsAsyncError(ex.Message, ex)
         ).MapAsync(_ => Unit.Value);
 }

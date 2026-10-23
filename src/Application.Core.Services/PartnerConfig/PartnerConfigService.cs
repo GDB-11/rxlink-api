@@ -1,3 +1,4 @@
+using Application.Core.Config;
 using Application.Core.DTOs.PartnerConfig.Errors;
 using Application.Core.DTOs.PartnerConfig.Response;
 using Application.Core.Interfaces.PartnerConfig;
@@ -12,13 +13,15 @@ namespace Application.Core.Services.PartnerConfig;
 public sealed class PartnerConfigService : IPartnerConfig
 {
     /// <summary>Route of the logo endpoint; the hash is appended as <c>v</c> so a new logo busts caches.</summary>
-    private const string LogoPath = "/api/partner/logo";
+    private const string LogoPath = "/api/v1/partner/logo";
 
     private readonly IPartnerRegistryReader _registry;
     private readonly IClinicRepository _clinics;
+    private readonly MobileClientConfig _mobile;
 
-    public PartnerConfigService(IPartnerRegistryReader registry, IClinicRepository clinics)
+    public PartnerConfigService(IPartnerRegistryReader registry, IClinicRepository clinics, MobileClientConfig mobile)
     {
+        _mobile = mobile;
         _registry = registry;
         _clinics = clinics;
     }
@@ -53,6 +56,8 @@ public sealed class PartnerConfigService : IPartnerConfig
             Currency = row.Currency,
             Locale = row.Locale,
             ClinicName = clinicName,
+            MinimumAppVersion = _mobile.MinimumAppVersion,
+            Features = _mobile.Features,
         });
     }
 

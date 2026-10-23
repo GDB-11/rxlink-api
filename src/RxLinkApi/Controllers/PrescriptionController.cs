@@ -125,7 +125,7 @@ public sealed class PrescriptionController : FunctionalController
     /// <summary>
     /// Returns the full prescription of a patient with its detail lines.
     /// </summary>
-    [HttpGet("prescription/patient/{code:guid}")]
+    [HttpGet("v1/prescription/patient/{code:guid}")]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(PrescriptionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

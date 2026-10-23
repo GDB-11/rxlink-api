@@ -167,7 +167,8 @@ public sealed class JwtServiceTests
 
         Assert.True(result.IsSuccess);
         Assert.NotEmpty(result.Value.AccessToken);
-        Assert.Equal(_fixedNow.AddMinutes(_jwtConfig.AccessTokenExpiryMinutes), result.Value.ExpiresAt);
+        Assert.Equal(_fixedNow.AddMinutes(_jwtConfig.PatientAccessTokenExpiryMinutes), result.Value.ExpiresAt);
+        Assert.Equal(15, _jwtConfig.PatientAccessTokenExpiryMinutes);
     }
 
     // ── GenerateRefreshToken ────────────────────────────────────────────────

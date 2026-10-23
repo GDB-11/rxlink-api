@@ -24,6 +24,12 @@ public sealed class PatientAccessPolicyTests
     {
         _userContext.Role.Returns(role);
         _userContext.UserCode.Returns(userCode ?? _userCode);
+        // Real patient tokens carry the patient code in its own claim and no user code.
+        if (role == "Patient")
+        {
+            _userContext.UserCode.Returns((Guid?)null);
+            _userContext.PatientCode.Returns(userCode ?? _userCode);
+        }
     }
 
     private void GivenFacts(bool canViewClinical = true, bool inCareTeam = false, bool hasBreakGlass = false) =>

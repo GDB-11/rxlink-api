@@ -12,6 +12,9 @@ public static class ActivityEventTypes
     public const string MfaReset = "Auth.MfaReset";
     public const string MfaFailed = "Auth.MfaFailed";
     public const string AccountLocked = "Auth.AccountLocked";
+    public const string PatientLoginSucceeded = "Auth.PatientLoginSucceeded";
+    public const string PatientLoginFailed = "Auth.PatientLoginFailed";
+    public const string PatientLookupFailed = "Auth.PatientLookupFailed";
 
     public const string PrescriptionCreated = "Prescription.Created";
     public const string PrescriptionSigned = "Prescription.Signed";

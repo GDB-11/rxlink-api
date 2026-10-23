@@ -57,6 +57,7 @@ public sealed class SpecialtyController : FunctionalController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("/api/specialties")]
+    [HttpGet("~/api/v1/specialties")]
     [ProducesResponseType(typeof(IEnumerable<SpecialtyWithDoctorCountResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> GetAllActive() =>
@@ -72,6 +73,7 @@ public sealed class SpecialtyController : FunctionalController
     /// </summary>
     [AllowAnonymous]
     [HttpGet("{code:guid}/doctors")]
+    [HttpGet("~/api/v1/specialty/{code:guid}/doctors")]
     [ProducesResponseType(typeof(IEnumerable<DoctorSummaryResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

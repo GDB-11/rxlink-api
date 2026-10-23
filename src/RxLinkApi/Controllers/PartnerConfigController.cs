@@ -12,7 +12,7 @@ namespace RxLinkApi.Controllers;
 /// <summary>Public, PHI-free identity of this deployment (name, logo, brand colours, locale), read from the registry.</summary>
 [AllowAnonymous]
 [ApiController]
-[Route("api/partner")]
+[Route("api/v1/partner")]
 public sealed class PartnerConfigController : FunctionalController
 {
     private readonly IPartnerConfig _service;

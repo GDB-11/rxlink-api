@@ -3,13 +3,13 @@ namespace Application.Core.DTOs.PatientAuth.Errors;
 public abstract record PatientAuthError(string Message, string? Details = null, Exception? Exception = null);
 
 public sealed record PatientNotFoundError()
-    : PatientAuthError("No se encontró una cuenta con ese correo electrónico.");
+    : PatientAuthError("Correo electrónico o contraseña incorrectos.");
 
 public sealed record PatientInactiveError()
     : PatientAuthError("La cuenta se encuentra inactiva. Contacte al administrador.");
 
 public sealed record PatientNoCredentialsError()
-    : PatientAuthError("Esta cuenta no tiene acceso al app. Contacte al administrador.");
+    : PatientAuthError("Correo electrónico o contraseña incorrectos.");
 
 public sealed record PatientIncorrectPasswordError()
     : PatientAuthError("Correo electrónico o contraseña incorrectos.");

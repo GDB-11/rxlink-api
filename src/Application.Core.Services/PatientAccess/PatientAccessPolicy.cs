@@ -36,12 +36,12 @@ public sealed class PatientAccessPolicy : IPatientAccessPolicy
         Guid? userCode = _userContext.UserCode;
         string? role = _userContext.Role;
 
+        // Patients are not User rows (no UserCode): their own record is the only one they may read.
+        if (role == PatientRole)
+            return Success(_userContext.PatientCode == patientCode ? PatientAccessDecision.Allowed : PatientAccessDecision.Denied);
+
         if (userCode is null)
             return Success(PatientAccessDecision.Denied);
-
-        // Patients are not User rows: their own record is the only one they may read.
-        if (role == PatientRole)
-            return Success(userCode == patientCode ? PatientAccessDecision.Allowed : PatientAccessDecision.Denied);
 
         if (role is not (DoctorRole or NurseRole or AdminRole))
             return Success(PatientAccessDecision.Denied);

@@ -15,4 +15,8 @@ public sealed class PublicPartnerConfigResponse
     public required string Currency { get; init; }
     public required string Locale { get; init; }
     public string? ClinicName { get; init; }
+    /// <summary>Oldest mobile app version this deployment supports.</summary>
+    public required string MinimumAppVersion { get; init; }
+    /// <summary>Optional modules switched on or off for the app, by name.</summary>
+    public required IReadOnlyDictionary<string, bool> Features { get; init; }
 }

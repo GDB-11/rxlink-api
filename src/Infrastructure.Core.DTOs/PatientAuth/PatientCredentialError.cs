@@ -11,9 +11,6 @@ public sealed record GetByPersonCodeAsyncError(string Message, Exception? Except
 public sealed record GetByEmailAsyncError(string Message, Exception? Exception = null)
     : PatientCredentialError(Message, null, Exception);
 
-public sealed record GetByRefreshTokenAsyncError(string Message, Exception? Exception = null)
-    : PatientCredentialError(Message, null, Exception);
-
 public sealed record CreatePersonAndPatientAsyncError(string Message, Exception? Exception = null)
     : PatientCredentialError(Message, null, Exception);
 
@@ -23,8 +20,11 @@ public sealed record CreatePatientForPersonAsyncError(string Message, Exception?
 public sealed record AddCredentialsAsyncError(string Message, Exception? Exception = null)
     : PatientCredentialError(Message, null, Exception);
 
-public sealed record UpdateRefreshTokenAsyncError(string Message, Exception? Exception = null)
+public sealed record StoreRefreshTokenAsyncError(string Message, Exception? Exception = null)
     : PatientCredentialError(Message, null, Exception);
 
-public sealed record ClearRefreshTokenAsyncError(string Message, Exception? Exception = null)
+public sealed record RotateRefreshTokenAsyncError(string Message, Exception? Exception = null)
+    : PatientCredentialError(Message, null, Exception);
+
+public sealed record RevokeSessionsAsyncError(string Message, Exception? Exception = null)
     : PatientCredentialError(Message, null, Exception);

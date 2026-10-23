@@ -57,7 +57,7 @@ public sealed class JwtService : IJwt
                 : []
         ];
 
-        return BuildToken(claims, issuedAt);
+        return BuildToken(claims, issuedAt, _jwtConfig.AccessTokenExpiryMinutes);
     }
 
     private (string AccessToken, DateTime ExpiresAt) CreatePatientAccessToken(PatientCredential patient)
@@ -74,12 +74,12 @@ public sealed class JwtService : IJwt
             new("patient_code", patient.PatientCode.ToString())
         ];
 
-        return BuildToken(claims, issuedAt);
+        return BuildToken(claims, issuedAt, _jwtConfig.PatientAccessTokenExpiryMinutes);
     }
 
-    private (string AccessToken, DateTime ExpiresAt) BuildToken(Claim[] claims, DateTime issuedAt)
+    private (string AccessToken, DateTime ExpiresAt) BuildToken(Claim[] claims, DateTime issuedAt, int expiryMinutes)
     {
-        DateTime expiresAt = issuedAt.AddMinutes(_jwtConfig.AccessTokenExpiryMinutes);
+        DateTime expiresAt = issuedAt.AddMinutes(expiryMinutes);
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

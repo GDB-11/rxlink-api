@@ -9,6 +9,7 @@ using Application.Core.Interfaces.Shared;
 using BindSharp;
 using BindSharp.Extensions;
 using Common.Helpers;
+using Infrastructure.Core.Interfaces.Activity;
 using Infrastructure.Core.Interfaces.PatientAuth;
 using Infrastructure.Core.Models.PatientAuth;
 
@@ -24,6 +25,7 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
     private readonly JwtConfig _jwtConfig;
 
     private readonly ICatalogWriteValidator _catalog;
+    private readonly IActivityLogger _activityLogger;
 
     public PatientAuthenticationService(
         IPatientCredentialRepository repository,
@@ -32,8 +34,10 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
         IDeterministicEncryption deterministicEncryption,
         ITimeProvider timeProvider,
         JwtConfig jwtConfig,
-        ICatalogWriteValidator catalog)
+        ICatalogWriteValidator catalog,
+        IActivityLogger activityLogger)
     {
+        _activityLogger = activityLogger;
         _repository = repository;
         _catalog = catalog;
         _passwordService = passwordService;
@@ -43,13 +47,12 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
         _jwtConfig = jwtConfig;
     }
 
-    public async Task<Result<PatientLookupResponse, PatientAuthError>> LookupAsync(
-        Guid documentTypeCode,
-        string documentNumber)
+    public async Task<Result<PatientLookupResponse, PatientAuthError>> LookupAsync(PatientLookupRequest request)
     {
-        var result = await _repository.GetByDocumentAsync(documentTypeCode, documentNumber);
+        var result = await _repository.GetByDocumentAsync(
+            request.DocumentTypeCode, request.DocumentNumber, request.BirthDate.ToDateTime());
 
-        return result
+        Result<PatientLookupResponse, PatientAuthError> response = result
             .MapError(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception))
             .Map(row => row is null
                 ? new PatientLookupResponse { Found = false }
@@ -57,11 +60,15 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
                 {
                     Found = true,
                     PersonCode = row.PersonCode,
-                    Names = row.Names,
-                    Surnames = row.Surnames,
-                    Email = row.Email,
-                    IsAlreadyPatient = row.PatientCode.HasValue
+                    HasAccount = row.HasCredentials
                 });
+
+        // No document number or birth date in the event: only that a lookup came back empty.
+        if (response.IsSuccess && !response.Value.Found)
+            await _activityLogger.LogAsync(new ActivityEvent(
+                ActivityEventTypes.PatientLookupFailed, null, null, null, "Patient lookup found no match"));
+
+        return response;
     }
 
     public async Task<Result<PatientAuthResponse, PatientAuthError>> RegisterAsync(RegisterPatientRequest request)
@@ -126,26 +133,70 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
         return await credentialResult.BindAsync(GenerateAndStoreTokens);
     }
 
+    // Unknown e-mail, no app account and wrong password all answer the same way (no account enumeration).
     public Task<Result<PatientAuthResponse, PatientAuthError>> LoginAsync(PatientLoginRequest request) =>
         _repository.GetByEmailAsync(request.Email)
             .MapErrorAsync(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception))
-            .EnsureNotNullAsync(new PatientNotFoundError())
-            .EnsureAsync(p => p.IsActive, new PatientInactiveError())
-            .EnsureAsync(p => p.PasswordHash is not null, new PatientNoCredentialsError())
-            .BindAsync(patient => ValidatePasswordAndGenerateTokens(patient, request.Password));
+            .EnsureNotNullAsync(new PatientIncorrectPasswordError())
+            .EnsureAsync(p => p.PasswordHash is not null, new PatientIncorrectPasswordError())
+            .BindAsync(patient => ValidatePasswordAndGenerateTokens(patient, request.Password))
+            .TapAsync(response => _activityLogger.LogAsync(new ActivityEvent(
+                ActivityEventTypes.PatientLoginSucceeded, null, ActivityEntityTypes.Patient,
+                response.Patient.PatientCode, "Patient logged in")))
+            .TapErrorAsync(error => error is PatientIncorrectPasswordError
+                ? _activityLogger.LogAsync(new ActivityEvent(
+                    ActivityEventTypes.PatientLoginFailed, null, null, null, "Patient login failed"))
+                : Task.CompletedTask);
 
-    public Task<Result<PatientAuthResponse, PatientAuthError>> RefreshAsync(PatientRefreshRequest request) =>
-        EncryptTokenForLookup(request.RefreshToken)
-            .BindAsync(hash => _repository
-                .GetByRefreshTokenAsync(hash, _timeProvider.UtcNow)
-                .MapErrorAsync(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception)))
-            .EnsureNotNullAsync(new PatientRefreshTokenNotFoundError())
-            .EnsureAsync(p => p.IsActive, new PatientInactiveError())
-            .BindAsync(GenerateAndStoreTokens);
+    /// <summary>
+    /// Rotating refresh (D31): the presented token is single-use. Presenting one that was already used means it
+    /// leaked, so the whole session family is revoked and the legitimate client has to log in again.
+    /// </summary>
+    public async Task<Result<PatientAuthResponse, PatientAuthError>> RefreshAsync(PatientRefreshRequest request)
+    {
+        Result<string, PatientAuthError> presented = EncryptToken(request.RefreshToken);
+        if (!presented.IsSuccess)
+            return Result<PatientAuthResponse, PatientAuthError>.Failure(presented.Error);
 
-    public Task<Result<Unit, PatientAuthError>> LogoutAsync(Guid patientCode) =>
-        _repository.ClearRefreshTokenAsync(patientCode)
-            .MapErrorAsync(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception));
+        DateTime now = _timeProvider.UtcNow;
+        string newRaw = _jwtService.GenerateRefreshToken();
+        Result<string, PatientAuthError> newHash = EncryptToken(newRaw);
+        if (!newHash.IsSuccess)
+            return Result<PatientAuthResponse, PatientAuthError>.Failure(newHash.Error);
+
+        var rotated = await _repository.RotateRefreshTokenAsync(
+            presented.Value, newHash.Value, now.AddMinutes(_jwtConfig.PatientRefreshTokenExpiryMinutes), now);
+        if (!rotated.IsSuccess)
+            return Result<PatientAuthResponse, PatientAuthError>.Failure(
+                new PatientRepositoryError(rotated.Error.Message, null, rotated.Error.Exception));
+
+        if (rotated.Value is null)
+        {
+            var revoked = await _repository.RevokeFamilyOfUsedTokenAsync(presented.Value, now);
+            if (revoked.IsSuccess && revoked.Value > 0)
+                await _activityLogger.LogAsync(new ActivityEvent(
+                    ActivityEventTypes.RefreshTokenReuse, null, null, null,
+                    "Patient refresh token reuse: session revoked", new { RevokedTokens = revoked.Value }));
+
+            return Result<PatientAuthResponse, PatientAuthError>.Failure(new PatientRefreshTokenNotFoundError());
+        }
+
+        PatientCredential patient = rotated.Value;
+        return _jwtService
+            .GeneratePatientAccessToken(patient)
+            .MapError(PatientAuthError (e) => new PatientJwtGenerationError(e.Details, e.Exception))
+            .Map(tokens => BuildAuthResponse(patient, tokens.AccessToken, newRaw, tokens.ExpiresAt));
+    }
+
+    public async Task<Result<Unit, PatientAuthError>> LogoutAsync(Guid patientCode)
+    {
+        var revoked = await _repository.RevokeAllSessionsAsync(patientCode, _timeProvider.UtcNow);
+        if (revoked.IsSuccess)
+            await _activityLogger.LogAsync(new ActivityEvent(
+                ActivityEventTypes.Logout, null, ActivityEntityTypes.Patient, patientCode, "Patient logged out"));
+
+        return revoked.MapError(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception));
+    }
 
     private Task<Result<PatientAuthResponse, PatientAuthError>> ValidatePasswordAndGenerateTokens(
         PatientCredential patient,
@@ -156,9 +207,11 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
             .Ensure(isValid => isValid, new PatientIncorrectPasswordError())
             .BindAsync(_ => GenerateAndStoreTokens(patient));
 
+    /// <summary>Starts a new session family (login or registration).</summary>
     private Task<Result<PatientAuthResponse, PatientAuthError>> GenerateAndStoreTokens(PatientCredential patient)
     {
         string rawToken = _jwtService.GenerateRefreshToken();
+        DateTime now = _timeProvider.UtcNow;
 
         return _jwtService
             .GeneratePatientAccessToken(patient)
@@ -168,20 +221,21 @@ public sealed class PatientAuthenticationService : IPatientAuthentication
                     .MapError(PatientAuthError (e) => new PatientJwtStorageError(e.Details, e.Exception))
                     .BindAsync(tokenHash =>
                         _repository
-                            .UpdateRefreshTokenAsync(
+                            .StoreRefreshTokenAsync(
                                 patient.PatientCode,
+                                Guid.NewGuid(),
                                 tokenHash,
-                                _timeProvider.UtcNow.AddMinutes(_jwtConfig.RefreshTokenExpiryMinutes))
+                                now.AddMinutes(_jwtConfig.PatientRefreshTokenExpiryMinutes),
+                                now)
                             .MapErrorAsync(PatientAuthError (e) =>
                                 new PatientRepositoryError(e.Message, null, e.Exception))
                             .MapAsync(_ =>
                                 BuildAuthResponse(patient, tokens.AccessToken, rawToken, tokens.ExpiresAt))));
     }
 
-    private Task<Result<string, PatientAuthError>> EncryptTokenForLookup(string rawToken) =>
-        Task.FromResult(
-            _deterministicEncryption.Encrypt(rawToken)
-                .MapError(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception)));
+    private Result<string, PatientAuthError> EncryptToken(string rawToken) =>
+        _deterministicEncryption.Encrypt(rawToken)
+            .MapError(PatientAuthError (e) => new PatientRepositoryError(e.Message, null, e.Exception));
 
     private static PatientAuthResponse BuildAuthResponse(
         PatientCredential patient,

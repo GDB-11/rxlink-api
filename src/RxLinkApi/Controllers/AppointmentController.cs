@@ -28,7 +28,7 @@ public sealed class AppointmentController : FunctionalController
     }
 
     /// <summary>Creates a new appointment. Locks the availability slot atomically.</summary>
-    [HttpPost("appointment")]
+    [HttpPost("v1/appointment")]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(AppointmentResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -47,7 +47,7 @@ public sealed class AppointmentController : FunctionalController
         );
 
     /// <summary>Transitions PendientePago → Confirmado, resolving payment (insurance or particular).</summary>
-    [HttpPatch("appointment/{code:guid}/confirm-payment")]
+    [HttpPatch("v1/appointment/{code:guid}/confirm-payment")]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -68,6 +68,7 @@ public sealed class AppointmentController : FunctionalController
     /// Patient can only cancel their own appointments; Admin can cancel any.
     /// </summary>
     [HttpPatch("appointment/{code:guid}/cancel")]
+    [HttpPatch("v1/appointment/{code:guid}/cancel")]
     [Authorize(Roles = "Patient,Administrador")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -160,6 +161,7 @@ public sealed class AppointmentController : FunctionalController
     /// Patient must own it; Doctor must be the assigned doctor; Admin can see any.
     /// </summary>
     [HttpGet("appointment/{code:guid}")]
+    [HttpGet("v1/appointment/{code:guid}")]
     [Authorize(Roles = "Patient,Doctor,Administrador")]
     [ProducesResponseType(typeof(AppointmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -192,7 +194,7 @@ public sealed class AppointmentController : FunctionalController
     }
 
     /// <summary>Returns the authenticated patient's appointments ordered by scheduledAt DESC.</summary>
-    [HttpGet("patient/appointments")]
+    [HttpGet("v1/patient/appointments")]
     [Authorize(Roles = "Patient")]
     [ProducesResponseType(typeof(AppointmentPageResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
